@@ -10,33 +10,107 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteRouteImport } from './routes/_app/route'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
+import { Route as AppAcompanhamentoRouteImport } from './routes/_app/acompanhamento'
+import { Route as AppCriarRouteImport } from './routes/_app/criar'
+import { Route as AppPerfilRouteImport } from './routes/_app/perfil'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppRouteRoute = AppRouteRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppAcompanhamentoRoute = AppAcompanhamentoRouteImport.update({
+  id: '/acompanhamento',
+  path: '/acompanhamento',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppCriarRoute = AppCriarRouteImport.update({
+  id: '/criar',
+  path: '/criar',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppPerfilRoute = AppPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/acompanhamento': typeof AppAcompanhamentoRoute
+  '/criar': typeof AppCriarRoute
+  '/perfil': typeof AppPerfilRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/acompanhamento': typeof AppAcompanhamentoRoute
+  '/criar': typeof AppCriarRoute
+  '/perfil': typeof AppPerfilRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteRouteWithChildren
+  '/login': typeof LoginRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/_app/acompanhamento': typeof AppAcompanhamentoRoute
+  '/_app/criar': typeof AppCriarRoute
+  '/_app/perfil': typeof AppPerfilRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/redefinir-senha'
+    | '/acompanhamento'
+    | '/criar'
+    | '/perfil'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/redefinir-senha'
+    | '/acompanhamento'
+    | '/criar'
+    | '/perfil'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/login'
+    | '/redefinir-senha'
+    | '/_app/acompanhamento'
+    | '/_app/criar'
+    | '/_app/perfil'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRouteRoute: typeof AppRouteRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +122,72 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/acompanhamento': {
+      id: '/_app/acompanhamento'
+      path: '/acompanhamento'
+      fullPath: '/acompanhamento'
+      preLoaderRoute: typeof AppAcompanhamentoRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/criar': {
+      id: '/_app/criar'
+      path: '/criar'
+      fullPath: '/criar'
+      preLoaderRoute: typeof AppCriarRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/perfil': {
+      id: '/_app/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof AppPerfilRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
   }
 }
 
+interface AppRouteRouteChildren {
+  AppAcompanhamentoRoute: typeof AppAcompanhamentoRoute
+  AppCriarRoute: typeof AppCriarRoute
+  AppPerfilRoute: typeof AppPerfilRoute
+}
+
+const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppAcompanhamentoRoute: AppAcompanhamentoRoute,
+  AppCriarRoute: AppCriarRoute,
+  AppPerfilRoute: AppPerfilRoute,
+}
+
+const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
+  AppRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRouteRoute: AppRouteRouteWithChildren,
+  LoginRoute: LoginRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
