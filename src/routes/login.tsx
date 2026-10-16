@@ -32,13 +32,13 @@ function Login() {
     setOcupado(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
     setOcupado(false);
-    if (error) return toast.error("E-mail ou senha incorretos.");
+    if (error) { toast.error("E-mail ou senha incorretos."); return; }
     toast.success("Bem-vinda de volta!");
     navigate({ to: "/acompanhamento", replace: true });
   };
 
   const criar = async () => {
-    if (!email || senha.length < 6) return toast.error("Informe e-mail e uma senha com pelo menos 6 caracteres.");
+    if (!email || senha.length < 6) { toast.error("Informe e-mail e uma senha com pelo menos 6 caracteres."); return; }
     setOcupado(true);
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -46,17 +46,17 @@ function Login() {
       options: { emailRedirectTo: window.location.origin },
     });
     setOcupado(false);
-    if (error) return toast.error("Não foi possível criar a conta: " + error.message);
+    if (error) { toast.error("Não foi possível criar a conta: " + error.message); return; }
     if (data.session) navigate({ to: "/acompanhamento", replace: true });
     else toast.success("Conta criada! Confira seu e-mail para confirmar.");
   };
 
   const esqueci = async () => {
-    if (!email) return toast.error("Digite seu e-mail primeiro.");
+    if (!email) { toast.error("Digite seu e-mail primeiro."); return; }
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/redefinir-senha`,
     });
-    if (error) return toast.error("Não foi possível enviar o e-mail.");
+    if (error) { toast.error("Não foi possível enviar o e-mail."); return; }
     toast.success("Enviamos um link para redefinir sua senha.");
   };
 

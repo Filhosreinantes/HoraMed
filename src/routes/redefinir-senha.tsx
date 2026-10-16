@@ -23,7 +23,7 @@ function Redefinir() {
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
     const { error } = await supabase.auth.updateUser({ password: senha });
-    if (error) return toast.error("Não foi possível alterar a senha.");
+    if (error) { toast.error("Não foi possível alterar a senha."); return; }
     toast.success("Senha alterada!");
     navigate({ to: "/acompanhamento", replace: true });
   };

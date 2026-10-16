@@ -53,7 +53,7 @@ const SELO: Record<Situacao, string> = {
   cancelado: "bg-destructive/10 text-destructive",
 };
 
-export function Selo({ s }: { s?: Situacao }) {
+export function Selo({ s }: { s?: Situacao | undefined }) {
   const k = s ?? "proximo";
   return <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", SELO[k])}>{SITUACAO_LABEL[k]}</span>;
 }
