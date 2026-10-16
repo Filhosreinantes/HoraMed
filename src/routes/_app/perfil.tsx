@@ -29,7 +29,7 @@ function Perfil() {
 
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form?.nome) return toast.error("Informe o nome.");
+    if (!form?.nome) { toast.error("Informe o nome."); return; }
     const agora = nowLocalISO();
     const campos = {
       nome: form.nome, emoji: form.emoji || "🌸", tema: form.tema || "azul",
@@ -38,12 +38,12 @@ function Perfil() {
     };
     if (form.id) {
       const { error } = await supabase.from("pedacinho_pessoas").update(campos).eq("id", form.id).eq("user_id", user.id);
-      if (error) return toast.error("Não foi possível salvar.");
+      if (error) { toast.error("Não foi possível salvar."); return; }
       toast.success("Tesouro atualizado!");
     } else {
       const id = uid();
       const { error } = await supabase.from("pedacinho_pessoas").insert({ ...campos, id, user_id: user.id, criado_em: agora });
-      if (error) return toast.error("Não foi possível adicionar.");
+      if (error) { toast.error("Não foi possível adicionar."); return; }
       setAtivaId(id);
       toast.success("Novo Tesouro adicionado!");
     }

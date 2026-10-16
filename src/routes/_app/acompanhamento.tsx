@@ -204,7 +204,7 @@ function Detalhes({ item, onClose }: { item: Item; onClose: () => void }) {
   const [salvando, setSalvando] = useState(false);
 
   const salvar = async () => {
-    if (!sit) return toast.error("Escolha o que aconteceu.");
+    if (!sit) { toast.error("Escolha o que aconteceu."); return; }
     setSalvando(true);
     const ok = await salvarRegistros([
       {
