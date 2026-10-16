@@ -18,28 +18,28 @@ export interface Dados {
   pessoaId: string;
   criadoEm: string;
   titulo: string;
-  cuidado?: Cuidado;
-  data?: string;
-  hora?: string;
-  local?: string;
-  profissional?: string;
-  especialidade?: string;
-  tipoTerapia?: string;
-  tipoExame?: string;
-  recomendacoes?: string;
-  medicamento?: string;
-  dosagem?: string;
-  frequencia?: string;
-  inicio?: string;
-  fim?: string;
-  situacao?: Situacao;
-  observacaoAcompanhamento?: string;
-  duracaoMeses?: number;
-  diaSemana?: string;
-  evento?: boolean;
-  parentId?: string;
-  programa?: boolean;
-  programaId?: string;
+  cuidado?: Cuidado | undefined;
+  data?: string | undefined;
+  hora?: string | undefined;
+  local?: string | undefined;
+  profissional?: string | undefined;
+  especialidade?: string | undefined;
+  tipoTerapia?: string | undefined;
+  tipoExame?: string | undefined;
+  recomendacoes?: string | undefined;
+  medicamento?: string | undefined;
+  dosagem?: string | undefined;
+  frequencia?: string | undefined;
+  inicio?: string | undefined;
+  fim?: string | undefined;
+  situacao?: Situacao | undefined;
+  observacaoAcompanhamento?: string | undefined;
+  duracaoMeses?: number | undefined;
+  diaSemana?: string | undefined;
+  evento?: boolean | undefined;
+  parentId?: string | undefined;
+  programa?: boolean | undefined;
+  programaId?: string | undefined;
 }
 
 export const EMOJI: Record<Cuidado, string> = {
@@ -76,7 +76,7 @@ export function toYMD(d: Date) {
 }
 
 export function parseYMD(s: string) {
-  const [y, m, d] = s.split("-").map(Number);
+  const [y = 1970, m = 1, d = 1] = s.split("-").map(Number);
   return new Date(y, (m || 1) - 1, d || 1);
 }
 

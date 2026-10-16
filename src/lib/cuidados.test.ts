@@ -22,7 +22,7 @@ describe("regras de cuidados", () => {
       { id: "b", pessoaId: "p", criadoEm: "2", titulo: "y", evento: true, parentId: "a", situacao: "faltou" },
     ]);
     expect(r).toHaveLength(1);
-    expect(r[0].situacao).toBe("faltou");
+    expect(r[0]?.situacao).toBe("faltou");
   });
   it("data em português", () => {
     expect(formatData("2026-10-16")).toBe("16 de outubro de 2026");

@@ -17,7 +17,8 @@ export const Route = createFileRoute("/_app/criar")({
   component: Criar,
 });
 
-type F = Record<string, string>;
+type K = "data"|"hora"|"local"|"profissional"|"especialidade"|"tipoTerapia"|"tipoExame"|"recomendacoes"|"medicamento"|"dosagem"|"frequencia"|"inicio"|"fim"|"programacao"|"meses"|"diaSemana";
+type F = Partial<Record<K, string>>;
 
 function Criar() {
   const { ativa, salvarRegistros } = useApp();
@@ -25,9 +26,9 @@ function Criar() {
   const [tipo, setTipo] = useState<Cuidado | null>(null);
   const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1" });
   const [salvando, setSalvando] = useState(false);
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+  const set = (k: K) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
-  const inp = (k: string, type = "text", req = false) => (
+  const inp = (k: K, type = "text", req = false) => (
     <input className="field" type={type} required={req} value={f[k] ?? ""} onChange={set(k)} />
   );
 
@@ -41,12 +42,12 @@ function Criar() {
     } else if (tipo === "Exame") {
       lista = [{ ...base, id: uid(), titulo: `Exame · ${f.tipoExame}`, tipoExame: f.tipoExame, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, recomendacoes: f.recomendacoes }];
     } else if (tipo === "Medicação") {
-      lista = [{ ...base, id: uid(), titulo: f.medicamento, medicamento: f.medicamento, dosagem: f.dosagem, frequencia: f.frequencia, profissional: f.profissional, especialidade: f.especialidade, inicio: f.inicio, fim: f.fim || undefined }];
+      lista = [{ ...base, id: uid(), titulo: f.medicamento ?? "Medicação", medicamento: f.medicamento, dosagem: f.dosagem, frequencia: f.frequencia, profissional: f.profissional, especialidade: f.especialidade, inicio: f.inicio, fim: f.fim || undefined }];
     } else {
       const prog = f.programacao as Programacao;
       const meses = Number(f.meses);
       const dia = Number(f.diaSemana);
-      const datas = gerarSessoes(f.data, prog, meses, prog === "semanal" ? dia : undefined);
+      const datas = gerarSessoes(f.data ?? "", prog, meses, prog === "semanal" ? dia : undefined);
       const programaId = prog === "unica" ? undefined : uid();
       lista = datas.map((data, idx) => ({
         ...base,
