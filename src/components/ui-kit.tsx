@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import { SITUACAO_LABEL, type Situacao } from "@/lib/cuidados";
@@ -23,37 +23,83 @@ export function SeletorTesouro({
   somenteLeitura?: boolean;
 }) {
   const { pessoas, ativa, setAtivaId } = useApp();
+  const [aberto, setAberto] = useState(false);
+
   if (!ativa) return null;
 
-  // Só permite interação se NÃO for leitura E houver mais de um Tesouro
   const interativo = !somenteLeitura && pessoas.length > 1;
 
   return (
-    <div className="relative flex items-center justify-between gap-3 rounded-2xl border border-gold/30 bg-card p-3 shadow-sm">
-      <div className="flex min-w-0 flex-col">
-        <span className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
-          {prefixo}
-        </span>
-        <span className="truncate font-display text-lg font-bold text-foreground">
-          {ativa.nome}
-        </span>
-      </div>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => interativo && setAberto((v) => !v)}
+        disabled={!interativo}
+        className="flex w-full items-center justify-between rounded-2xl border p-3 text-left shadow-sm transition disabled:cursor-default"
+        style={{
+          backgroundColor: "var(--tema-claro, #E8F1F9)",
+          borderColor: "var(--tema, #5B92C7)",
+        }}
+      >
+        <div className="flex min-w-0 flex-col">
+          <span
+            className="text-[0.65rem] font-bold uppercase tracking-wider"
+            style={{ color: "var(--tema-escuro, #2C4A6B)" }}
+          >
+            {prefixo}
+          </span>
+          <span
+            className="truncate font-display text-lg font-bold"
+            style={{ color: "var(--tema-escuro, #2C4A6B)" }}
+          >
+            {ativa.nome}
+          </span>
+        </div>
+        {interativo && (
+          <ChevronDown
+            className={cn(
+              "h-5 w-5 shrink-0 transition-transform motion-reduce:transition-none",
+              aberto && "rotate-180",
+            )}
+            style={{ color: "var(--tema-escuro, #2C4A6B)" }}
+          />
+        )}
+      </button>
 
-      {/* Chevron só aparece quando há o que fazer com o clique */}
-      {interativo && <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground" />}
-
-      {/* Overlay invisível (dropdown nativo) só quando interativo */}
-      {interativo && (
-        <select
-          className="absolute inset-0 cursor-pointer opacity-0"
-          aria-label="Escolher Tesouro"
-          value={ativa.id}
-          onChange={(e) => setAtivaId(e.target.value)}
-        >
-          {pessoas.map((p) => (
-            <option key={p.id} value={p.id}>{p.nome}</option>
-          ))}
-        </select>
+      {interativo && aberto && (
+        <>
+          {/* Overlay para fechar ao clicar fora */}
+          <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} aria-hidden="true" />
+          <ul
+            role="listbox"
+            className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border bg-card shadow-soft"
+            style={{ borderColor: "var(--tema, #5B92C7)" }}
+          >
+            {pessoas.map((p) => {
+              const selecionado = p.id === ativa.id;
+              return (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selecionado}
+                    onClick={() => {
+                      setAtivaId(p.id);
+                      setAberto(false);
+                    }}
+                    className={cn(
+                      "block w-full px-4 py-2.5 text-left text-sm font-semibold transition hover:bg-muted",
+                      selecionado && "bg-muted",
+                    )}
+                    style={{ color: "var(--tema-escuro, #2C4A6B)" }}
+                  >
+                    {p.nome}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </div>
   );
