@@ -3,8 +3,8 @@ import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
-  EMOJI, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
-  type Cuidado, type Situacao,
+  EMOJI, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente, resolverSituacoes,
+  type Cuidado
 } from "@/lib/cuidados";
 import { Botao, Divisor, Pill, SeletorTesouro } from "@/components/ui-kit";
 import { CompromissoCard } from "@/components/compromisso-card";
@@ -18,150 +18,176 @@ export const Route = createFileRoute("/_app/acompanhamento")({
       { property: "og:title", content: "Acompanhamento · Rotina Azul" },
       { property: "og:description", content: "Panorama da rotina de cuidados do seu Tesouro." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Acompanhamento,
 });
 
-type Periodo = "mes" | "ano" | "tudo";
-type Drill = { cuidado: Cuidado; situacao: Situacao } | { med: "uso" | "encerradas" } | null;
-
-const LINHAS: { s: Situacao; label: string }[] = [
-  { s: "feito", label: "Compareceu" },
-  { s: "faltou", label: "Faltou" },
-  { s: "cancelado", label: "Cancelou" },
-  { s: "proximo", label: "Próximos" },
-];
+const FILTROS = [
+  { chave: "mes", rotulo: "Este mês" },
+  { chave: "ano", rotulo: "Este ano" },
+  { chave: "tudo", rotulo: "Tudo" },
+] as const;
 
 function Acompanhamento() {
-  const { itens, carregando } = useApp();
-  const [periodo, setPeriodo] = useState<Periodo>("mes");
-  const [drill, setDrill] = useState<Drill>(null);
+  const { carregando, registros } = useApp();
+  const [filtro, setFiltro] = useState<"mes" | "ano" | "tudo">("mes");
+  const [drillDown, setDrillDown] = useState<{ tipo: Cuidado; filtro: string } | null>(null);
 
-  const filtrados = useMemo(() => {
-    const hoje = hojeYMD();
-    return itens.filter((i) => {
-      if (periodo === "tudo") return true;
-      const d = i.data || i.inicio || "";
-      return periodo === "mes" ? d.slice(0, 7) === hoje.slice(0, 7) : d.slice(0, 4) === hoje.slice(0, 4);
-    });
-  }, [itens, periodo]);
+  const hoje = hojeYMD();
 
-  const meds = itens.filter((i) => i.cuidado === "Medicação");
-  const emUso = ordenarPorDataHora(meds.filter((m) => medicacaoEmUso(m)));
-  const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
-  const proximos = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i)));
+  // Resolve as situações (mescla eventos com o item original)
+  const resolvidos = useMemo(() => resolverSituacoes(registros), [registros]);
 
-  const listaDrill = ordenarPorDataHora(!drill
-    ? []
-    : "med" in drill
-      ? drill.med === "uso" ? emUso : encerradas
-      : filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao));
+  const filtrados = resolvidos.filter((item) => {
+    if (item.evento) return false;
+    if (filtro === "mes") return item.data?.startsWith(hoje.slice(0, 7)) || item.inicio?.startsWith(hoje.slice(0, 7));
+    if (filtro === "ano") return item.data?.startsWith(hoje.slice(0, 4)) || item.inicio?.startsWith(hoje.slice(0, 4));
+    return true;
+  });
+
+  const pendentes = resolvidos
+    .filter((item) => {
+      if (item.evento) return false;
+      return compromissoPendente(item, hoje);
+    })
+    .sort((a, b) => ordenarPorDataHora([a, b])[0]?.id === a.id ? -1 : 1);
+
+  const contarPor = (tipo: Cuidado) => {
+    const doTipo = filtrados.filter((a) => a.cuidado === tipo);
+    return {
+      total: doTipo.length,
+      proximo: doTipo.filter((a) => compromissoPendente(a, hoje)).length,
+      feito: doTipo.filter((a) => a.situacao === "feito").length,
+      faltou: doTipo.filter((a) => a.situacao === "faltou").length,
+      cancelado: doTipo.filter((a) => a.situacao === "cancelado").length,
+    };
+  };
+
+  const getListaDrill = () => {
+    if (!drillDown) return [];
+    let lista = filtrados.filter((a) => a.cuidado === drillDown.tipo);
+    if (drillDown.filtro === "proximo") {
+      lista = lista.filter((a) => compromissoPendente(a, hoje));
+    } else {
+      lista = lista.filter((a) => a.situacao === drillDown.filtro);
+    }
+    return ordenarPorDataHora(lista);
+  };
+
+  const medicacoes = filtrados.filter((a) => a.cuidado === "Medicação");
+  const medsEmUso = medicacoes.filter((m) => medicacaoEmUso(m, hoje));
+  const medsEncerradas = medicacoes.filter((m) => !medicacaoEmUso(m, hoje));
+
+  const CardContagem = ({ tipo }: { tipo: Cuidado }) => {
+    const c = contarPor(tipo);
+    const Btn = ({ chave, rotulo, emoji, qtd }: any) => (
+      <button onClick={() => setDrillDown({ tipo, filtro: chave })} className="flex items-center gap-1.5 rounded-lg bg-[#F8FAFC] px-2 py-1 text-[0.68rem] hover:bg-gray-100">
+        <span>{emoji}</span> <span className="flex-1 text-left text-[#7A8A9A]">{rotulo}</span> <span className="font-bold">{qtd}</span>
+      </button>
+    );
+
+    return (
+      <div className="rounded-2xl border border-gold/30 bg-card p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[0.95rem]">{EMOJI[tipo]}</span>
+          <p className="text-[0.68rem] font-semibold uppercase tracking-wider">{tipo}</p>
+          <span className="ml-auto font-bold">{c.total}</span>
+        </div>
+        <div className="space-y-1">
+          <Btn chave="proximo" rotulo="Próximos" emoji="⏰" qtd={c.proximo} />
+          <Btn chave="feito" rotulo="Compareceu" emoji="✓" qtd={c.feito} />
+          <Btn chave="faltou" rotulo="Faltou" emoji="—" qtd={c.faltou} />
+          <Btn chave="cancelado" rotulo="Cancelou" emoji="✗" qtd={c.cancelado} />
+        </div>
+      </div>
+    );
+  };
+
+  if (carregando) {
+    return (
+      <div className="p-4 space-y-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-60 w-full" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-5">
-      <header>
-        <h1 className="text-3xl font-semibold">Acompanhamento</h1>
-        <p className="text-sm text-muted-foreground">Sua agenda de cuidados num só lugar.</p>
+    <div className="pb-24 space-y-4">
+      <header className="px-4 pt-6">
+        <h1 className="font-display text-2xl font-semibold italic text-foreground">Acompanhamento</h1>
+        <p className="text-sm text-muted-foreground mt-1">Sua agenda de cuidados num só lugar.</p>
+        <div className="mt-4"><SeletorTesouro /></div>
       </header>
-      <SeletorTesouro />
-      <div className="flex gap-2">
-        <Pill ativo={periodo === "mes"} onClick={() => setPeriodo("mes")}>Este mês</Pill>
-        <Pill ativo={periodo === "ano"} onClick={() => setPeriodo("ano")}>Este ano</Pill>
-        <Pill ativo={periodo === "tudo"} onClick={() => setPeriodo("tudo")}>Tudo</Pill>
-      </div>
 
-      {carregando ? (
-        <div className="space-y-3">
-          <Skeleton className="h-40 rounded-3xl bg-muted" />
-          <Skeleton className="h-40 rounded-3xl bg-muted" />
-          <Skeleton className="h-24 rounded-3xl bg-muted" />
+      <section className="px-4">
+        <div className="flex gap-2">
+          {FILTROS.map((f) => (
+            <Botao key={f.chave} variant={filtro === f.chave ? "default" : "outline"} onClick={() => { setFiltro(f.chave); setDrillDown(null); }} className="flex-1 rounded-full text-xs h-9">
+              {f.rotulo}
+            </Botao>
+          ))}
         </div>
-      ) : (
-        <>
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold">🩺 Cuidados médicos</h2>
-            <div className="grid gap-3">
-              {(["Consulta", "Terapia", "Exame"] as Cuidado[]).map((c) => {
-                const doTipo = filtrados.filter((i) => i.cuidado === c);
-                return (
-                  <div key={c} className="notebook p-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="font-display text-lg font-semibold italic">{EMOJI[c]} {c}</p>
-                      <span className="font-display text-2xl font-bold text-gold">{doTipo.length}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {LINHAS.map(({ s, label }) => {
-                        const n = doTipo.filter((i) => (i.situacao ?? "proximo") === s).length;
-                        const ativo = drill && "cuidado" in drill && drill.cuidado === c && drill.situacao === s;
-                        return (
-                          <Botao variant="ghost"
-                            key={s}
-                            onClick={() => setDrill({ cuidado: c, situacao: s })}
-                            className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${ativo ? "bg-primary text-primary-foreground" : "bg-muted"}`}
-                          >
-                            <span>{label}</span>
-                            <strong>{n}</strong>
-                          </Botao>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+      </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold">💊 Medicações</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <Botao variant="ghost" onClick={() => setDrill({ med: "uso" })} className="notebook p-4 text-left">
-                <p className="text-sm text-muted-foreground">Em uso</p>
-                <p className="font-display text-3xl font-bold text-accent">{emUso.length}</p>
-              </Botao>
-              <Botao variant="ghost" onClick={() => setDrill({ med: "encerradas" })} className="notebook p-4 text-left">
-                <p className="text-sm text-muted-foreground">Encerradas</p>
-                <p className="font-display text-3xl font-bold text-gold">{encerradas.length}</p>
-              </Botao>
-            </div>
-          </section>
+      <Divisor />
 
-          {drill && (
-            <section className="notebook space-y-3 p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">
-                  {"med" in drill
-                    ? drill.med === "uso" ? "💊 Medicações em uso" : "💊 Medicações encerradas"
-                    : `${EMOJI[drill.cuidado]} ${drill.cuidado} · ${LINHAS.find((l) => l.s === drill.situacao)?.label}`}
-                </h3>
-                <Botao variant="ghost" onClick={() => setDrill(null)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-semibold">
-                  <X className="h-4 w-4" /> Fechar
-                </Botao>
-              </div>
-              {listaDrill.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nada por aqui.</p>
-              ) : (
-                listaDrill.map((i) => <CompromissoCard key={i.id} item={i} />)
-              )}
-            </section>
-          )}
+      <section className="px-4">
+        <p className="mb-2 text-[0.65rem] font-bold tracking-widest uppercase text-muted-foreground">🩺 Cuidados médicos</p>
+        <div className="grid grid-cols-2 gap-2">
+          <CardContagem tipo="Consulta" />
+          <CardContagem tipo="Terapia" />
+          <CardContagem tipo="Exame" />
+        </div>
+      </section>
 
-          <Divisor />
-
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold">Próximos compromissos</h2>
-            {proximos.length === 0 ? (
-              <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso agendado.</p>
+      {drillDown && (
+        <section className="px-4">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-semibold text-foreground">{drillDown.tipo} · {drillDown.filtro}</h2>
+            <Botao variant="ghost" onClick={() => setDrillDown(null)} className="text-xs h-8 px-2 text-muted-foreground"><X className="h-4 w-4 mr-1"/> Fechar</Botao>
+          </div>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+            {getListaDrill().length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-4">Nenhum registro nesta categoria.</p>
             ) : (
-              <div className="max-h-[400px] space-y-2 overflow-y-auto">
-                {proximos.map((i) => <CompromissoCard key={i.id} item={i} />)}
-              </div>
+              getListaDrill().map((item) => <CompromissoCard key={item.id} item={item} />)
             )}
-          </section>
-        </>
+          </div>
+        </section>
       )}
 
+      {!drillDown && pendentes.length > 0 && (
+        <section className="px-4">
+          <h2 className="text-lg font-semibold italic text-foreground mb-3">Próximos compromissos</h2>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+            {pendentes.map((item) => <CompromissoCard key={item.id} item={item} />)}
+          </div>
+        </section>
+      )}
+
+      {!drillDown && (medsEmUso.length > 0 || medsEncerradas.length > 0) && (
+        <section className="px-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Pill className="h-5 w-5 text-rose-500" />
+            <h2 className="text-lg font-semibold italic text-foreground">Medicações</h2>
+          </div>
+          {medsEmUso.length > 0 && (
+            <>
+              <p className="mb-2 text-[0.68rem] font-bold tracking-widest uppercase text-muted-foreground">Em uso · {medsEmUso.length}</p>
+              <div className="space-y-2 mb-4">{medsEmUso.map((m) => <CompromissoCard key={m.id} item={m} />)}</div>
+            </>
+          )}
+          {medsEncerradas.length > 0 && (
+            <>
+              <p className="mb-2 text-[0.68rem] font-bold tracking-widest uppercase text-muted-foreground">Encerradas · {medsEncerradas.length}</p>
+              <div className="space-y-2 opacity-70">{medsEncerradas.map((m) => <CompromissoCard key={m.id} item={m} />)}</div>
+            </>
+          )}
+        </section>
+      )}
     </div>
   );
 }
