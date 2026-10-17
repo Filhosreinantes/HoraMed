@@ -4,14 +4,13 @@ import { toast } from "sonner";
 import { supabase } from "./supabase";
 import { nowLocalISO, resolverSituacoes, uid, type Dados, type Item, type Pessoa } from "./cuidados";
 
-type Registro = Dados & { tipo?: string };
-
 interface Ctx {
   user: User;
   pessoas: Pessoa[];
   ativa: Pessoa | null;
   setAtivaId: (id: string) => void;
   itens: Item[];
+  logs: Dados[]; // <-- NOVO AQUI
   carregando: boolean;
   recarregar: () => Promise<void>;
   salvarRegistros: (lista: Dados[], tipo?: string) => Promise<boolean>;
@@ -23,7 +22,7 @@ const KEY = "rotina-azul:ativa";
 export function AppProvider({ user, children }: { user: User; children: ReactNode }) {
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [ativaId, setAtivaIdState] = useState<string | null>(null);
-  const [registros, setRegistros] = useState<Registro[]>([]);
+  const [registros, setRegistros] = useState<(Dados & { tipo?: string })[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   const recarregar = useCallback(async () => {
@@ -52,17 +51,12 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
       return c && lista.some((p) => p.id === c) ? c : lista[0]?.id ?? null;
     });
 
-    // 🔑 Passo 2: trazer "tipo" junto com "dados"
     const { data: rs } = await supabase
       .from("pedacinho_registros")
       .select("dados, tipo")
       .eq("user_id", user.id);
 
-    setRegistros(
-      ((rs ?? []) as { dados: Dados; tipo: string | null }[])
-        .filter((r) => r.dados)
-        .map((r) => ({ ...r.dados, tipo: r.tipo ?? "acontecimentos" }))
-    );
+    setRegistros(((rs ?? []) as { dados: Dados; tipo: string }[]).map(r => ({ ...r.dados, tipo: r.tipo })));
     setCarregando(false);
   }, [user.id]);
 
@@ -91,21 +85,25 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
       toast.error("Não foi possível salvar. Tente novamente.");
       return false;
     }
-    // manter o estado consistente com o que foi persistido
-    setRegistros((r) => [...r, ...lista.map((d) => ({ ...d, tipo }))]);
+    setRegistros((r) => [...r, ...lista.map(d => ({ ...d, tipo }))]);
     return true;
   };
 
   const ativa = pessoas.find((p) => p.id === ativaId) ?? null;
-
-  // O filtro de "cuidado" já existe — agora "tipo" também está disponível em `d`
+  
   const itens = useMemo(
-    () => resolverSituacoes(registros.filter((d) => d.pessoaId === ativaId && d.cuidado)),
+    () => resolverSituacoes(registros.filter((d) => d.pessoaId === ativaId && d.cuidado && d.tipo !== "medicacao_logs")),
+    [registros, ativaId],
+  );
+
+  // AQUI: Separando os logs de medicação
+  const logs = useMemo(
+    () => registros.filter((d) => d.pessoaId === ativaId && d.tipo === "medicacao_logs"),
     [registros, ativaId],
   );
 
   return (
-    <AppCtx.Provider value={{ user, pessoas, ativa, setAtivaId, itens, carregando, recarregar, salvarRegistros }}>
+    <AppCtx.Provider value={{ user, pessoas, ativa, setAtivaId, itens, logs, carregando, recarregar, salvarRegistros }}>
       {children}
     </AppCtx.Provider>
   );
