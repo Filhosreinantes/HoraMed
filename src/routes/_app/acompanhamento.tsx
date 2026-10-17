@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Check, Clock, Pill as PillIcon, History } from "lucide-react";
+import { X, ChevronLeft, Check, Clock, History } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   EMOJI, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -33,7 +33,7 @@ const LINHAS: { s: Situacao; label: string }[] = [
 ];
 
 function Acompanhamento() {
-  const { itens, carregando, salvarRegistros } = useApp();
+  const { itens, logs, carregando, salvarRegistros } = useApp();
   const [view, setView] = useState<View>("menu");
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [drill, setDrill] = useState<Drill>(null);
@@ -57,19 +57,17 @@ function Acompanhamento() {
   const emUso = ordenarPorDataHora(meds.filter((m) => medicacaoEmUso(m)));
   const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
   
-  // Próximos compromissos (EXCLUINDO medicação)
   const proximos = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação"));
 
-  // Lista de horários de hoje para medicação
+  // Agenda de hoje lendo DIRETO dos logs
   const agendaHoje = useMemo(() => {
     const arr: any[] = [];
     emUso.forEach((m) => {
       const horarios = m.horarios && m.horarios.length > 0 ? m.horarios : (m.frequencia ? m.frequencia.split(",") : ["08:00"]);
       horarios.forEach((h: string) => {
         const hClean = h.trim();
-        // Verifica se há um log de "Tomou" ou "Atrasou" hoje
-        const log = itens.find((i: any) => 
-          i.tipo === "medicacao_logs" && 
+        // Busca no log
+        const log = logs.find((i: any) => 
           i.parentId === m.id && 
           i.data === hoje && 
           i.titulo.includes(hClean)
@@ -78,16 +76,15 @@ function Acompanhamento() {
       });
     });
     return arr.sort((a, b) => a.horario.localeCompare(b.horario));
-  }, [emUso, itens, hoje]);
+  }, [emUso, logs, hoje]);
 
-  // Histórico de medicação
-  const logs = useMemo(() => {
-    return itens
-      .filter((i: any) => i.tipo === "medicacao_logs")
+  // Histórico lendo DIRETO dos logs
+  const logsFiltrados = useMemo(() => {
+    return logs
       .filter((i: any) => !filtroMed || i.titulo.toLowerCase().includes(filtroMed.toLowerCase()))
       .filter((i: any) => i.data === dataHistorico)
       .sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
-  }, [itens, filtroMed, dataHistorico]);
+  }, [logs, filtroMed, dataHistorico]);
 
   const registrarMedicacao = async (item: any, horario: string, novoHorario?: string) => {
     const titulo = novoHorario 
@@ -137,7 +134,7 @@ function Acompanhamento() {
             onClick={() => setView("compromissos")} 
             className="notebook flex flex-col items-center justify-center p-8 transition hover:bg-sky/30 border-gold/40 shadow-soft"
           >
-            <span className="text-6xl mb-3">🩺</span>
+            <span className="text-4xl mb-3">🩺</span>
             <span className="font-display text-2xl font-bold italic">Compromissos</span>
             <span className="text-sm text-muted-foreground mt-1">Consultas, Terapias e Exames</span>
           </button>
@@ -146,7 +143,7 @@ function Acompanhamento() {
             onClick={() => setView("medicacoes")} 
             className="notebook flex flex-col items-center justify-center p-8 transition hover:bg-rose/20 border-gold/40 shadow-soft"
           >
-            <span className="text-6xl mb-3">💊</span>
+            <span className="text-4xl mb-3">💊</span>
             <span className="font-display text-2xl font-bold italic">Medicações</span>
             <span className="text-sm text-muted-foreground mt-1">Horários, remédios e histórico</span>
           </button>
@@ -298,11 +295,11 @@ function Acompanhamento() {
           </select>
         </div>
 
-        {logs.length === 0 ? (
+        {logsFiltrados.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum registro encontrado.</p>
         ) : (
           <ul className="space-y-2">
-            {logs.map((l: any) => (
+            {logsFiltrados.map((l: any) => (
               <li key={l.id} className="flex items-center gap-2 rounded-lg bg-muted/50 p-2 text-sm">
                 <span className="text-green-600">✓</span>
                 <span className="flex-1">{l.titulo}</span>
