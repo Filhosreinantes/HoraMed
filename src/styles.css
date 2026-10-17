@@ -66,6 +66,11 @@
   --input: oklch(0.88 0.03 88);
   --ring: oklch(0.64 0.1 248);
   --shadow-soft: 0 6px 24px -10px oklch(0.39 0.07 250 / 0.22);
+
+  /* 🎨 Tema padrão (azul) — evita flash antes do banco carregar */
+  --tema: #5B92C7;
+  --tema-claro: #E8F1F9;
+  --tema-escuro: #2C4A6B;
 }
 
 @layer base {
