@@ -13,7 +13,6 @@ import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { supabase } from "@/lib/supabase";
 
 function NotFoundComponent() {
   return (
@@ -105,27 +104,6 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-
-  // ✅ RASTREADOR DE AFILIADOS (Definitivo)
-  useEffect(() => {
-    const ref = new URLSearchParams(window.location.search).get("ref");
-
-    if (ref) {
-      localStorage.setItem("afiliado_ref", ref);
-      console.log("🔍 TENTANDO REGISTRAR CLIQUE:", ref);
-
-      supabase
-        .from("affiliate_clicks")
-        .insert({ codigo_ref: ref, app_origem: "Rotina Azul" })
-        .then(({ error }) => {
-          if (error) {
-            console.error("❌ ERRO NO SUPABASE:", error);
-          } else {
-            console.log("✅ CLIQUE REGISTRADO!");
-          }
-        });
-    }
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
