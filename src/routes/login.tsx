@@ -28,6 +28,7 @@ function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [ocupado, setOcupado] = useState(false);
+  const [pixAberto, setPixAberto] = useState(false);
 
   const entrar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +82,85 @@ function Login() {
         <Botao type="button" variant="outline" disabled={ocupado} onClick={criar} className="w-full">Criar minha conta</Botao>
         <Botao type="button" variant="ghost" onClick={esqueci} className="w-full py-1 text-sm">Esqueci minha senha</Botao>
       </form>
+
+      {/* ═══ LOJA FILHOS REINANTES ═══ */}
+      <div className="mt-8 pt-6 border-t border-gold/30">
+        <h2 className="text-center font-display text-sm font-bold text-gold mb-1 uppercase tracking-widest">
+          Loja Filhos Reinantes
+        </h2>
+        <p className="text-center text-xs text-muted-foreground mb-4">
+          Série Quero Ser Como Criança
+        </p>
+
+        <div className="space-y-3">
+          {/* Card Rotina Azul */}
+          <div className="notebook flex items-center justify-between p-3 border-gold/40">
+            <div>
+              <h3 className="font-display font-bold text-lg text-foreground">Rotina Azul</h3>
+              <p className="text-xs text-muted-foreground">Sua agenda de cuidados</p>
+            </div>
+            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">Grátis</span>
+          </div>
+
+          {/* Card Pedacinho Azul (Clicável) */}
+          <button
+            onClick={() => setPixAberto(true)}
+            className="notebook flex w-full items-center justify-between p-3 border-gold/40 text-left transition hover:bg-sky/20"
+          >
+            <div>
+              <h3 className="font-display font-bold text-lg text-foreground">Meu Pedacinho Azul</h3>
+              <p className="text-xs text-muted-foreground">Diário, biografia e comunidade</p>
+            </div>
+            <span className="rounded-full bg-gold/20 px-3 py-1 text-xs font-bold text-foreground">R$ 14,90</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ═══ MODAL DE COMPRA PIX ═══ */}
+      {pixAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm space-y-4 rounded-3xl bg-white p-6 shadow-xl">
+            <div className="text-center">
+              <h2 className="font-display text-2xl font-bold text-foreground">Seus dados</h2>
+              <p className="text-xs text-muted-foreground mt-1">Débora · R$ 14,90</p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-muted-foreground">Nome completo</label>
+                <input type="text" placeholder="Seu nome" className="field w-full mt-1" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted-foreground">E-mail</label>
+                <input type="email" placeholder="seu@email.com" className="field w-full mt-1" />
+                <p className="text-[0.65rem] text-muted-foreground mt-1">Enviaremos o acesso para este e-mail.</p>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted-foreground">CPF</label>
+                <input type="text" placeholder="000.000.000-00" className="field w-full mt-1" />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setPixAberto(false)}
+                className="flex-1 rounded-full border border-gray-300 py-2.5 text-sm font-bold text-gray-600"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  alert("PIX gerado com sucesso! (Aqui abriria o QR Code)");
+                  setPixAberto(false);
+                }}
+                className="flex-1 rounded-full bg-[#00B87C] py-2.5 text-sm font-bold text-white shadow-md"
+              >
+                Gerar PIX
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
