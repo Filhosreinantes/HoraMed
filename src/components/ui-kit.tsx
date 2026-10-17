@@ -19,7 +19,6 @@ export function SeletorTesouro({
   somenteLeitura = false,
 }: {
   prefixo?: string;
-  /** Quando true, o bloco vira apenas display: sem chevron, sem dropdown, sem clique. */
   somenteLeitura?: boolean;
 }) {
   const { pessoas, ativa, setAtivaId } = useApp();
@@ -52,7 +51,8 @@ export function SeletorTesouro({
             className="truncate font-display text-lg font-bold"
             style={{ color: "var(--tema-escuro, #2C4A6B)" }}
           >
-            {ativa.nome}
+            {/* ✅ AQUI: O emoji foi adicionado antes do nome */}
+            {ativa.emoji} {ativa.nome}
           </span>
         </div>
         {interativo && (
@@ -68,7 +68,6 @@ export function SeletorTesouro({
 
       {interativo && aberto && (
         <>
-          {/* Overlay para fechar ao clicar fora */}
           <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} aria-hidden="true" />
           <ul
             role="listbox"
@@ -93,7 +92,7 @@ export function SeletorTesouro({
                     )}
                     style={{ color: "var(--tema-escuro, #2C4A6B)" }}
                   >
-                    {p.nome}
+                    {p.emoji} {p.nome}
                   </button>
                 </li>
               );
