@@ -18,6 +18,7 @@ const CORES: Record<string, { cor: string; claro: string; escuro: string }> = {
   azul: { cor: "#5B92C7", claro: "#E8F1F9", escuro: "#2C4A6B" },
   rosa: { cor: "#D18CA0", claro: "#FBE5EC", escuro: "#8B3E58" },
   verde: { cor: "#6FB89A", claro: "#DCF0E7", escuro: "#3D8064" },
+  amarelo: { cor: "#E5B84B", claro: "#FBF1D6", escuro: "#7A5A12" },
   "lilás": { cor: "#9B8FC7", claro: "#EDE7F5", escuro: "#524880" },
   lilas: { cor: "#9B8FC7", claro: "#EDE7F5", escuro: "#524880" },
 };
@@ -40,7 +41,6 @@ function Layout() {
 }
 
 function Shell() {
-  // ✅ Agora dentro do AppProvider → useApp() funciona
   const { ativa } = useApp();
   const tema = CORES[ativa?.tema || "azul"] ?? CORES.azul;
 
