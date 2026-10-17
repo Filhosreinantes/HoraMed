@@ -65,7 +65,7 @@ function Login() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-10">
       <div className="text-center">
-        <img src="/filhos.png" alt="Mãe abraçando seus filhos" width={140} height={140} className="mx-auto h-36 w-36" />
+        <img src="/filhos.png" alt="Filhos Reinantes" className="mx-auto h-16 w-auto mb-4" />
         <h1 className="mt-2 text-3xl font-semibold">Rotina Azul</h1>
         <p className="mt-1 text-muted-foreground">Sua agenda de cuidados num só lugar.</p>
       </div>
