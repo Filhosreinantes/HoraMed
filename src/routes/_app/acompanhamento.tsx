@@ -33,7 +33,7 @@ const LINHAS: { s: Situacao; label: string }[] = [
 ];
 
 function Acompanhamento() {
-  const { itens, logs, carregando, salvarRegistros } = useApp();
+  const { itens, logs, ativa, carregando, salvarRegistros } = useApp();
   const [view, setView] = useState<View>("menu");
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [drill, setDrill] = useState<Drill>(null);
@@ -57,7 +57,7 @@ function Acompanhamento() {
   const meds = itens.filter((i) => i.cuidado === "Medicação");
   const emUso = ordenarPorDataHora(meds.filter((m) => medicacaoEmUso(m)));
   const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
-  
+
   const proximos = useMemo(() => {
     let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação"));
     if (buscaProximos) {
@@ -72,9 +72,9 @@ function Acompanhamento() {
       const horarios = m.horarios && m.horarios.length > 0 ? m.horarios : (m.frequencia ? m.frequencia.split(",") : ["08:00"]);
       horarios.forEach((h: string) => {
         const hClean = h.trim();
-        const log = logs.find((i: any) => 
-          i.parentId === m.id && 
-          i.data === hoje && 
+        const log = logs.find((i: any) =>
+          i.parentId === m.id &&
+          i.data === hoje &&
           i.titulo.includes(hClean)
         );
         arr.push({ med: m, horario: hClean, log });
@@ -91,15 +91,15 @@ function Acompanhamento() {
   }, [logs, filtroMed, dataHistorico]);
 
   const registrarMedicacao = async (item: any, horario: string, novoHorario?: string) => {
-    const titulo = novoHorario 
+    const titulo = novoHorario
       ? `Atrasou: ${item.medicamento} (${horario} -> ${novoHorario})`
       : `Tomou: ${item.medicamento} (${horario})`;
-      
+
     const dados: Dados = {
       id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo,
       cuidado: "Medicação_Log" as any, evento: true, parentId: item.id, data: hoje,
     };
-    
+
     const ok = await salvarRegistros([dados], "medicacao_logs");
     if (ok) {
       toast.success(novoHorario ? "Atraso registrado!" : "Medicação registrada!");
@@ -121,10 +121,12 @@ function Acompanhamento() {
     return (
       <div className="mx-auto max-w-lg space-y-5 py-6">
         <header className="text-center">
-          <h1 className="text-3xl font-semibold">Acompanhamento</h1>
+          <h1 className="text-3xl font-semibold">
+            {ativa?.emoji} {ativa?.nome}
+          </h1>
           <p className="text-sm text-muted-foreground">O que você quer ver hoje?</p>
         </header>
-        
+
         <div className="px-4"><SeletorTesouro /></div>
 
         <div className="grid gap-4 px-4 mt-8">
@@ -151,7 +153,7 @@ function Acompanhamento() {
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold">
           <ChevronLeft className="h-4 w-4" /> Voltar ao menu
         </Botao>
-        
+
         <header>
           <h1 className="text-2xl font-semibold">Compromissos</h1>
         </header>
@@ -215,12 +217,12 @@ function Acompanhamento() {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Todos os próximos compromissos</h2>
           </div>
-          
+
           {/* Filtro de busca por tipo */}
           <div className="flex items-center gap-2 mb-2">
-            <select 
-              className="field text-sm p-2 w-full border-gold/30 bg-card" 
-              value={buscaProximos} 
+            <select
+              className="field text-sm p-2 w-full border-gold/30 bg-card"
+              value={buscaProximos}
               onChange={(e) => setBuscaProximos(e.target.value)}
             >
               <option value="">Todos os tipos</option>
@@ -259,7 +261,7 @@ function Acompanhamento() {
           <Clock className="h-5 w-5 text-accent" />
           <h2 className="text-lg font-semibold">Horários de Hoje</h2>
         </div>
-        
+
         {agendaHoje.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhuma medicação agendada para hoje.</p>
         ) : (
@@ -293,7 +295,7 @@ function Acompanhamento() {
           <History className="h-5 w-5 text-gold" />
           <h2 className="text-lg font-semibold">Histórico</h2>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-2 mb-3">
           <input type="date" className="field text-sm p-2" value={dataHistorico} onChange={(e) => setDataHistorico(e.target.value)} />
           <select className="field text-sm p-2" value={filtroMed} onChange={(e) => setFiltroMed(e.target.value)}>
@@ -339,9 +341,9 @@ function Acompanhamento() {
           <div className="w-full max-w-sm space-y-4 rounded-3xl bg-card p-5 shadow-xl">
             <h3 className="font-display text-lg font-bold text-foreground">Atrasou a medicação</h3>
             <p className="text-sm text-muted-foreground">Qual o novo horário que você deu a dose do {atrasoModal.item.medicamento}?</p>
-            <input 
-              type="time" 
-              className="w-full rounded-xl border p-2" 
+            <input
+              type="time"
+              className="w-full rounded-xl border p-2"
               defaultValue={new Date().toTimeString().slice(0, 5)}
               onChange={(e) => setAtrasoModal({ ...atrasoModal, novoHorario: e.target.value } as any)}
             />
