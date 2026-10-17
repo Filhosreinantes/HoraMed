@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "./supabase";
 import { nowLocalISO, resolverSituacoes, uid, type Dados, type Item, type Pessoa } from "./cuidados";
 
-// ✅ Novo: registro com tipo junto
-export type RegistroComTipo = Dados & { tipo: string };
+type Registro = Dados & { tipo?: string };
 
 interface Ctx {
   user: User;
@@ -21,13 +20,10 @@ interface Ctx {
 const AppCtx = createContext<Ctx | null>(null);
 const KEY = "rotina-azul:ativa";
 
-// ✅ Tipos que o Rotina Azul exibe
-const TIPOS_VISIVEIS = ["acontecimentos", "medicacao_logs"];
-
 export function AppProvider({ user, children }: { user: User; children: ReactNode }) {
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [ativaId, setAtivaIdState] = useState<string | null>(null);
-  const [registros, setRegistros] = useState<RegistroComTipo[]>([]);
+  const [registros, setRegistros] = useState<Registro[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   const recarregar = useCallback(async () => {
@@ -56,18 +52,17 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
       return c && lista.some((p) => p.id === c) ? c : lista[0]?.id ?? null;
     });
 
-    // ✅ Agora busca dados E tipo
+    // 🔑 Passo 2: trazer "tipo" junto com "dados"
     const { data: rs } = await supabase
       .from("pedacinho_registros")
-      .select("dados, tipo")   // ← aqui
+      .select("dados, tipo")
       .eq("user_id", user.id);
 
-    // ✅ Filtra só pelos tipos visíveis e mantém a coluna tipo
-    const registrosFiltrados: RegistroComTipo[] = ((rs ?? []) as { dados: Dados; tipo: string }[])
-      .filter((r) => r.dados && TIPOS_VISIVEIS.includes(r.tipo))
-      .map((r) => ({ ...r.dados, tipo: r.tipo }));
-
-    setRegistros(registrosFiltrados);
+    setRegistros(
+      ((rs ?? []) as { dados: Dados; tipo: string | null }[])
+        .filter((r) => r.dados)
+        .map((r) => ({ ...r.dados, tipo: r.tipo ?? "acontecimentos" }))
+    );
     setCarregando(false);
   }, [user.id]);
 
@@ -96,12 +91,14 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
       toast.error("Não foi possível salvar. Tente novamente.");
       return false;
     }
-    // ✅ Atualiza o estado com tipo incluso
+    // manter o estado consistente com o que foi persistido
     setRegistros((r) => [...r, ...lista.map((d) => ({ ...d, tipo }))]);
     return true;
   };
 
   const ativa = pessoas.find((p) => p.id === ativaId) ?? null;
+
+  // O filtro de "cuidado" já existe — agora "tipo" também está disponível em `d`
   const itens = useMemo(
     () => resolverSituacoes(registros.filter((d) => d.pessoaId === ativaId && d.cuidado)),
     [registros, ativaId],
