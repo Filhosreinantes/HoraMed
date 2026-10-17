@@ -25,6 +25,25 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
   const [registros, setRegistros] = useState<(Dados & { tipo?: string })[]>([]);
   const [carregando, setCarregando] = useState(true);
 
+  // ✅ RASTREADOR DE AFILIADOS
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref');
+    
+    if (ref) {
+      // 1. Salva o código no navegador do cliente
+      localStorage.setItem('afiliado_ref', ref);
+      
+      // 2. Registra o clique no banco para estatísticas
+      supabase.from('affiliate_clicks').insert({
+        codigo_ref: ref,
+        app_origem: "Rotina Azul"
+      }).then(({ error }) => {
+        if (error) console.error("Erro ao registrar clique do afiliado:", error);
+      });
+    }
+  }, []);
+
   const recarregar = useCallback(async () => {
     const { data: ps, error } = await supabase
       .from("pedacinho_pessoas")
