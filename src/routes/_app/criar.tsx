@@ -25,6 +25,7 @@ function Criar() {
   const navigate = useNavigate();
   const [tipo, setTipo] = useState<Cuidado | null>(null);
   const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1" });
+  const [horarios, setHorarios] = useState<string[]>(["08:00"]);
   const [salvando, setSalvando] = useState(false);
   const set = (k: K) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
@@ -42,7 +43,8 @@ function Criar() {
     } else if (tipo === "Exame") {
       lista = [{ ...base, id: uid(), titulo: `Exame · ${f.tipoExame}`, tipoExame: f.tipoExame, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, recomendacoes: f.recomendacoes }];
     } else if (tipo === "Medicação") {
-      lista = [{ ...base, id: uid(), titulo: f.medicamento ?? "Medicação", medicamento: f.medicamento, dosagem: f.dosagem, frequencia: f.frequencia, profissional: f.profissional, especialidade: f.especialidade, inicio: f.inicio, fim: f.fim || undefined }];
+      const limpos = horarios.filter(Boolean).sort();
+      lista = [{ ...base, id: uid(), titulo: `Medicação · ${f.medicamento}`, medicamento: f.medicamento, dosagem: f.dosagem, horarios: limpos, frequencia: limpos.join(", "), profissional: f.profissional, especialidade: f.especialidade, inicio: f.inicio, fim: f.fim || undefined }];
     } else {
       const prog = f.programacao as Programacao;
       const meses = Number(f.meses);
@@ -150,7 +152,40 @@ function Criar() {
             <>
               <Campo label="Nome">{inp("medicamento", "text", true)}</Campo>
               <Campo label="Dosagem">{inp("dosagem")}</Campo>
-              <Campo label="Horário(s)">{inp("frequencia")}</Campo>
+              <div className="space-y-1.5">
+                <span className="text-sm font-semibold">Horários</span>
+                <div className="space-y-2">
+                  {horarios.map((h, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        className="field flex-1"
+                        type="time"
+                        required
+                        value={h}
+                        onChange={(e) => setHorarios((p) => p.map((v, i) => (i === idx ? e.target.value : v)))}
+                      />
+                      {horarios.length > 1 && (
+                        <button
+                          type="button"
+                          aria-label="Remover horário"
+                          onClick={() => setHorarios((p) => p.filter((_, i) => i !== idx))}
+                          className="rounded-xl bg-muted px-3 py-2 text-sm font-semibold"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setHorarios((p) => [...p, ""])}
+                    className="rounded-xl border border-gold/50 bg-card px-4 py-2 text-sm font-semibold"
+                  >
+                    + Adicionar horário
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">Ex: 08:00, 14:00, 20:00 — usaremos para os lembretes.</p>
+              </div>
               <Campo label="Profissional que prescreveu">{inp("profissional")}</Campo>
               <Campo label="Especialidade">{inp("especialidade")}</Campo>
               <div className="grid grid-cols-2 gap-3">
