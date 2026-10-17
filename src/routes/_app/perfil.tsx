@@ -21,7 +21,11 @@ export const Route = createFileRoute("/_app/perfil")({
   component: Perfil,
 });
 
-const EMOJIS = ["🌸", "⭐", "🦋", "🐻", "🌈", "🐳", "🌻", "🚀", "🦁", "💙"];
+const EMOJIS_PESSOAS = [
+  "👩", "👨", "👧", "👦", "🧑", "👵", "👴",
+  "👩‍🦱", "👨‍🦱", "👱‍♀️", "👱", "🧔",
+  "👩🏾", "👨🏿", "👩🏼", "🧒",
+];
 const TEMAS = ["azul", "rosa", "verde", "amarelo", "lilás"];
 
 function Perfil() {
@@ -34,7 +38,7 @@ function Perfil() {
     if (!form?.nome) { toast.error("Informe o nome."); return; }
     const agora = nowLocalISO();
     const campos = {
-      nome: form.nome, emoji: form.emoji || "🌸", tema: form.tema || "azul",
+      nome: form.nome, emoji: form.emoji || "👧", tema: form.tema || "azul",
       nascimento: form.nascimento || null, nome_mae: form.nome_mae || null,
       nome_pai: form.nome_pai || null, responsavel: form.responsavel || null, atualizado_em: agora,
     };
@@ -56,11 +60,11 @@ function Perfil() {
   return (
     <div className="space-y-5">
       <h1 className="text-3xl font-semibold">Perfil</h1>
-      <SeletorTesouro prefixo="Tesouro ativo" />
+      <SeletorTesouro prefixo="Tesouro Ativo" />
 
       {ativa && (
         <div className="notebook flex items-center gap-4 p-5">
-          <span className="grid h-16 w-16 place-items-center rounded-full bg-gold-soft text-4xl">{ativa.emoji || "🌸"}</span>
+          <span className="grid h-16 w-16 place-items-center rounded-full bg-gold-soft text-4xl">{ativa.emoji || "👧"}</span>
           <div className="min-w-0 flex-1">
             <p className="font-display text-2xl font-semibold italic">{ativa.nome}</p>
             {ativa.nascimento && <p className="text-sm text-muted-foreground">Nasceu em {formatData(ativa.nascimento)}</p>}
@@ -71,7 +75,7 @@ function Perfil() {
         </div>
       )}
 
-      <Botao variant="outline" className="flex w-full items-center justify-center gap-2" onClick={() => setForm({ emoji: "🌸", tema: "azul" })}>
+      <Botao variant="outline" className="flex w-full items-center justify-center gap-2" onClick={() => setForm({ emoji: "👧", tema: "azul" })}>
         <Plus className="h-5 w-5" /> Adicionar outro Tesouro
       </Botao>
 
@@ -103,7 +107,7 @@ function Perfil() {
             <div>
               <p className="mb-1.5 text-sm font-semibold">Emoji</p>
               <div className="flex flex-wrap gap-2">
-                {EMOJIS.map((em) => (
+                {EMOJIS_PESSOAS.map((em) => (
                   <button type="button" key={em} onClick={() => setForm({ ...form, emoji: em })}
                     className={`grid h-11 w-11 place-items-center rounded-full text-2xl ${form.emoji === em ? "bg-sky ring-2 ring-accent" : "bg-muted"}`}>
                     {em}
