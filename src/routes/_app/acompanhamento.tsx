@@ -37,9 +37,8 @@ function Acompanhamento() {
   const [view, setView] = useState<View>("menu");
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [drill, setDrill] = useState<Drill>(null);
-  const [buscaProximos, setBuscaProximos] = useState(""); // Busca por tipo
+  const [buscaProximos, setBuscaProximos] = useState("");
 
-  // Estados para medicação
   const [atrasoModal, setAtrasoModal] = useState<{ item: any, horario: string } | null>(null);
   const [filtroMed, setFiltroMed] = useState("");
   const [dataHistorico, setDataHistorico] = useState(hojeYMD());
@@ -121,9 +120,8 @@ function Acompanhamento() {
     return (
       <div className="mx-auto max-w-lg space-y-5 py-6">
         <header className="text-center">
-          <h1 className="text-3xl font-semibold">
-            {ativa?.emoji} {ativa?.nome}
-          </h1>
+          {/* TÍTULO FIXO ACOMPANHAMENTO */}
+          <h1 className="text-3xl font-semibold">Acompanhamento</h1>
           <p className="text-sm text-muted-foreground">O que você quer ver hoje?</p>
         </header>
 
@@ -218,7 +216,6 @@ function Acompanhamento() {
             <h2 className="text-xl font-semibold">Todos os próximos compromissos</h2>
           </div>
 
-          {/* Filtro de busca por tipo */}
           <div className="flex items-center gap-2 mb-2">
             <select
               className="field text-sm p-2 w-full border-gold/30 bg-card"
