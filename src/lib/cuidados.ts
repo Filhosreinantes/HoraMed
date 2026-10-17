@@ -30,6 +30,7 @@ export interface Dados {
   medicamento?: string | undefined;
   dosagem?: string | undefined;
   frequencia?: string | undefined;
+  horarios?: string[] | undefined;
   inicio?: string | undefined;
   fim?: string | undefined;
   situacao?: Situacao | undefined;
@@ -129,6 +130,12 @@ export function gerarSessoes(
 
 export function subtitulo(d: Dados) {
   return [d.profissional, d.especialidade || d.tipoTerapia || d.tipoExame, d.local].filter(Boolean).join(" · ");
+}
+
+/** Title always starts with the care type, e.g. "Medicação · Predsin". */
+export function tituloComTipo(d: Dados) {
+  if (!d.cuidado) return d.titulo;
+  return d.titulo.startsWith(d.cuidado) ? d.titulo : `${d.cuidado} · ${d.titulo}`;
 }
 
 export function tituloEvento(original: Dados, situacao: Situacao) {
