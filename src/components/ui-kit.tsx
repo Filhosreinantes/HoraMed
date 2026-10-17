@@ -18,17 +18,28 @@ export function SeletorTesouro({ prefixo = "Cuidando de" }: { prefixo?: string }
   const { pessoas, ativa, setAtivaId } = useApp();
   if (!ativa) return null;
   return (
-    <div className="flex items-center gap-3 rounded-full border border-gold/40 bg-card px-4 py-2 shadow-soft">
-      <span className="text-2xl">{ativa.emoji || "🌸"}</span>
+    <div
+      className="flex items-center gap-3 rounded-2xl border p-3 shadow-sm transition"
+      style={{ backgroundColor: "var(--tema-claro)", borderColor: "var(--tema)" }}
+    >
+      {/* Ícone substituído */}
+      <img src="/icon-192.png" alt="Tesouro" className="h-8 w-8 rounded-full object-cover shadow-sm" />
+
       <div className="min-w-0 flex-1">
-        <p className="text-xs text-muted-foreground">{prefixo}</p>
+        <span
+          className="text-xs font-semibold uppercase tracking-wider"
+          style={{ color: "var(--tema-escuro)" }}
+        >
+          {prefixo}
+        </span>
         {pessoas.length > 1 ? (
           <div className="relative">
             <select
               aria-label="Escolher Tesouro"
               value={ativa.id}
               onChange={(e) => setAtivaId(e.target.value)}
-              className="w-full appearance-none bg-transparent pr-6 font-display text-lg font-semibold italic outline-none"
+              className="w-full appearance-none bg-transparent pr-6 font-display text-lg font-bold outline-none"
+              style={{ color: "var(--tema-escuro)" }}
             >
               {pessoas.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -36,10 +47,15 @@ export function SeletorTesouro({ prefixo = "Cuidando de" }: { prefixo?: string }
                 </option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-0 top-1.5 h-4 w-4 text-accent" />
+            <ChevronDown
+              className="pointer-events-none absolute right-0 top-1.5 h-4 w-4"
+              style={{ color: "var(--tema-escuro)" }}
+            />
           </div>
         ) : (
-          <p className="truncate font-display text-lg font-semibold italic">{ativa.nome}</p>
+          <p className="truncate font-display text-lg font-bold" style={{ color: "var(--tema-escuro)" }}>
+            {ativa.nome}
+          </p>
         )}
       </div>
     </div>
