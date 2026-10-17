@@ -30,17 +30,18 @@ function Login() {
   const [ocupado, setOcupado] = useState(false);
   const [pixAberto, setPixAberto] = useState(false);
 
-  // ✅ RASTREADOR NA TELA DE LOGIN BONITA
+  // ✅ RASTREADOR DE AFILIADOS NA TELA DE LOGIN
   useEffect(() => {
     const ref = new URLSearchParams(window.location.search).get("ref");
     if (ref) {
       localStorage.setItem("afiliado_ref", ref);
-      // Grava o clique no banco
       import("@/lib/supabase").then(({ supabase }) => {
         supabase.from("affiliate_clicks").insert({
           codigo_ref: ref,
           app_origem: "Rotina Azul"
-        }).then(); 
+        }).then(({ error }) => {
+          if (error) console.error("Erro no rastreio:", error);
+        });
       });
     }
   }, []);
