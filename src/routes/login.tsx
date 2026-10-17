@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react"; // ✅ useEffect importado
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { Botao, Campo, Divisor } from "@/components/ui-kit";
@@ -29,6 +29,21 @@ function Login() {
   const [senha, setSenha] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [pixAberto, setPixAberto] = useState(false);
+
+  // ✅ RASTREADOR NA TELA DE LOGIN BONITA
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) {
+      localStorage.setItem("afiliado_ref", ref);
+      // Grava o clique no banco
+      import("@/lib/supabase").then(({ supabase }) => {
+        supabase.from("affiliate_clicks").insert({
+          codigo_ref: ref,
+          app_origem: "Rotina Azul"
+        }).then(); 
+      });
+    }
+  }, []);
 
   const entrar = async (e: React.FormEvent) => {
     e.preventDefault();
