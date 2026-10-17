@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Check, Clock, History } from "lucide-react";
+import { X, ChevronLeft, Check, Clock, History, Search } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   EMOJI, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -37,6 +37,7 @@ function Acompanhamento() {
   const [view, setView] = useState<View>("menu");
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [drill, setDrill] = useState<Drill>(null);
+  const [buscaProximos, setBuscaProximos] = useState(""); // Busca por tipo
 
   // Estados para medicação
   const [atrasoModal, setAtrasoModal] = useState<{ item: any, horario: string } | null>(null);
@@ -57,16 +58,20 @@ function Acompanhamento() {
   const emUso = ordenarPorDataHora(meds.filter((m) => medicacaoEmUso(m)));
   const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
   
-  const proximos = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação"));
+  const proximos = useMemo(() => {
+    let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação"));
+    if (buscaProximos) {
+      lista = lista.filter((i) => i.cuidado === buscaProximos);
+    }
+    return lista;
+  }, [itens, buscaProximos]);
 
-  // Agenda de hoje lendo DIRETO dos logs
   const agendaHoje = useMemo(() => {
     const arr: any[] = [];
     emUso.forEach((m) => {
       const horarios = m.horarios && m.horarios.length > 0 ? m.horarios : (m.frequencia ? m.frequencia.split(",") : ["08:00"]);
       horarios.forEach((h: string) => {
         const hClean = h.trim();
-        // Busca no log
         const log = logs.find((i: any) => 
           i.parentId === m.id && 
           i.data === hoje && 
@@ -78,7 +83,6 @@ function Acompanhamento() {
     return arr.sort((a, b) => a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
-  // Histórico lendo DIRETO dos logs
   const logsFiltrados = useMemo(() => {
     return logs
       .filter((i: any) => !filtroMed || i.titulo.toLowerCase().includes(filtroMed.toLowerCase()))
@@ -92,14 +96,8 @@ function Acompanhamento() {
       : `Tomou: ${item.medicamento} (${horario})`;
       
     const dados: Dados = {
-      id: uid(),
-      pessoaId: item.pessoaId,
-      criadoEm: nowLocalISO(),
-      titulo,
-      cuidado: "Medicação_Log" as any,
-      evento: true,
-      parentId: item.id,
-      data: hoje,
+      id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo,
+      cuidado: "Medicação_Log" as any, evento: true, parentId: item.id, data: hoje,
     };
     
     const ok = await salvarRegistros([dados], "medicacao_logs");
@@ -130,19 +128,13 @@ function Acompanhamento() {
         <div className="px-4"><SeletorTesouro /></div>
 
         <div className="grid gap-4 px-4 mt-8">
-          <button 
-            onClick={() => setView("compromissos")} 
-            className="notebook flex flex-col items-center justify-center p-8 transition hover:bg-sky/30 border-gold/40 shadow-soft"
-          >
+          <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center p-8 transition hover:bg-sky/30 border-gold/40 shadow-soft">
             <span className="text-4xl mb-3">🩺</span>
             <span className="font-display text-2xl font-bold italic">Compromissos</span>
             <span className="text-sm text-muted-foreground mt-1">Consultas, Terapias e Exames</span>
           </button>
 
-          <button 
-            onClick={() => setView("medicacoes")} 
-            className="notebook flex flex-col items-center justify-center p-8 transition hover:bg-rose/20 border-gold/40 shadow-soft"
-          >
+          <button onClick={() => setView("medicacoes")} className="notebook flex flex-col items-center justify-center p-8 transition hover:bg-rose/20 border-gold/40 shadow-soft">
             <span className="text-4xl mb-3">💊</span>
             <span className="font-display text-2xl font-bold italic">Medicações</span>
             <span className="text-sm text-muted-foreground mt-1">Horários, remédios e histórico</span>
@@ -220,7 +212,24 @@ function Acompanhamento() {
         <Divisor />
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold">Próximos compromissos</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Todos os próximos compromissos</h2>
+          </div>
+          
+          {/* Filtro de busca por tipo */}
+          <div className="flex items-center gap-2 mb-2">
+            <select 
+              className="field text-sm p-2 w-full border-gold/30 bg-card" 
+              value={buscaProximos} 
+              onChange={(e) => setBuscaProximos(e.target.value)}
+            >
+              <option value="">Todos os tipos</option>
+              <option value="Consulta">Consulta</option>
+              <option value="Terapia">Terapia</option>
+              <option value="Exame">Exame</option>
+            </select>
+          </div>
+
           {proximos.length === 0 ? (
             <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso agendado.</p>
           ) : (
@@ -245,7 +254,6 @@ function Acompanhamento() {
       </header>
       <SeletorTesouro />
 
-      {/* HORÁRIOS DE HOJE */}
       <section className="notebook p-4 space-y-3">
         <div className="flex items-center gap-2 mb-2">
           <Clock className="h-5 w-5 text-accent" />
@@ -280,7 +288,6 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* HISTÓRICO */}
       <section className="notebook p-4 space-y-3">
         <div className="flex items-center gap-2 mb-2">
           <History className="h-5 w-5 text-gold" />
@@ -310,7 +317,6 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* LISTAS DE MEDICAMENTOS */}
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">💊 Remédios Cadastrados</h2>
         <div className="grid grid-cols-2 gap-3">
@@ -319,7 +325,7 @@ function Acompanhamento() {
               <p className="font-display text-3xl font-bold text-accent">{emUso.length}</p>
            </div>
            <div className="notebook p-4 text-left">
-              <p className="text-sm text-muted-foreground">Encerradas</p>
+              <p className="text-sm text-muted-foreground">Encerrados</p>
               <p className="font-display text-3xl font-bold text-gold">{encerradas.length}</p>
            </div>
         </div>
@@ -328,7 +334,6 @@ function Acompanhamento() {
         </div>
       </section>
 
-      {/* MODAL DE ATRASO */}
       {atrasoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-sm space-y-4 rounded-3xl bg-card p-5 shadow-xl">
