@@ -8,9 +8,9 @@ export const Route = createFileRoute("/redefinir-senha")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Redefinir senha · Controle na Rotina Azul" },
+      { title: "Redefinir senha · Rotina Azul" },
       { name: "description", content: "Crie uma nova senha para sua conta." },
-      { property: "og:title", content: "Redefinir senha · Controle na Rotina Azul" },
+      { property: "og:title", content: "Redefinir senha · Rotina Azul" },
       { property: "og:description", content: "Crie uma nova senha para sua conta." },
     ],
   }),

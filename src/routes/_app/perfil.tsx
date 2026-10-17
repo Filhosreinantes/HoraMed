@@ -10,9 +10,9 @@ import { Botao, Campo, Divisor, SeletorTesouro } from "@/components/ui-kit";
 export const Route = createFileRoute("/_app/perfil")({
   head: () => ({
     meta: [
-      { title: "Perfil · Controle na Rotina Azul" },
+      { title: "Perfil · Rotina Azul" },
       { name: "description", content: "Gerencie seus Tesouros e sua conta." },
-      { property: "og:title", content: "Perfil · Controle na Rotina Azul" },
+      { property: "og:title", content: "Perfil · Rotina Azul" },
       { property: "og:description", content: "Gerencie seus Tesouros e sua conta." },
     ],
   }),

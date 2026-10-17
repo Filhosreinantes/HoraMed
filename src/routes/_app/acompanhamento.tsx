@@ -13,9 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const Route = createFileRoute("/_app/acompanhamento")({
   head: () => ({
     meta: [
-      { title: "Acompanhamento · Controle na Rotina Azul" },
+      { title: "Acompanhamento · Rotina Azul" },
       { name: "description", content: "Panorama de consultas, terapias, exames e medicações." },
-      { property: "og:title", content: "Acompanhamento · Controle na Rotina Azul" },
+      { property: "og:title", content: "Acompanhamento · Rotina Azul" },
       { property: "og:description", content: "Panorama da rotina de cuidados do seu Tesouro." },
     ],
   }),
