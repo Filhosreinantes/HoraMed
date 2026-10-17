@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/
 import { useEffect } from "react";
 import { Calendar, Plus, User } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { AppProvider } from "@/lib/app-store";
+import { AppProvider, useApp } from "@/lib/app-store";
 
 export const Route = createFileRoute("/_app")({
   ssr: false,
@@ -14,6 +14,14 @@ export const Route = createFileRoute("/_app")({
   component: Layout,
 });
 
+const CORES: Record<string, { cor: string; claro: string; escuro: string }> = {
+  azul: { cor: "#5B92C7", claro: "#E8F1F9", escuro: "#2C4A6B" },
+  rosa: { cor: "#D18CA0", claro: "#FBE5EC", escuro: "#8B3E58" },
+  verde: { cor: "#6FB89A", claro: "#DCF0E7", escuro: "#3D8064" },
+  "lilás": { cor: "#9B8FC7", claro: "#EDE7F5", escuro: "#524880" },
+  lilas: { cor: "#9B8FC7", claro: "#EDE7F5", escuro: "#524880" },
+};
+
 function Layout() {
   const { user } = Route.useRouteContext();
   const navigate = useNavigate();
@@ -24,9 +32,30 @@ function Layout() {
     return () => data.subscription.unsubscribe();
   }, [navigate]);
 
-  const tab = "flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold";
   return (
     <AppProvider user={user}>
+      <Shell />
+    </AppProvider>
+  );
+}
+
+function Shell() {
+  // ✅ Agora dentro do AppProvider → useApp() funciona
+  const { ativa } = useApp();
+  const tema = CORES[ativa?.tema || "azul"] ?? CORES.azul;
+
+  const tab = "flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold";
+
+  return (
+    <div
+      style={
+        {
+          "--tema": tema.cor,
+          "--tema-claro": tema.claro,
+          "--tema-escuro": tema.escuro,
+        } as React.CSSProperties
+      }
+    >
       <div className="mx-auto min-h-screen max-w-lg px-4 pb-28 pt-6">
         <Outlet />
       </div>
@@ -46,6 +75,6 @@ function Layout() {
           </Link>
         </div>
       </nav>
-    </AppProvider>
+    </div>
   );
 }
