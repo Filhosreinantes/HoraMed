@@ -14,11 +14,19 @@ export function Divisor() {
   );
 }
 
-export function SeletorTesouro({ prefixo = "Cuidando de" }: { prefixo?: string }) {
+export function SeletorTesouro({
+  prefixo = "Cuidando de",
+  somenteLeitura = false,
+}: {
+  prefixo?: string;
+  /** Quando true, o bloco vira apenas display: sem chevron, sem dropdown, sem clique. */
+  somenteLeitura?: boolean;
+}) {
   const { pessoas, ativa, setAtivaId } = useApp();
   if (!ativa) return null;
 
-  const multi = pessoas.length > 1;
+  // Só permite interação se NÃO for leitura E houver mais de um Tesouro
+  const interativo = !somenteLeitura && pessoas.length > 1;
 
   return (
     <div className="relative flex items-center justify-between gap-3 rounded-2xl border border-gold/30 bg-card p-3 shadow-sm">
@@ -30,9 +38,12 @@ export function SeletorTesouro({ prefixo = "Cuidando de" }: { prefixo?: string }
           {ativa.nome}
         </span>
       </div>
-      {multi && <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground" />}
-      {/* Overlay invisível: clicar em qualquer ponto abre o seletor nativo (só quando há mais de 1) */}
-      {multi && (
+
+      {/* Chevron só aparece quando há o que fazer com o clique */}
+      {interativo && <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground" />}
+
+      {/* Overlay invisível (dropdown nativo) só quando interativo */}
+      {interativo && (
         <select
           className="absolute inset-0 cursor-pointer opacity-0"
           aria-label="Escolher Tesouro"
