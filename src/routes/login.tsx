@@ -8,9 +8,9 @@ export const Route = createFileRoute("/login")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Entrar · Controle na Rotina Azul" },
+      { title: "Entrar · Rotina Azul" },
       { name: "description", content: "Entre para ver a agenda de cuidados dos seus Tesouros." },
-      { property: "og:title", content: "Entrar · Controle na Rotina Azul" },
+      { property: "og:title", content: "Entrar · Rotina Azul" },
       { property: "og:description", content: "Sua agenda de cuidados num só lugar." },
     ],
   }),
@@ -64,7 +64,7 @@ function Login() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-10">
       <div className="text-center">
         <img src="/filhos.png" alt="Mãe abraçando seus filhos" width={140} height={140} className="mx-auto h-36 w-36" />
-        <h1 className="mt-2 text-3xl font-semibold">Controle na Rotina Azul</h1>
+        <h1 className="mt-2 text-3xl font-semibold">Rotina Azul</h1>
         <p className="mt-1 text-muted-foreground">Sua agenda de cuidados num só lugar.</p>
       </div>
       <Divisor />

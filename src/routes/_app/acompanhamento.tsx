@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
 import {
-  EMOJI, formatData, hojeYMD, medicacaoEmUso, nowLocalISO, subtitulo, tituloEvento, uid,
+  EMOJI, formatData, hojeYMD, medicacaoEmUso, nowLocalISO, subtitulo, tituloComTipo, tituloEvento, uid,
   type Cuidado, type Item, type Situacao,
 } from "@/lib/cuidados";
 import { Botao, Divisor, Pill, SeletorTesouro, Selo } from "@/components/ui-kit";
@@ -13,9 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const Route = createFileRoute("/_app/acompanhamento")({
   head: () => ({
     meta: [
-      { title: "Acompanhamento · Controle na Rotina Azul" },
+      { title: "Acompanhamento · Rotina Azul" },
       { name: "description", content: "Panorama de consultas, terapias, exames e medicações." },
-      { property: "og:title", content: "Acompanhamento · Controle na Rotina Azul" },
+      { property: "og:title", content: "Acompanhamento · Rotina Azul" },
       { property: "og:description", content: "Panorama da rotina de cuidados do seu Tesouro." },
     ],
   }),
@@ -187,7 +187,7 @@ function Linha({ i, onClick }: { i: Item; onClick: () => void }) {
     <button onClick={onClick} className="flex w-full items-center gap-3 rounded-2xl border border-gold/30 bg-card p-3 text-left shadow-soft">
       <span className="text-3xl">{i.cuidado ? EMOJI[i.cuidado] : "📌"}</span>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold">{i.titulo}</p>
+        <p className="truncate font-semibold">{tituloComTipo(i)}</p>
         {subtitulo(i) && <p className="truncate text-sm text-muted-foreground">{subtitulo(i)}</p>}
         <p className="text-xs text-accent">{quando}</p>
       </div>
@@ -231,7 +231,7 @@ function Detalhes({ item, onClose }: { item: Item; onClose: () => void }) {
     ["Profissional", item.profissional], ["Especialidade", item.especialidade],
     ["Tipo de terapia", item.tipoTerapia], ["Tipo de exame", item.tipoExame],
     ["Recomendações", item.recomendacoes], ["Medicamento", item.medicamento],
-    ["Dosagem", item.dosagem], ["Horário(s)", item.frequencia],
+    ["Dosagem", item.dosagem], ["Horários", item.horarios?.length ? item.horarios.join(" · ") : item.frequencia],
     ["Início", formatData(item.inicio)], ["Fim", item.cuidado === "Medicação" ? (item.fim ? formatData(item.fim) : "Uso contínuo") : undefined],
     ["Anotações", item.observacaoAcompanhamento],
   ];
@@ -242,7 +242,7 @@ function Detalhes({ item, onClose }: { item: Item; onClose: () => void }) {
         <div className="flex items-start gap-3">
           <span className="text-4xl">{item.cuidado ? EMOJI[item.cuidado] : "📌"}</span>
           <div className="flex-1">
-            <h3 className="text-xl font-semibold">{item.titulo}</h3>
+            <h3 className="text-xl font-semibold">{tituloComTipo(item)}</h3>
             {item.cuidado !== "Medicação" && <Selo s={item.situacao} />}
           </div>
         </div>

@@ -52,8 +52,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     const { data: rs } = await supabase
       .from("pedacinho_registros")
       .select("dados")
-      .eq("user_id", user.id)
-      .eq("tipo", "acontecimentos");
+      .eq("user_id", user.id);
     setRegistros(((rs ?? []) as { dados: Dados }[]).map((r) => r.dados).filter(Boolean));
     setCarregando(false);
   }, [user.id]);
