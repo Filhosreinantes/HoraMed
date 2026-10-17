@@ -5,6 +5,8 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Rotina Azul" },
       { name: "description", content: "Sua agenda de cuidados num só lugar." },
       { property: "og:title", content: "Rotina Azul" },
