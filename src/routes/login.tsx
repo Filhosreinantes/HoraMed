@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { Botao, Campo, Divisor } from "@/components/ui-kit";
 
-
 export const Route = createFileRoute("/login")({
   ssr: false,
   head: () => ({
