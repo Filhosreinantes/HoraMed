@@ -51,7 +51,7 @@ export function CompromissoCard({ item }: { item: Item }) {
       <Botao variant="ghost" aria-expanded={expandido} aria-controls={detalhesId}
         onClick={() => setExpandido((v) => !v)}
         className="flex w-full items-center gap-3 rounded-none p-3 text-left text-foreground hover:no-underline active:scale-100">
-        <span aria-hidden="true" className="shrink-0 text-3xl">{item.cuidado ? EMOJI[item.cuidado] : "📌"}</span>
+        <span aria-hidden="true" className="shrink-0 text-2xl">{item.cuidado ? EMOJI[item.cuidado] : "📌"}</span>
         <div className="min-w-0 flex-1">
           <p className="break-words font-semibold">{tituloComTipo(item)}</p>
           {subtitulo(item) && <p className="break-words text-sm font-normal text-muted-foreground">{subtitulo(item)}</p>}
