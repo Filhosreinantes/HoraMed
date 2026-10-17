@@ -139,11 +139,16 @@ export function tituloComTipo(d: Dados) {
 }
 
 export function tituloEvento(original: Dados, situacao: Situacao) {
-  const partes = [original.cuidado, original.profissional, original.especialidade || original.tipoTerapia || original.tipoExame]
-    .filter(Boolean)
-    .join(" · ");
-  const quando = [formatData(original.data), original.hora].filter(Boolean).join(" · ");
-  return `${SITUACAO_LABEL[situacao]}: ${partes}${quando ? `, seria dia ${quando}` : ""}`;
+  // The outcome is stored in situacao; the title identifies the care naturally.
+  void situacao;
+  if (original.cuidado === "Medicação") {
+    return tituloComTipo({ ...original, titulo: original.medicamento || original.titulo });
+  }
+  if (original.profissional?.trim()) {
+    const especialidade = original.especialidade || original.tipoTerapia || original.tipoExame;
+    return `${original.cuidado || "Compromisso"} com ${original.profissional.trim()}${especialidade ? ` (${especialidade})` : ""}`;
+  }
+  return tituloComTipo(original);
 }
 
 /** Original items with effective situation derived from immutable event records. */
@@ -151,8 +156,9 @@ export function resolverSituacoes(todos: Dados[]) {
   const eventos = todos.filter((d) => d.evento && d.parentId);
   const ultimo = new Map<string, Dados>();
   for (const e of eventos) {
-    const prev = ultimo.get(e.parentId!);
-    if (!prev || e.criadoEm > prev.criadoEm) ultimo.set(e.parentId!, e);
+    if (!e.parentId) continue;
+    const prev = ultimo.get(e.parentId);
+    if (!prev || e.criadoEm >= prev.criadoEm) ultimo.set(e.parentId, e);
   }
   return todos
     .filter((d) => !d.evento)
@@ -168,4 +174,18 @@ export type Item = ReturnType<typeof resolverSituacoes>[number];
 
 export function medicacaoEmUso(d: Dados, hoje = hojeYMD()) {
   return !d.fim || d.fim >= hoje;
+}
+
+/** Missing dates sort last; medication schedules use their start and earliest time. */
+export function ordenarPorDataHora<T extends Dados>(itens: T[]): T[] {
+  const chave = (d: Dados) => {
+    const data = d.data || d.inicio || "9999-12-31";
+    const hora = d.hora || [...(d.horarios || [])].sort()[0] || "00:00";
+    return `${data}T${hora}`;
+  };
+  return [...itens].sort((a, b) => chave(a).localeCompare(chave(b)));
+}
+
+export function compromissoPendente(d: Dados, hoje = hojeYMD()) {
+  return d.cuidado === "Medicação" ? medicacaoEmUso(d, hoje) : (d.situacao ?? "proximo") === "proximo";
 }

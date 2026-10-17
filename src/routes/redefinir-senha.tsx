@@ -8,6 +8,8 @@ export const Route = createFileRoute("/redefinir-senha")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Redefinir senha · Rotina Azul" },
       { name: "description", content: "Crie uma nova senha para sua conta." },
       { property: "og:title", content: "Redefinir senha · Rotina Azul" },

@@ -8,6 +8,8 @@ import { Botao, Campo, Divisor, SeletorTesouro } from "@/components/ui-kit";
 export const Route = createFileRoute("/_app/criar")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Novo compromisso · Rotina Azul" },
       { name: "description", content: "Agende consultas, terapias, exames e medicações." },
       { property: "og:title", content: "Novo compromisso · Rotina Azul" },

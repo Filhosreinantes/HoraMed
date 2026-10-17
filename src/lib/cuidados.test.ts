@@ -1,7 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { gerarSessoes, medicacaoEmUso, resolverSituacoes, formatData } from "./cuidados";
+import { gerarSessoes, medicacaoEmUso, resolverSituacoes, formatData, ordenarPorDataHora, compromissoPendente, tituloEvento, type Dados } from "./cuidados";
 
 describe("regras de cuidados", () => {
+  const registro = (dados: Partial<Dados>): Dados => ({ id: "a", pessoaId: "p", criadoEm: "2026-10-17", titulo: "Predsin", ...dados });
+  it("ordena por data e depois hora, sem alterar a lista original", () => {
+    const lista = [registro({ id: "tarde", data: "2026-10-18", hora: "14:00" }), registro({ id: "antes", data: "2026-10-17", hora: "20:00" }), registro({ id: "cedo", data: "2026-10-18", hora: "08:00" })];
+    expect(ordenarPorDataHora(lista).map((d) => d.id)).toEqual(["antes", "cedo", "tarde"]);
+    expect(lista[0]?.id).toBe("tarde");
+  });
+  it("inclui medicação contínua ou vigente, mesmo após registrar acompanhamento", () => {
+    expect(compromissoPendente(registro({ cuidado: "Medicação", situacao: "feito" }), "2026-10-17")).toBe(true);
+    expect(compromissoPendente(registro({ cuidado: "Medicação", fim: "2026-10-20" }), "2026-10-17")).toBe(true);
+    expect(compromissoPendente(registro({ cuidado: "Medicação", fim: "2026-10-17" }), "2026-10-17")).toBe(true);
+    expect(compromissoPendente(registro({ cuidado: "Medicação", fim: "2026-10-16" }), "2026-10-17")).toBe(false);
+  });
+  it("inclui consultas, exames e terapias pendentes, inclusive sem situação", () => {
+    for (const cuidado of ["Consulta", "Exame", "Terapia"] as const) {
+      expect(compromissoPendente(registro({ cuidado }))).toBe(true);
+      expect(compromissoPendente(registro({ cuidado, situacao: "faltou" }))).toBe(false);
+    }
+  });
+  it("ordena medicação por início e menor horário da lista", () => {
+    const lista = [registro({ id: "tarde", inicio: "2026-10-17", horarios: ["20:00", "14:00"] }), registro({ id: "cedo", inicio: "2026-10-17", horarios: ["20:00", "08:00"] })];
+    expect(ordenarPorDataHora(lista).map((d) => d.id)).toEqual(["cedo", "tarde"]);
+  });
+  it("gera título de consulta com profissional e especialidade", () => {
+    expect(tituloEvento(registro({ cuidado: "Consulta", profissional: "Dr. Marcelo", especialidade: "Nefrologista" }), "feito")).toBe("Consulta com Dr. Marcelo (Nefrologista)");
+    expect(tituloEvento(registro({ cuidado: "Consulta", profissional: "Dr. Marcelo" }), "faltou")).toBe("Consulta com Dr. Marcelo");
+  });
+  it("gera título de medicação com nome do medicamento", () => {
+    expect(tituloEvento(registro({ cuidado: "Medicação", medicamento: "Predsin" }), "feito")).toBe("Medicação · Predsin");
+  });
   it("a cada 15 dias por 3 meses gera 6 sessões", () => {
     const s = gerarSessoes("2026-10-01", "quinzenal", 3);
     expect(s).toHaveLength(6);

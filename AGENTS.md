@@ -11,3 +11,4 @@
 
 - Data lives in the user's external Supabase (shared with "Meu Pedacinho Azul"); client is in src/lib/supabase.ts and app routes are client-only under src/routes/_app — session is in localStorage.
 - Follow-ups on appointments are new `evento` records with `parentId`; never update originals — history must stay immutable.
+- Appointment ordering and eligibility live in browser-safe cuidados helpers; expandable appointment cards reuse these resolved items so all lists and follow-ups share the same rules.

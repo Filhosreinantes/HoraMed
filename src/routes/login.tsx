@@ -8,6 +8,8 @@ export const Route = createFileRoute("/login")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Entrar · Rotina Azul" },
       { name: "description", content: "Entre para ver a agenda de cuidados dos seus Tesouros." },
       { property: "og:title", content: "Entrar · Rotina Azul" },
