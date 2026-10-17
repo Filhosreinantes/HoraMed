@@ -4,6 +4,9 @@ import { toast } from "sonner";
 import { supabase } from "./supabase";
 import { nowLocalISO, resolverSituacoes, uid, type Dados, type Item, type Pessoa } from "./cuidados";
 
+// ✅ Novo: registro com tipo junto
+export type RegistroComTipo = Dados & { tipo: string };
+
 interface Ctx {
   user: User;
   pessoas: Pessoa[];
@@ -12,16 +15,19 @@ interface Ctx {
   itens: Item[];
   carregando: boolean;
   recarregar: () => Promise<void>;
-  salvarRegistros: (lista: Dados[]) => Promise<boolean>;
+  salvarRegistros: (lista: Dados[], tipo?: string) => Promise<boolean>;
 }
 
 const AppCtx = createContext<Ctx | null>(null);
 const KEY = "rotina-azul:ativa";
 
+// ✅ Tipos que o Rotina Azul exibe
+const TIPOS_VISIVEIS = ["acontecimentos", "medicacao_logs"];
+
 export function AppProvider({ user, children }: { user: User; children: ReactNode }) {
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [ativaId, setAtivaIdState] = useState<string | null>(null);
-  const [registros, setRegistros] = useState<Dados[]>([]);
+  const [registros, setRegistros] = useState<RegistroComTipo[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   const recarregar = useCallback(async () => {
@@ -49,11 +55,19 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
       const c = cur ?? salvo;
       return c && lista.some((p) => p.id === c) ? c : lista[0]?.id ?? null;
     });
+
+    // ✅ Agora busca dados E tipo
     const { data: rs } = await supabase
       .from("pedacinho_registros")
-      .select("dados")
+      .select("dados, tipo")   // ← aqui
       .eq("user_id", user.id);
-    setRegistros(((rs ?? []) as { dados: Dados }[]).map((r) => r.dados).filter(Boolean));
+
+    // ✅ Filtra só pelos tipos visíveis e mantém a coluna tipo
+    const registrosFiltrados: RegistroComTipo[] = ((rs ?? []) as { dados: Dados; tipo: string }[])
+      .filter((r) => r.dados && TIPOS_VISIVEIS.includes(r.tipo))
+      .map((r) => ({ ...r.dados, tipo: r.tipo }));
+
+    setRegistros(registrosFiltrados);
     setCarregando(false);
   }, [user.id]);
 
@@ -66,13 +80,13 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     setAtivaIdState(id);
   };
 
-  const salvarRegistros = async (lista: Dados[]) => {
+  const salvarRegistros = async (lista: Dados[], tipo: string = "acontecimentos") => {
     const agora = nowLocalISO();
     const rows = lista.map((d) => ({
       id: d.id,
       user_id: user.id,
       pessoa_id: d.pessoaId,
-      tipo: "acontecimentos",
+      tipo,
       dados: d,
       criado_em: agora,
       atualizado_em: agora,
@@ -82,7 +96,8 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
       toast.error("Não foi possível salvar. Tente novamente.");
       return false;
     }
-    setRegistros((r) => [...r, ...lista]);
+    // ✅ Atualiza o estado com tipo incluso
+    setRegistros((r) => [...r, ...lista.map((d) => ({ ...d, tipo }))]);
     return true;
   };
 
