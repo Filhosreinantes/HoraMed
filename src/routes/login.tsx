@@ -84,34 +84,27 @@ function Login() {
       </form>
 
       {/* ═══ LOJA FILHOS REINANTES ═══ */}
-      <div className="mt-8 pt-6 border-t border-gold/30">
-        <h2 className="text-center font-display text-sm font-bold text-gold mb-1 uppercase tracking-widest">
+      <div className="mt-8 border-t border-gold/30 pt-6">
+        <h2 className="mb-4 text-center font-display text-sm font-bold uppercase tracking-widest text-gold">
           Loja Filhos Reinantes
         </h2>
-        <p className="text-center text-xs text-muted-foreground mb-4">
-          Série Quero Ser Como Criança
-        </p>
 
         <div className="space-y-3">
-          {/* Card Rotina Azul */}
-          <div className="notebook flex items-center justify-between p-3 border-gold/40">
-            <div>
-              <h3 className="font-display font-bold text-lg text-foreground">Rotina Azul</h3>
-              <p className="text-xs text-muted-foreground">Sua agenda de cuidados</p>
-            </div>
-            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">Grátis</span>
-          </div>
-
-          {/* Card Pedacinho Azul (Clicável) */}
+          {/* Card Rotina Azul (Clicável para comprar) */}
           <button
             onClick={() => setPixAberto(true)}
-            className="notebook flex w-full items-center justify-between p-3 border-gold/40 text-left transition hover:bg-sky/20"
+            className="notebook flex w-full items-center justify-between border-gold/40 p-4 text-left transition hover:bg-sky/20"
           >
             <div>
-              <h3 className="font-display font-bold text-lg text-foreground">Meu Pedacinho Azul</h3>
-              <p className="text-xs text-muted-foreground">Diário, biografia e comunidade</p>
+              <h3 className="font-display text-lg font-bold text-foreground">Rotina Azul</h3>
+              <p className="text-xs text-muted-foreground">Sua agenda de cuidados</p>
             </div>
-            <span className="rounded-full bg-gold/20 px-3 py-1 text-xs font-bold text-foreground">R$ 14,90</span>
+            <div className="text-right">
+              <span className="block rounded-full bg-gold/20 px-3 py-1 text-xs font-bold text-foreground">
+                Assinar
+              </span>
+              <span className="mt-1 block text-sm font-bold text-gold">R$ 5,00/mês</span>
+            </div>
           </button>
         </div>
       </div>
@@ -121,8 +114,8 @@ function Login() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-sm space-y-4 rounded-3xl bg-white p-6 shadow-xl">
             <div className="text-center">
-              <h2 className="font-display text-2xl font-bold text-foreground">Seus dados</h2>
-              <p className="text-xs text-muted-foreground mt-1">Débora · R$ 14,90</p>
+              <h2 className="font-display text-2xl font-bold text-foreground">Assinar Rotina Azul</h2>
+              <p className="mt-1 text-xs text-muted-foreground">Acesso mensal · R$ 5,00</p>
             </div>
 
             <div className="space-y-3">
