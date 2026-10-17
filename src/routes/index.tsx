@@ -10,10 +10,17 @@ export const Route = createFileRoute("/")({
     ],
   }),
   beforeLoad: async () => {
-    // 1. Verifica se o usuário já está logado
     const { data } = await supabase.auth.getSession();
     
-    // 2. Se estiver logado, vai para o painel. Se não, vai para a tela de login bonita.
-    throw redirect({ to: data.session ? "/acompanhamento" : "/login", replace: true });
+    // Pega o ?ref= da URL, se existir
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    
+    // Vai para o acompanhamento se logado, senão vai para o login bonito.
+    // O search: (prev) => prev garante que o ?ref= não se perca!
+    throw redirect({ 
+      to: data.session ? "/acompanhamento" : "/login", 
+      search: (prev) => ({ ...prev, ...(ref ? { ref } : {}) }),
+      replace: true 
+    });
   },
 });
