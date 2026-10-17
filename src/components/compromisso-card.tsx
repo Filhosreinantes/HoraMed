@@ -24,7 +24,8 @@ export function CompromissoCard({ item }: { item: Item }) {
         id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(),
         titulo: tituloEvento(item, situacao), cuidado: item.cuidado,
         situacao, observacaoAcompanhamento: nota, evento: true, parentId: item.id,
-      }]);
+      }], item.cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos"); // <-- AQUI: passa o tipo correto
+      
       if (ok) {
         toast.success("Acompanhamento registrado!");
         setNota("");
