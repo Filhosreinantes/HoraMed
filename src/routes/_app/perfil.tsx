@@ -81,16 +81,6 @@ function Perfil() {
 
       <Divisor />
 
-      <a
-        href="https://meu-pedacinho-azul.vercel.app"
-        target="_blank"
-        rel="noreferrer"
-        className="block rounded-3xl border border-gold/60 bg-gradient-to-br from-sky to-gold-soft p-5 shadow-soft"
-      >
-        <p className="font-display text-xl font-semibold italic">Conheça o Meu Pedacinho Azul →</p>
-        <p className="mt-1 text-sm text-muted-foreground">Diário, biografia do Tesouro, comunidade e muito mais.</p>
-      </a>
-
       <Botao variant="danger" className="flex w-full items-center justify-center gap-2" onClick={() => setSair(true)}>
         <LogOut className="h-5 w-5" /> Sair da conta
       </Botao>
