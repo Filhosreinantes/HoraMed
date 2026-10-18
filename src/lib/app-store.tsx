@@ -12,6 +12,7 @@ interface Ctx {
   itens: Item[];
   logs: Dados[];
   carregando: boolean;
+  assinaturaAtiva: boolean | null; // ✅ NOVO
   recarregar: () => Promise<void>;
   salvarRegistros: (lista: Dados[], tipo?: string) => Promise<boolean>;
 }
@@ -24,6 +25,38 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
   const [ativaId, setAtivaIdState] = useState<string | null>(null);
   const [registros, setRegistros] = useState<(Dados & { tipo?: string })[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [assinaturaAtiva, setAssinaturaAtiva] = useState<boolean | null>(null); // ✅ NOVO
+
+  // ✅ VERIFICA A ASSINATURA ASSIM QUE O APP CARREGA
+  useEffect(() => {
+    async function checarAssinatura() {
+      if (!user.email) {
+        setAssinaturaAtiva(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("rotina_assinaturas")
+        .select("ativa_ate")
+        .eq("email", user.email)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Erro ao buscar assinatura:", error);
+        setAssinaturaAtiva(false);
+        return;
+      }
+
+      if (data && data.ativa_ate) {
+        const hoje = new Date();
+        const ativaAte = new Date(data.ativa_ate);
+        setAssinaturaAtiva(ativaAte > hoje);
+      } else {
+        setAssinaturaAtiva(false);
+      }
+    }
+    checarAssinatura();
+  }, [user.email]);
 
   const recarregar = useCallback(async () => {
     const { data: ps, error } = await supabase
@@ -102,7 +135,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
   );
 
   return (
-    <AppCtx.Provider value={{ user, pessoas, ativa, setAtivaId, itens, logs, carregando, recarregar, salvarRegistros }}>
+    <AppCtx.Provider value={{ user, pessoas, ativa, setAtivaId, itens, logs, carregando, assinaturaAtiva, recarregar, salvarRegistros }}>
       {children}
     </AppCtx.Provider>
   );
