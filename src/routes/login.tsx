@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react"; // ✅ useEffect importado
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { Botao, Campo, Divisor } from "@/components/ui-kit";
@@ -38,7 +38,7 @@ function Login() {
       import("@/lib/supabase").then(({ supabase }) => {
         supabase.from("affiliate_clicks").insert({
           codigo_ref: ref,
-          app_origem: "Rotina Azul"
+          app_origem: "Rotina Azul",
         }).then(({ error }) => {
           if (error) console.error("Erro no rastreio:", error);
         });
@@ -141,7 +141,13 @@ function Login() {
               </div>
               <div>
                 <label className="text-xs font-bold text-muted-foreground">E-mail</label>
-                <input type="email" placeholder="seu@email.com" className="field w-full mt-1" />
+                {/* ✅ ID adicionado */}
+                <input
+                  id="email-comprador"
+                  type="email"
+                  placeholder="seu@email.com"
+                  className="field w-full mt-1"
+                />
                 <p className="text-[0.65rem] text-muted-foreground mt-1">Enviaremos o acesso para este e-mail.</p>
               </div>
               <div>
@@ -158,13 +164,35 @@ function Login() {
                 Cancelar
               </button>
               <button
-                onClick={() => {
-                  alert("PIX gerado com sucesso! (Aqui abriria o QR Code)");
+                onClick={async () => {
+                  // ✅ Pega o e-mail pelo ID do input
+                  const inputEmail = document.getElementById("email-comprador") as HTMLInputElement;
+                  const emailCliente = inputEmail?.value?.trim();
+                  const ref = localStorage.getItem("afiliado_ref");
+
+                  // ✅ Validação: impede de ir sem e-mail
+                  if (!emailCliente) {
+                    toast.error("Informe seu e-mail para continuar.");
+                    return;
+                  }
+
+                  // ✅ Salva o clique com o e-mail para o Webhook cruzar depois
+                  if (ref) {
+                    const { error } = await supabase.from("affiliate_clicks").insert({
+                      codigo_ref: ref,
+                      email_cliente: emailCliente,
+                      app_origem: "Rotina Azul",
+                    });
+                    if (error) console.error("Erro ao registrar compra:", error);
+                  }
+
+                  // ✅ Abre o PagBank
+                  window.open("https://pag.ae/82f-9CE1a", "_blank");
                   setPixAberto(false);
                 }}
                 className="flex-1 rounded-full bg-[#00B87C] py-2.5 text-sm font-bold text-white shadow-md"
               >
-                Gerar PIX
+                Ir para o Pagamento
               </button>
             </div>
           </div>
