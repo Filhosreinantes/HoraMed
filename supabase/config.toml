@@ -1,0 +1,9 @@
+project_id = "jzigayoqkgnqjtdfjskf"
+
+# O comprador ainda não tem conta (compra na tela de login) e o PagBank não
+# envia JWT, então as duas funções validam tudo no próprio código.
+[functions.rotina-azul-checkout]
+verify_jwt = false
+
+[functions.rotina-azul-webhook]
+verify_jwt = false

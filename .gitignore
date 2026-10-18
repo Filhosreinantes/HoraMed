@@ -30,3 +30,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Segredos locais
+.env
+.env.*
+supabase/.temp/
