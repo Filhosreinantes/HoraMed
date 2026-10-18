@@ -41,11 +41,52 @@ function Layout() {
 }
 
 function Shell() {
-  const { ativa } = useApp();
+  const { ativa, assinaturaAtiva } = useApp(); // ✅ Puxando a verificação do app-store
   const tema = CORES[ativa?.tema || "azul"] ?? CORES.azul;
 
   const tab = "flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold";
 
+  // 1. Enquanto o Supabase está checando a tabela rotina_assinaturas
+  if (assinaturaAtiva === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#FDFBF7]">
+        <p className="text-sm font-semibold text-[#7A8A9A]">Verificando assinatura...</p>
+      </div>
+    );
+  }
+
+  // 2. Se a pessoa não pagou (ou expirou)
+  if (assinaturaAtiva === false) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#FDFBF7] p-6 text-center">
+        <div className="w-full max-w-sm rounded-3xl border border-[#B8933F]/40 bg-white p-8 shadow-soft">
+          <span className="text-5xl">💙</span>
+          <h2 className="mt-4 font-display text-2xl font-bold italic text-[#2C4A6B]">
+            Assine o Rotina Azul
+          </h2>
+          <p className="mt-2 text-sm text-[#7A8A9A]">
+            Sua assinatura não está ativa. Libere o acesso completo para organizar a rotina dos seus Tesouros.
+          </p>
+          <a
+            href="https://pag.ae/82f-9CE1a"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-6 block w-full rounded-2xl bg-[#5B92C7] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#4a7eb3]"
+          >
+            Assinar agora por R$ 5,00/mês
+          </a>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="mt-4 text-xs font-semibold text-[#7A8A9A] underline-offset-4 hover:underline"
+          >
+            Sair da conta
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Se a assinatura está ativa, mostra o app normalmente
   return (
     <div
       style={
