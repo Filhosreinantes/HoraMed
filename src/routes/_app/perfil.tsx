@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Plus, LogOut } from "lucide-react";
+import OneSignal from "react-onesignal";
 import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
 import { supabase } from "@/lib/supabase";
@@ -32,6 +33,42 @@ function Perfil() {
   const { ativa, user, recarregar, setAtivaId } = useApp();
   const [form, setForm] = useState<Partial<Pessoa> | null>(null);
   const [sair, setSair] = useState(false);
+  const [notifPermissao, setNotifPermissao] = useState<NotificationPermission>("default");
+  const [ativando, setAtivando] = useState(false);
+
+  // Lê o estado atual da permissão (client-only)
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    setNotifPermissao(Notification.permission);
+  }, []);
+
+  const ativarLembretes = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      toast.error("Seu navegador não suporta notificações.");
+      return;
+    }
+    setAtivando(true);
+    try {
+      if (OneSignal.initialized) {
+        await OneSignal.Notifications.requestPermission();
+      } else {
+        await Notification.requestPermission();
+      }
+      const novaPermissao = Notification.permission;
+      setNotifPermissao(novaPermissao);
+
+      if (novaPermissao === "granted") {
+        toast.success("Lembretes ativados! 💙");
+      } else if (novaPermissao === "denied") {
+        toast.error("Notificações bloqueadas. Habilite nas configurações do navegador.");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Não foi possível ativar os lembretes.");
+    } finally {
+      setAtivando(false);
+    }
+  };
 
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +115,24 @@ function Perfil() {
       <Botao variant="outline" className="flex w-full items-center justify-center gap-2" onClick={() => setForm({ emoji: "👧", tema: "azul" })}>
         <Plus className="h-5 w-5" /> Adicionar outro Tesouro
       </Botao>
+
+      {/* ✅ Lembretes de notificação */}
+      <button
+        type="button"
+        onClick={ativarLembretes}
+        disabled={ativando || notifPermissao === "granted"}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gold/50 bg-card py-3 font-semibold shadow-soft text-foreground disabled:opacity-70"
+      >
+        {notifPermissao === "granted" ? (
+          <>✅ Lembretes ativados</>
+        ) : notifPermissao === "denied" ? (
+          <>🔕 Notificações bloqueadas</>
+        ) : ativando ? (
+          <>Ativando…</>
+        ) : (
+          <>🔔 Ativar Lembretes de Medicação</>
+        )}
+      </button>
 
       <Divisor />
 
