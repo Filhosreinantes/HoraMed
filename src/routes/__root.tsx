@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
+import OneSignal from "react-onesignal"; // ✅ Import do OneSignal
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -104,6 +105,17 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // ✅ INICIALIZAÇÃO DO ONESIGNAL
+  useEffect(() => {
+    OneSignal.init({
+      appId: "SEU_APP_ID_AQUI", // ⚠️ Substitua pelo ID do seu app no painel do OneSignal
+      serviceWorkerPath: "onesignal/OneSignalSDKWorker.js",
+      serviceWorkerParam: { scope: "/onesignal/" },
+      notifyButton: { enable: false }, // Desativa o botão padrão para não quebrar o layout
+      allowLocalhostAsSecureOrigin: true, // Permite testar no seu computador (localhost)
+    }).catch((err) => console.error("Erro ao iniciar OneSignal:", err));
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
