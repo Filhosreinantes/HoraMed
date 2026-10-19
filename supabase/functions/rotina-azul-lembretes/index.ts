@@ -8,7 +8,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { lembretesDoDia, type Dados } from "../../../src/lib/cuidados.ts";
 
-const FUSO = "America/Sao_Paulo";
+const FUSO_PADRAO = "America/Sao_Paulo"; // quem ainda não salvou o fuso do aparelho
 const JANELA_MIN = 5; // tolera atrasos do cron sem perder lembretes
 const ONESIGNAL = "https://api.onesignal.com";
 
@@ -35,11 +35,22 @@ function json(body: unknown, status = 200) {
   });
 }
 
-/** Data (YYYY-MM-DD) e hora (HH:MM) de um instante no fuso de Brasília. */
-function emBrasilia(d: Date) {
+/** Fuso IANA válido ou o padrão (um valor inválido faria o Intl lançar erro). */
+function fusoValido(fuso: string | null | undefined) {
+  if (!fuso) return FUSO_PADRAO;
+  try {
+    new Intl.DateTimeFormat("en-CA", { timeZone: fuso });
+    return fuso;
+  } catch {
+    return FUSO_PADRAO;
+  }
+}
+
+/** Data (YYYY-MM-DD) e hora (HH:MM) de um instante no fuso indicado. */
+function noFuso(d: Date, fuso = FUSO_PADRAO) {
   const p = Object.fromEntries(
     new Intl.DateTimeFormat("en-CA", {
-      timeZone: FUSO,
+      timeZone: fuso,
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -76,8 +87,6 @@ async function enviarPush(userId: string, titulo: string, texto: string, topico:
 
 async function enviarDevidos() {
   const agora = Date.now();
-  const momentos = Array.from({ length: JANELA_MIN }, (_, k) => emBrasilia(new Date(agora - k * 60_000)));
-  const dias = [...new Set(momentos.map((m) => m.data))];
 
   const { data: regs, error } = await db
     .from("pedacinho_registros")
@@ -92,10 +101,20 @@ async function enviarDevidos() {
     lista.push(r.dados as Dados);
     porUsuaria.set(r.user_id, lista);
   }
+  if (porUsuaria.size === 0) return { enviados: 0 };
+
+  const { data: prefs } = await db
+    .from("rotina_preferencias")
+    .select("user_id, fuso")
+    .in("user_id", [...porUsuaria.keys()]);
+  const fusos = new Map((prefs ?? []).map((p) => [p.user_id as string, fusoValido(p.fuso)]));
 
   const devidos: { userId: string; l: ReturnType<typeof lembretesDoDia>[number]; data: string }[] = [];
   for (const [userId, todos] of porUsuaria) {
-    for (const dia of dias) {
+    // Os últimos minutos no relógio da usuária (o horário "08:00" é local dela).
+    const fuso = fusos.get(userId) ?? FUSO_PADRAO;
+    const momentos = Array.from({ length: JANELA_MIN }, (_, k) => noFuso(new Date(agora - k * 60_000), fuso));
+    for (const dia of new Set(momentos.map((m) => m.data))) {
       const horasDoDia = new Set(momentos.filter((m) => m.data === dia).map((m) => m.hora));
       for (const l of lembretesDoDia(todos, dia)) {
         if (horasDoDia.has(l.hora)) devidos.push({ userId, l, data: dia });
@@ -152,7 +171,7 @@ async function enviarTeste(req: Request) {
   const { data, error } = await db.auth.getUser(token);
   if (error || !data.user) return json({ error: "faça login novamente" }, 401);
 
-  const agora = emBrasilia(new Date());
+  const agora = noFuso(new Date());
   const { data: reserva } = await db
     .from("rotina_lembretes_enviados")
     .upsert(

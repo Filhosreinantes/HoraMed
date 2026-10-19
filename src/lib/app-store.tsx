@@ -36,6 +36,16 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     }
   }, [user.id]);
 
+  // Fuso do aparelho: o servidor envia os lembretes no horário local da usuária.
+  useEffect(() => {
+    const fuso = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!fuso) return;
+    supabase
+      .from("rotina_preferencias")
+      .upsert({ user_id: user.id, fuso, atualizado_em: new Date().toISOString() })
+      .then(({ error }) => error && console.error("Erro ao salvar fuso:", error));
+  }, [user.id]);
+
   // ✅ VERIFICAÇÃO DE ASSINATURA
   const checarAssinatura = useCallback(async () => {
     if (!user?.email) {
