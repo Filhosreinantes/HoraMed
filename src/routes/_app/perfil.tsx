@@ -34,18 +34,44 @@ function Perfil() {
   const [form, setForm] = useState<Partial<Pessoa> | null>(null);
   const [sair, setSair] = useState(false);
 
-  // ✅ NOVA FUNÇÃO DE ATIVAR LEMBRETES
+  // ✅ ATIVAR LEMBRETES (versão robusta)
   const ativarLembretes = async () => {
     try {
+      // 1. Verifica se o navegador já bloqueou o site
+      if (
+        typeof window !== "undefined" &&
+        window.Notification &&
+        Notification.permission === "denied"
+      ) {
+        toast.error(
+          "As notificações estão bloqueadas no navegador. Vá nas configurações do site e permita manualmente.",
+          { duration: 6000 }
+        );
+        return;
+      }
+
+      // 2. Verifica se o OneSignal carregou
+      if (!OneSignal || !OneSignal.Notifications) {
+        toast.error(
+          "O sistema de notificações ainda está carregando. Tente novamente em 2 segundos."
+        );
+        return;
+      }
+
+      // 3. Pede a permissão
       await OneSignal.Notifications.requestPermission();
+
+      // 4. Verifica se foi autorizado
       if (OneSignal.Notifications.permission) {
-        OneSignal.login(user.id); // Garante o vínculo do device com o ID do banco
+        await OneSignal.login(user.id); // Conecta o celular ao ID da usuária
         toast.success("Lembretes ativados com sucesso! 💙");
       } else {
-        toast.error("Você precisa permitir as notificações no navegador.");
+        toast.error(
+          "Permissão não concedida. O navegador precisa que você clique em 'Permitir'."
+        );
       }
     } catch (error) {
-      console.error(error);
+      console.error("Erro no OneSignal:", error);
       toast.error("Erro ao ativar as notificações.");
     }
   };
@@ -96,7 +122,7 @@ function Perfil() {
         <Plus className="h-5 w-5" /> Adicionar outro Tesouro
       </Botao>
 
-      {/* ✅ NOVO BOTÃO DE LEMBRETES */}
+      {/* ✅ BOTÃO DE LEMBRETES */}
       <button
         onClick={ativarLembretes}
         className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gold/50 bg-card py-3 font-semibold shadow-soft text-foreground transition hover:bg-muted"
