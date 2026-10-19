@@ -4,7 +4,23 @@ import { supabase } from "@/lib/supabase";
 
 type Pix = { id: string; status: string; qrText: string; qrPng: string | null; expiraEm: string };
 type Etapa =
-  { tipo: "dados" } | { tipo: "pix"; pix: Pix } | { tipo: "pago" } | { tipo: "expirado" };
+  | { tipo: "dados" }
+  | { tipo: "pix"; pix: Pix }
+  | { tipo: "pago" }
+  | { tipo: "expirado" }
+  | { tipo: "link" };
+
+// Plano B enquanto o PIX por API estiver indisponível: link de pagamento estático.
+const LINK_PAGAMENTO = "https://pag.ae/82f-9CE1a";
+
+class ErroCheckout extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+  ) {
+    super(message);
+  }
+}
 
 async function chamar<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke("rotina-azul-checkout", { body });
@@ -13,7 +29,10 @@ async function chamar<T>(body: Record<string, unknown>): Promise<T> {
       ?.json?.()
       .then((j: { error?: string }) => j.error)
       .catch(() => null);
-    throw new Error(msg || "Não foi possível falar com o pagamento. Tente novamente.");
+    throw new ErroCheckout(
+      msg || "Não foi possível falar com o pagamento. Tente novamente.",
+      error.context?.status,
+    );
   }
   return data as T;
 }
@@ -78,7 +97,10 @@ export function CheckoutPix({
       });
       setEtapa({ tipo: "pix", pix });
     } catch (e) {
-      toast.error((e as Error).message);
+      // Dados inválidos (4xx) são corrigíveis; falha do servidor ou do PagBank cai no link.
+      const status = e instanceof ErroCheckout ? e.status : undefined;
+      if (status && status < 500) toast.error((e as Error).message);
+      else setEtapa({ tipo: "link" });
     } finally {
       setOcupado(false);
     }
@@ -209,6 +231,28 @@ export function CheckoutPix({
               className="w-full rounded-full bg-[#00B87C] py-2.5 text-sm font-bold text-white shadow-md"
             >
               Continuar
+            </button>
+          </div>
+        )}
+
+        {etapa.tipo === "link" && (
+          <div className="space-y-3 text-center">
+            <p className="font-bold text-foreground">Pague pelo link do PagBank</p>
+            <p className="text-sm text-muted-foreground">
+              O PIX automático está indisponível no momento. Você pode pagar pelo link seguro do
+              PagBank; use o e-mail <strong>{email.trim().toLowerCase()}</strong> no pagamento.
+            </p>
+            <a
+              href={LINK_PAGAMENTO}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onFechar}
+              className="block w-full rounded-full bg-[#00B87C] py-2.5 text-sm font-bold text-white shadow-md"
+            >
+              Ir para o Pagamento
+            </a>
+            <button onClick={onFechar} className="w-full py-1 text-xs font-bold text-gray-500">
+              Cancelar
             </button>
           </div>
         )}
