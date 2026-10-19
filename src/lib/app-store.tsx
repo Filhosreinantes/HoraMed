@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
+import OneSignal from "react-onesignal";
 import { supabase } from "./supabase";
 import { nowLocalISO, resolverSituacoes, uid, type Dados, type Item, type Pessoa } from "./cuidados";
 
@@ -12,9 +13,9 @@ interface Ctx {
   itens: Item[];
   logs: Dados[];
   carregando: boolean;
-  assinaturaAtiva: boolean | null; // ✅ NOVO
   recarregar: () => Promise<void>;
   salvarRegistros: (lista: Dados[], tipo?: string) => Promise<boolean>;
+  assinaturaAtiva: boolean | null;
 }
 
 const AppCtx = createContext<Ctx | null>(null);
@@ -25,16 +26,24 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
   const [ativaId, setAtivaIdState] = useState<string | null>(null);
   const [registros, setRegistros] = useState<(Dados & { tipo?: string })[]>([]);
   const [carregando, setCarregando] = useState(true);
-  const [assinaturaAtiva, setAssinaturaAtiva] = useState<boolean | null>(null); // ✅ NOVO
+  const [assinaturaAtiva, setAssinaturaAtiva] = useState<boolean | null>(null);
 
-  // ✅ VERIFICA A ASSINATURA ASSIM QUE O APP CARREGA
+  // ✅ 1. CRÍTICO: Conecta o dispositivo ao ID do Supabase
+  useEffect(() => {
+    if (user?.id) {
+      OneSignal.login(user.id).catch((err) =>
+        console.error("Erro ao logar no OneSignal:", err)
+      );
+    }
+  }, [user.id]);
+
+  // ✅ VERIFICAÇÃO DE ASSINATURA
   useEffect(() => {
     async function checarAssinatura() {
-      if (!user.email) {
+      if (!user?.email) {
         setAssinaturaAtiva(false);
         return;
       }
-
       const { data, error } = await supabase
         .from("rotina_assinaturas")
         .select("ativa_ate")
@@ -42,18 +51,11 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
         .maybeSingle();
 
       if (error) {
-        console.error("Erro ao buscar assinatura:", error);
+        console.error("Erro ao checar assinatura:", error);
         setAssinaturaAtiva(false);
         return;
       }
-
-      if (data && data.ativa_ate) {
-        const hoje = new Date();
-        const ativaAte = new Date(data.ativa_ate);
-        setAssinaturaAtiva(ativaAte > hoje);
-      } else {
-        setAssinaturaAtiva(false);
-      }
+      setAssinaturaAtiva(data && data.ativa_ate ? new Date(data.ativa_ate) > new Date() : false);
     }
     checarAssinatura();
   }, [user.email]);
@@ -114,11 +116,44 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
       atualizado_em: agora,
     }));
     const { error } = await supabase.from("pedacinho_registros").insert(rows);
+    
     if (error) {
       toast.error("Não foi possível salvar. Tente novamente.");
       return false;
     }
     setRegistros((r) => [...r, ...lista.map(d => ({ ...d, tipo }))]);
+
+    // ✅ AGENDAMENTO NO ONESIGNAL
+    if (lista.some((d) => d.cuidado === "Medicação")) {
+      for (const d of lista) {
+        if (d.cuidado !== "Medicação") continue;
+
+        let horariosLimpos: string[] = [];
+        if (d.horarios && d.horarios.length > 0) {
+          horariosLimpos = d.horarios;
+        } else if (d.frequencia) {
+          horariosLimpos = d.frequencia
+            .split(/[,\s]+e\s+|[,\s]+/)
+            .filter(Boolean)
+            .map((h) => {
+              const num = h.replace(/[^\d]/g, "");
+              if (num.length <= 2) return `${num.padStart(2, "0")}:00`;
+              return `${num.slice(0, 2).padStart(2, "0")}:${num.slice(2, 4)}`;
+            });
+        }
+
+        if (horariosLimpos.length > 0) {
+          supabase.functions.invoke("agendar-lembretes", {
+            body: {
+              userId: user.id,
+              medicamento: d.medicamento || "Medicação",
+              horarios: horariosLimpos,
+            },
+          }).catch((err) => console.error("Erro ao agendar no OneSignal:", err));
+        }
+      }
+    }
+
     return true;
   };
 
@@ -135,7 +170,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
   );
 
   return (
-    <AppCtx.Provider value={{ user, pessoas, ativa, setAtivaId, itens, logs, carregando, assinaturaAtiva, recarregar, salvarRegistros }}>
+    <AppCtx.Provider value={{ user, pessoas, ativa, setAtivaId, itens, logs, carregando, recarregar, salvarRegistros, assinaturaAtiva }}>
       {children}
     </AppCtx.Provider>
   );
