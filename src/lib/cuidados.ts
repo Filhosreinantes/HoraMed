@@ -189,3 +189,19 @@ export function ordenarPorDataHora<T extends Dados>(itens: T[]): T[] {
 export function compromissoPendente(d: Dados, hoje = hojeYMD()) {
   return d.cuidado === "Medicação" ? medicacaoEmUso(d, hoje) : (d.situacao ?? "proximo") === "proximo";
 }
+
+/**
+ * Medications that should trigger reminders on `hoje`: started, not ended and not
+ * cancelled by their latest follow-up. Dose logs (no situacao) don't change state.
+ */
+export function medicacoesComLembrete(todos: Dados[], hoje = hojeYMD()) {
+  const semLogs = todos.filter((d) => !d.evento || d.situacao);
+  return resolverSituacoes(semLogs).filter(
+    (d) =>
+      d.cuidado === "Medicação" &&
+      (d.horarios?.length ?? 0) > 0 &&
+      (!d.inicio || d.inicio <= hoje) &&
+      medicacaoEmUso(d, hoje) &&
+      d.situacao !== "cancelado",
+  );
+}

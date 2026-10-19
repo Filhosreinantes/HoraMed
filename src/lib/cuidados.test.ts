@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gerarSessoes, medicacaoEmUso, resolverSituacoes, formatData, ordenarPorDataHora, compromissoPendente, tituloEvento, type Dados } from "./cuidados";
+import { gerarSessoes, medicacaoEmUso, resolverSituacoes, formatData, ordenarPorDataHora, compromissoPendente, tituloEvento, medicacoesComLembrete, type Dados } from "./cuidados";
 
 describe("regras de cuidados", () => {
   const registro = (dados: Partial<Dados>): Dados => ({ id: "a", pessoaId: "p", criadoEm: "2026-10-17", titulo: "Predsin", ...dados });
@@ -55,5 +55,40 @@ describe("regras de cuidados", () => {
   });
   it("data em português", () => {
     expect(formatData("2026-10-16")).toBe("16 de outubro de 2026");
+  });
+});
+
+describe("lembretes de medicação", () => {
+  const med = (dados: Partial<Dados> = {}): Dados => ({
+    id: "m", pessoaId: "p", criadoEm: "2026-10-01T08:00:00", titulo: "Medicação · Predsin",
+    cuidado: "Medicação", horarios: ["08:00", "20:00"], inicio: "2026-10-10", ...dados,
+  });
+  const evento = (dados: Partial<Dados>): Dados => ({
+    id: `e-${dados.criadoEm}`, pessoaId: "p", titulo: "x", evento: true, parentId: "m", criadoEm: "2026-10-15T09:00:00", ...dados,
+  });
+  const ids = (todos: Dados[], hoje: string) => medicacoesComLembrete(todos, hoje).map((d) => d.id);
+
+  it("respeita início e fim da medicação", () => {
+    expect(ids([med()], "2026-10-09")).toEqual([]);
+    expect(ids([med()], "2026-10-10")).toEqual(["m"]);
+    expect(ids([med({ fim: "2026-10-20" })], "2026-10-20")).toEqual(["m"]);
+    expect(ids([med({ fim: "2026-10-20" })], "2026-10-21")).toEqual([]);
+  });
+  it("uso contínuo continua avisando depois de 28 dias", () => {
+    expect(ids([med()], "2027-03-01")).toEqual(["m"]);
+  });
+  it("para de avisar quando o último acompanhamento cancela, e volta se for retomada", () => {
+    const cancelou = evento({ cuidado: "Medicação", situacao: "cancelado", criadoEm: "2026-10-15T09:00:00" });
+    expect(ids([med(), cancelou], "2026-10-16")).toEqual([]);
+    const retomou = evento({ cuidado: "Medicação", situacao: "feito", criadoEm: "2026-10-17T09:00:00" });
+    expect(ids([med(), cancelou, retomou], "2026-10-18")).toEqual(["m"]);
+  });
+  it("registro de dose tomada não desfaz o cancelamento", () => {
+    const cancelou = evento({ cuidado: "Medicação", situacao: "cancelado", criadoEm: "2026-10-15T09:00:00" });
+    const tomou = evento({ titulo: "Tomou: Predsin (08:00)", criadoEm: "2026-10-16T08:00:00" });
+    expect(ids([med(), cancelou, tomou], "2026-10-16")).toEqual([]);
+  });
+  it("ignora medicação sem horários e outros cuidados", () => {
+    expect(ids([med({ horarios: [] }), med({ id: "c", cuidado: "Consulta" })], "2026-10-16")).toEqual([]);
   });
 });

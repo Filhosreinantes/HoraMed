@@ -7,3 +7,6 @@ verify_jwt = false
 
 [functions.rotina-azul-webhook]
 verify_jwt = false
+
+[functions.rotina-azul-lembretes]
+verify_jwt = false

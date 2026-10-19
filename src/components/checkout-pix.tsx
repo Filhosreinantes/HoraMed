@@ -49,9 +49,12 @@ function mascaraCpf(v: string) {
 export function CheckoutPix({
   emailInicial,
   onFechar,
+  onPago,
 }: {
   emailInicial: string;
   onFechar: () => void;
+  /** Chamado ao continuar depois do pagamento confirmado (ex.: rechecar a assinatura). */
+  onPago?: () => void;
 }) {
   const [etapa, setEtapa] = useState<Etapa>({ tipo: "dados" });
   const [nome, setNome] = useState("");
@@ -227,7 +230,10 @@ export function CheckoutPix({
               crie sua conta com esse e-mail.
             </p>
             <button
-              onClick={onFechar}
+              onClick={() => {
+                onFechar();
+                onPago?.();
+              }}
               className="w-full rounded-full bg-[#00B87C] py-2.5 text-sm font-bold text-white shadow-md"
             >
               Continuar

@@ -1,8 +1,11 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Calendar, Plus, User } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { AppProvider, useApp } from "@/lib/app-store";
+import { desconectarUsuaria } from "@/lib/notificacoes";
+import { CheckoutPix } from "@/components/checkout-pix";
+import { NotificationPrompt } from "@/components/NotificationPrompt";
 
 export const Route = createFileRoute("/_app")({
   ssr: false,
@@ -14,8 +17,10 @@ export const Route = createFileRoute("/_app")({
   component: Layout,
 });
 
-const CORES: Record<string, { cor: string; claro: string; escuro: string }> = {
-  azul: { cor: "#5B92C7", claro: "#E8F1F9", escuro: "#2C4A6B" },
+type Cores = { cor: string; claro: string; escuro: string };
+const AZUL: Cores = { cor: "#5B92C7", claro: "#E8F1F9", escuro: "#2C4A6B" };
+const CORES: Record<string, Cores> = {
+  azul: AZUL,
   rosa: { cor: "#D18CA0", claro: "#FBE5EC", escuro: "#8B3E58" },
   verde: { cor: "#6FB89A", claro: "#DCF0E7", escuro: "#3D8064" },
   amarelo: { cor: "#E5B84B", claro: "#FBF1D6", escuro: "#7A5A12" },
@@ -28,7 +33,11 @@ function Layout() {
   const navigate = useNavigate();
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((ev) => {
-      if (ev === "SIGNED_OUT") navigate({ to: "/login", replace: true });
+      if (ev === "SIGNED_OUT") {
+        // Este aparelho deixa de receber os lembretes da conta que saiu.
+        desconectarUsuaria();
+        navigate({ to: "/login", replace: true });
+      }
     });
     return () => data.subscription.unsubscribe();
   }, [navigate]);
@@ -41,8 +50,9 @@ function Layout() {
 }
 
 function Shell() {
-  const { ativa, assinaturaAtiva } = useApp(); // ✅ Puxando a verificação do app-store
-  const tema = CORES[ativa?.tema || "azul"] ?? CORES.azul;
+  const { ativa, user, assinaturaAtiva, checarAssinatura } = useApp();
+  const [comprando, setComprando] = useState(false);
+  const tema = CORES[ativa?.tema || "azul"] ?? AZUL;
 
   const tab = "flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold";
 
@@ -51,6 +61,20 @@ function Shell() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#FDFBF7]">
         <p className="text-sm font-semibold text-[#7A8A9A]">Verificando assinatura...</p>
+      </div>
+    );
+  }
+
+  if (assinaturaAtiva === "erro") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#FDFBF7] p-6 text-center">
+        <p className="text-sm font-semibold text-[#7A8A9A]">Não foi possível verificar sua assinatura.</p>
+        <button
+          onClick={checarAssinatura}
+          className="rounded-2xl bg-[#5B92C7] px-6 py-3 text-sm font-bold text-white shadow-md"
+        >
+          Tentar de novo
+        </button>
       </div>
     );
   }
@@ -67,14 +91,18 @@ function Shell() {
           <p className="mt-2 text-sm text-[#7A8A9A]">
             Sua assinatura não está ativa. Libere o acesso completo para organizar a rotina dos seus Tesouros.
           </p>
-          <a
-            href="https://pag.ae/82f-9CE1a"
-            target="_blank"
-            rel="noreferrer"
+          <button
+            onClick={() => setComprando(true)}
             className="mt-6 block w-full rounded-2xl bg-[#5B92C7] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#4a7eb3]"
           >
             Assinar agora por R$ 5,00/mês
-          </a>
+          </button>
+          <button
+            onClick={checarAssinatura}
+            className="mt-3 block w-full text-xs font-semibold text-[#5B92C7]"
+          >
+            Já paguei · verificar de novo
+          </button>
           <button
             onClick={() => supabase.auth.signOut()}
             className="mt-4 text-xs font-semibold text-[#7A8A9A] underline-offset-4 hover:underline"
@@ -82,6 +110,13 @@ function Shell() {
             Sair da conta
           </button>
         </div>
+        {comprando && (
+          <CheckoutPix
+            emailInicial={user.email ?? ""}
+            onFechar={() => setComprando(false)}
+            onPago={checarAssinatura}
+          />
+        )}
       </div>
     );
   }
@@ -100,6 +135,7 @@ function Shell() {
       <div className="mx-auto min-h-screen max-w-lg px-4 pb-28 pt-6">
         <Outlet />
       </div>
+      <NotificationPrompt />
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/40 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
         <div className="mx-auto flex max-w-lg">
           <Link to="/acompanhamento" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>

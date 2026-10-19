@@ -1,90 +1,105 @@
 import { useEffect, useState } from "react";
-import OneSignal from "react-onesignal";
 import { toast } from "sonner";
+import { useApp } from "@/lib/app-store";
+import {
+  ativarNotificacoes,
+  estadoNotificacoes,
+  MENSAGEM,
+  type EstadoNotificacoes,
+} from "@/lib/notificacoes";
 
+const CHAVE = "rotina-azul:notificacao-perguntada";
+
+/** Convite para ativar os lembretes, mostrado uma vez por aparelho depois do login. */
 export function NotificationPrompt() {
-  const [aberto, setAberto] = useState(false);
+  const { user } = useApp();
+  const [estado, setEstado] = useState<EstadoNotificacoes | null>(null);
   const [carregando, setCarregando] = useState(false);
 
   useEffect(() => {
-    // Verifica se o usuário já foi perguntado ou já está inscrito
-    const jaPerguntado = localStorage.getItem("rotina-azul:notificacao-perguntada");
-    
-    // Espera um pouquinho o OneSignal carregar e verifica se já tem permissão
-    setTimeout(() => {
-      const temPermissao = OneSignal.Notifications?.permission;
-      
-      // Se não tem permissão e não foi perguntado ainda, mostra o modal
-      if (!temPermissao && !jaPerguntado) {
-        setAberto(true);
-      }
-    }, 2000); // 2 segundos após entrar no app
+    let ativo = true;
+    let perguntado = false;
+    try {
+      perguntado = !!localStorage.getItem(CHAVE);
+    } catch {
+      // sem localStorage: pergunta mesmo assim
+    }
+    if (perguntado) return;
+    estadoNotificacoes().then((e) => {
+      // Só incomoda quando dá para fazer algo: ativar agora ou instalar no iPhone.
+      if (ativo && (e === "pendente" || e === "instalar-ios")) setEstado(e);
+    });
+    return () => {
+      ativo = false;
+    };
   }, []);
 
-  const ativarNotificacoes = async () => {
+  const lembrarResposta = () => {
+    try {
+      localStorage.setItem(CHAVE, "sim");
+    } catch {
+      // ignora
+    }
+    setEstado(null);
+  };
+
+  const ativar = async () => {
     setCarregando(true);
     try {
-      // Isso abre aquele aviso nativo do navegador
-      await OneSignal.Notifications.requestPermission();
-      
-      // Salva no navegador que ele já foi perguntado
-      localStorage.setItem("rotina-azul:notificacao-perguntada", "sim");
-      setAberto(false);
-      
-      // Opcional: Se ele aceitou, mostra um toast de sucesso
-      if (OneSignal.Notifications.permission) {
-        toast.success("Lembretes ativados com sucesso! 💙");
-      }
+      const final = await ativarNotificacoes(user.id);
+      if (final === "ativas") toast.success("Lembretes ativados! 💙");
+      else if (final === "pendente")
+        toast.error('Permissão não concedida. Toque em "Permitir" para receber os lembretes.');
+      else toast.error(MENSAGEM[final], { duration: 8000 });
     } catch (error) {
       console.error("Erro ao pedir permissão", error);
+      toast.error("Não foi possível ativar os lembretes.");
     } finally {
       setCarregando(false);
+      lembrarResposta();
     }
   };
 
-  const fechar = () => {
-    // Se ele clicar em "Agora não", não mostramos mais hoje
-    localStorage.setItem("rotina-azul:notificacao-perguntada", "sim");
-    setAberto(false);
-  };
-
-  if (!aberto) return null;
+  if (!estado) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm space-y-4 rounded-3xl bg-white p-6 shadow-xl text-center">
-        
-        {/* Ícone fofo */}
+      <div className="w-full max-w-sm space-y-4 rounded-3xl bg-white p-6 text-center shadow-xl">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-sky text-3xl shadow-sm">
           🔔
         </div>
 
         <div>
-          <h2 className="font-display text-2xl font-bold text-foreground">
-            Ative os Lembretes
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Para te avisar na hora exata dos remédios, o navegador vai pedir sua permissão.
-            <br /><br />
-            <strong className="text-primary">Clique em "Permitir"</strong> para não perder nenhum horário. Prometemos não enviar spam! 💙
-          </p>
+          <h2 className="font-display text-2xl font-bold text-foreground">Ative os Lembretes</h2>
+          {estado === "instalar-ios" ? (
+            <p className="mt-2 text-sm text-muted-foreground">{MENSAGEM["instalar-ios"]}</p>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Para te avisar na hora dos remédios, o navegador vai pedir sua permissão.
+              <br />
+              <br />
+              <strong className="text-primary">Toque em "Permitir"</strong> para não perder nenhum
+              horário. Prometemos não enviar spam! 💙
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-2 pt-2">
+          {estado === "pendente" && (
+            <button
+              onClick={ativar}
+              disabled={carregando}
+              className="w-full rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-soft disabled:opacity-60"
+            >
+              {carregando ? "Ativando..." : "Quero receber lembretes"}
+            </button>
+          )}
           <button
-            onClick={ativarNotificacoes}
-            disabled={carregando}
-            className="w-full rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground shadow-soft disabled:opacity-60"
-          >
-            {carregando ? "Ativando..." : "Quero receber lembretes"}
-          </button>
-          
-          <button
-            onClick={fechar}
+            onClick={lembrarResposta}
             disabled={carregando}
             className="w-full rounded-2xl border border-gray-300 py-3 text-sm font-bold text-gray-500"
           >
-            Agora não
+            {estado === "pendente" ? "Agora não" : "Entendi"}
           </button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import OneSignal from "react-onesignal";
+import { conectarUsuaria } from "./notificacoes";
 import { supabase } from "./supabase";
 import { nowLocalISO, resolverSituacoes, uid, type Dados, type Item, type Pessoa } from "./cuidados";
 
@@ -15,7 +15,8 @@ interface Ctx {
   carregando: boolean;
   recarregar: () => Promise<void>;
   salvarRegistros: (lista: Dados[], tipo?: string) => Promise<boolean>;
-  assinaturaAtiva: boolean | null;
+  assinaturaAtiva: boolean | null | "erro";
+  checarAssinatura: () => Promise<void>;
 }
 
 const AppCtx = createContext<Ctx | null>(null);
@@ -26,39 +27,39 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
   const [ativaId, setAtivaIdState] = useState<string | null>(null);
   const [registros, setRegistros] = useState<(Dados & { tipo?: string })[]>([]);
   const [carregando, setCarregando] = useState(true);
-  const [assinaturaAtiva, setAssinaturaAtiva] = useState<boolean | null>(null);
+  const [assinaturaAtiva, setAssinaturaAtiva] = useState<boolean | null | "erro">(null);
 
   // ✅ 1. CRÍTICO: Conecta o dispositivo ao ID do Supabase
   useEffect(() => {
     if (user?.id) {
-      OneSignal.login(user.id).catch((err) =>
-        console.error("Erro ao logar no OneSignal:", err)
-      );
+      conectarUsuaria(user.id);
     }
   }, [user.id]);
 
   // ✅ VERIFICAÇÃO DE ASSINATURA
-  useEffect(() => {
-    async function checarAssinatura() {
-      if (!user?.email) {
-        setAssinaturaAtiva(false);
-        return;
-      }
-      const { data, error } = await supabase
-        .from("rotina_assinaturas")
-        .select("ativa_ate")
-        .eq("email", user.email)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Erro ao checar assinatura:", error);
-        setAssinaturaAtiva(false);
-        return;
-      }
-      setAssinaturaAtiva(data && data.ativa_ate ? new Date(data.ativa_ate) > new Date() : false);
+  const checarAssinatura = useCallback(async () => {
+    if (!user?.email) {
+      setAssinaturaAtiva(false);
+      return;
     }
-    checarAssinatura();
+    setAssinaturaAtiva(null);
+    const { data, error } = await supabase
+      .from("rotina_assinaturas")
+      .select("ativa_ate")
+      .eq("email", user.email.toLowerCase())
+      .maybeSingle();
+    if (error) {
+      // Falha de rede não pode trancar quem já pagou: mostra "tentar de novo".
+      console.error("Erro ao checar assinatura:", error);
+      setAssinaturaAtiva("erro");
+      return;
+    }
+    setAssinaturaAtiva(data?.ativa_ate ? new Date(data.ativa_ate) > new Date() : false);
   }, [user.email]);
+
+  useEffect(() => {
+    checarAssinatura();
+  }, [checarAssinatura]);
 
   const recarregar = useCallback(async () => {
     const { data: ps, error } = await supabase
@@ -123,37 +124,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     }
     setRegistros((r) => [...r, ...lista.map(d => ({ ...d, tipo }))]);
 
-    // ✅ AGENDAMENTO NO ONESIGNAL
-    if (lista.some((d) => d.cuidado === "Medicação")) {
-      for (const d of lista) {
-        if (d.cuidado !== "Medicação") continue;
-
-        let horariosLimpos: string[] = [];
-        if (d.horarios && d.horarios.length > 0) {
-          horariosLimpos = d.horarios;
-        } else if (d.frequencia) {
-          horariosLimpos = d.frequencia
-            .split(/[,\s]+e\s+|[,\s]+/)
-            .filter(Boolean)
-            .map((h) => {
-              const num = h.replace(/[^\d]/g, "");
-              if (num.length <= 2) return `${num.padStart(2, "0")}:00`;
-              return `${num.slice(0, 2).padStart(2, "0")}:${num.slice(2, 4)}`;
-            });
-        }
-
-        if (horariosLimpos.length > 0) {
-          supabase.functions.invoke("agendar-lembretes", {
-            body: {
-              userId: user.id,
-              medicamento: d.medicamento || "Medicação",
-              horarios: horariosLimpos,
-            },
-          }).catch((err) => console.error("Erro ao agendar no OneSignal:", err));
-        }
-      }
-    }
-
+    // Os lembretes de medicação são enviados pelo servidor (rotina-azul-lembretes).
     return true;
   };
 
@@ -170,7 +141,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
   );
 
   return (
-    <AppCtx.Provider value={{ user, pessoas, ativa, setAtivaId, itens, logs, carregando, recarregar, salvarRegistros, assinaturaAtiva }}>
+    <AppCtx.Provider value={{ user, pessoas, ativa, setAtivaId, itens, logs, carregando, recarregar, salvarRegistros, assinaturaAtiva, checarAssinatura }}>
       {children}
     </AppCtx.Provider>
   );

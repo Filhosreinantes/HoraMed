@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Pencil, Plus, LogOut } from "lucide-react";
 import { toast } from "sonner";
-import OneSignal from "react-onesignal";
+import { ativarNotificacoes, MENSAGEM } from "@/lib/notificacoes";
 import { useApp } from "@/lib/app-store";
 import { supabase } from "@/lib/supabase";
 import { formatData, nowLocalISO, uid, type Pessoa } from "@/lib/cuidados";
@@ -34,42 +34,13 @@ function Perfil() {
   const [form, setForm] = useState<Partial<Pessoa> | null>(null);
   const [sair, setSair] = useState(false);
 
-  // ✅ ATIVAR LEMBRETES (versão robusta)
+  // ✅ ATIVAR LEMBRETES
   const ativarLembretes = async () => {
     try {
-      // 1. Verifica se o navegador já bloqueou o site
-      if (
-        typeof window !== "undefined" &&
-        window.Notification &&
-        Notification.permission === "denied"
-      ) {
-        toast.error(
-          "As notificações estão bloqueadas no navegador. Vá nas configurações do site e permita manualmente.",
-          { duration: 6000 }
-        );
-        return;
-      }
-
-      // 2. Verifica se o OneSignal carregou
-      if (!OneSignal || !OneSignal.Notifications) {
-        toast.error(
-          "O sistema de notificações ainda está carregando. Tente novamente em 2 segundos."
-        );
-        return;
-      }
-
-      // 3. Pede a permissão
-      await OneSignal.Notifications.requestPermission();
-
-      // 4. Verifica se foi autorizado
-      if (OneSignal.Notifications.permission) {
-        await OneSignal.login(user.id); // Conecta o celular ao ID da usuária
-        toast.success("Lembretes ativados com sucesso! 💙");
-      } else {
-        toast.error(
-          "Permissão não concedida. O navegador precisa que você clique em 'Permitir'."
-        );
-      }
+      const estado = await ativarNotificacoes(user.id);
+      if (estado === "ativas") toast.success("Lembretes ativados neste aparelho! 💙");
+      else if (estado === "pendente") toast.error('Permissão não concedida. Toque em "Permitir" para receber os lembretes.');
+      else toast.error(MENSAGEM[estado], { duration: 8000 });
     } catch (error) {
       console.error("Erro no OneSignal:", error);
       toast.error("Erro ao ativar as notificações.");
