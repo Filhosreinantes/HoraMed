@@ -106,16 +106,22 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
-  // ✅ INICIALIZAÇÃO DO ONESIGNAL
-useEffect(() => {
-  OneSignal.init({
-    appId: "c1ce9bf7-7bd7-4d39-9b90-294a304b4500", // ✅ Seu App ID aqui
-    serviceWorkerPath: "onesignal/OneSignalSDKWorker.js",
-    serviceWorkerParam: { scope: "/onesignal/" },
-    notifyButton: { enable: false }, 
-    allowLocalhostAsSecureOrigin: true, 
-  }).catch((err) => console.error("Erro ao iniciar OneSignal:", err));
-}, []);
+  // ✅ INICIALIZAÇÃO DO ONESIGNAL (client-only)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Evita double-init no StrictMode / re-renders
+    if (OneSignal.initialized) return;
+
+    OneSignal.init({
+      appId: "c1ce9bf7-7bd7-4d39-9b90-294a304b4500",
+      // ✅ Barra no início — caminho absoluto
+      serviceWorkerPath: "/onesignal/OneSignalSDKWorker.js",
+      serviceWorkerParam: { scope: "/onesignal/" },
+      notifyButton: { enable: true }, // sino de notificação
+      allowLocalhostAsSecureOrigin: false, // ✅ produção
+    }).catch((err) => console.error("Erro ao iniciar OneSignal:", err));
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
