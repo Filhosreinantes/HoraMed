@@ -15,6 +15,7 @@ const TITULO: Record<EstadoNotificacoes, string> = {
   pendente: "🔕 Lembretes desligados neste aparelho",
   bloqueadas: "🚫 Notificações bloqueadas no navegador",
   "instalar-ios": "📲 Instale o app para receber lembretes",
+  "nao-carregou": "🛡️ Um bloqueador impediu os lembretes",
   "sem-suporte": "⚠️ Este navegador não recebe notificações",
 };
 
@@ -122,6 +123,18 @@ export function NotificacoesCartao() {
             className={`${botao} border border-gold/50 text-foreground`}
           >
             Verificar de novo
+          </button>
+        </>
+      )}
+
+      {estado === "nao-carregou" && (
+        <>
+          <p className="text-xs text-muted-foreground">{MENSAGEM["nao-carregou"]}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className={`${botao} border border-gold/50 text-foreground`}
+          >
+            Recarregar página
           </button>
         </>
       )}

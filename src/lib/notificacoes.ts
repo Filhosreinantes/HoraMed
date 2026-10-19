@@ -42,12 +42,16 @@ function instaladoNaTela() {
 }
 
 export type EstadoNotificacoes =
-  "ativas" | "pendente" | "bloqueadas" | "instalar-ios" | "sem-suporte";
+  "ativas" | "pendente" | "bloqueadas" | "instalar-ios" | "nao-carregou" | "sem-suporte";
 
 export async function estadoNotificacoes(): Promise<EstadoNotificacoes> {
   // No iPhone, notificação web só funciona com o app instalado na tela inicial.
   if (ehIOS() && !instaladoNaTela()) return "instalar-ios";
-  if (!("Notification" in window) || !(await iniciarNotificacoes())) return "sem-suporte";
+  const suportaPush =
+    "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+  if (!suportaPush) return "sem-suporte";
+  // O navegador aceita push, mas o OneSignal não carregou: quase sempre é bloqueador (Brave Shields etc.).
+  if (!(await iniciarNotificacoes())) return "nao-carregou";
   if (!OneSignal.Notifications.isPushSupported()) return "sem-suporte";
   if (Notification.permission === "denied") return "bloqueadas";
   return OneSignal.Notifications.permission && OneSignal.User.PushSubscription.optedIn
@@ -60,6 +64,8 @@ export const MENSAGEM: Record<Exclude<EstadoNotificacoes, "ativas" | "pendente">
     'No iPhone, primeiro instale o app: toque em Compartilhar e depois em "Adicionar à Tela de Início". Abra o Rotina Azul pelo ícone e ative os lembretes.',
   bloqueadas:
     "As notificações estão bloqueadas para este site. Libere nas configurações do navegador e tente de novo.",
+  "nao-carregou":
+    "O sistema de lembretes foi bloqueado neste navegador. No Brave, toque no ícone do leão e desligue o Shields para este site; se usar bloqueador de anúncios, libere este site. Depois recarregue a página.",
   "sem-suporte": "Este navegador não recebe notificações. Tente pelo Chrome no celular.",
 };
 

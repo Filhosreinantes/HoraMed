@@ -63,7 +63,6 @@ async function enviarPush(userId: string, titulo: string, texto: string, topico:
       include_aliases: { external_id: [userId] },
       headings: { en: titulo, pt: titulo },
       contents: { en: texto, pt: texto },
-      url: "/acompanhamento",
       web_push_topic: topico, // o mesmo lembrete nunca aparece duplicado
       priority: 10,
       ttl: 3600, // se o celular estiver desligado, não entrega lembrete velho

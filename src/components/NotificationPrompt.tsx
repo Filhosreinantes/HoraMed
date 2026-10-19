@@ -27,7 +27,7 @@ export function NotificationPrompt() {
     if (perguntado) return;
     estadoNotificacoes().then((e) => {
       // Só incomoda quando dá para fazer algo: ativar agora ou instalar no iPhone.
-      if (ativo && (e === "pendente" || e === "instalar-ios")) setEstado(e);
+      if (ativo && (e === "pendente" || e === "instalar-ios" || e === "nao-carregou")) setEstado(e);
     });
     return () => {
       ativo = false;
@@ -71,8 +71,8 @@ export function NotificationPrompt() {
 
         <div>
           <h2 className="font-display text-2xl font-bold text-foreground">Ative os Lembretes</h2>
-          {estado === "instalar-ios" ? (
-            <p className="mt-2 text-sm text-muted-foreground">{MENSAGEM["instalar-ios"]}</p>
+          {estado === "instalar-ios" || estado === "nao-carregou" ? (
+            <p className="mt-2 text-sm text-muted-foreground">{MENSAGEM[estado]}</p>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">
               Para te avisar na hora dos remédios, o navegador vai pedir sua permissão.
