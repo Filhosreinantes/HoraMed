@@ -43,6 +43,9 @@ export interface Dados {
   parentId?: string | undefined;
   programa?: boolean | undefined;
   programaId?: string | undefined;
+  /** Change event: edits the parent's fields or removes it, keeping the original intact. */
+  acao?: "editar" | "excluir" | undefined;
+  alteracoes?: Partial<Dados> | undefined;
 }
 
 export const EMOJI: Record<Cuidado, string> = {
@@ -153,18 +156,43 @@ export function tituloEvento(original: Dados, situacao: Situacao) {
   return tituloComTipo(original);
 }
 
-/** Original items with effective situation derived from immutable event records. */
+/** Fields an edit may never change: identity and type of the original record. */
+const CAMPOS_FIXOS = ["id", "pessoaId", "criadoEm", "cuidado", "evento", "parentId"] as const;
+
+function aplicarEdicoes(original: Dados, edicoes: Dados[] = []) {
+  const ordenadas = [...edicoes].sort((a, b) => a.criadoEm.localeCompare(b.criadoEm));
+  const atual: Dados = Object.assign({}, original, ...ordenadas.map((e) => e.alteracoes));
+  const fixos = Object.fromEntries(CAMPOS_FIXOS.map((k) => [k, original[k]]));
+  return Object.assign(atual, fixos) as Dados;
+}
+
+/**
+ * Original items with effective situation derived from immutable event records.
+ * Edit events are applied in order and remove events hide the item; neither
+ * counts as a follow-up situation.
+ */
 export function resolverSituacoes(todos: Dados[]) {
   const eventos = todos.filter((d) => d.evento && d.parentId);
   const ultimo = new Map<string, Dados>();
+  const edicoes = new Map<string, Dados[]>();
+  const excluidos = new Set<string>();
   for (const e of eventos) {
     if (!e.parentId) continue;
+    if (e.acao === "excluir") {
+      excluidos.add(e.parentId);
+      continue;
+    }
+    if (e.acao === "editar") {
+      edicoes.set(e.parentId, [...(edicoes.get(e.parentId) ?? []), e]);
+      continue;
+    }
     const prev = ultimo.get(e.parentId);
     if (!prev || e.criadoEm >= prev.criadoEm) ultimo.set(e.parentId, e);
   }
   return todos
-    .filter((d) => !d.evento)
-    .map((d) => {
+    .filter((d) => !d.evento && !excluidos.has(d.id))
+    .map((original) => {
+      const d = aplicarEdicoes(original, edicoes.get(original.id));
       const ev = ultimo.get(d.id);
       return ev
         ? { ...d, situacao: ev.situacao, observacaoAcompanhamento: ev.observacaoAcompanhamento, _evento: ev }
@@ -197,7 +225,7 @@ export function compromissoPendente(d: Dados, hoje = hojeYMD()) {
  * cancelled by their latest follow-up. Dose logs (no situacao) don't change state.
  */
 export function medicacoesComLembrete(todos: Dados[], hoje = hojeYMD()) {
-  const semLogs = todos.filter((d) => !d.evento || d.situacao);
+  const semLogs = todos.filter((d) => !d.evento || d.situacao || d.acao);
   return resolverSituacoes(semLogs).filter(
     (d) =>
       d.cuidado === "Medicação" &&
@@ -251,4 +279,28 @@ export function lembretesDoDia(todos: Dados[], dia = hojeYMD()): Lembrete[] {
     }
   }
   return out;
+}
+
+/** Care types that get a reminder 24 hours before. */
+export const CUIDADOS_COM_VESPERA: Cuidado[] = ["Consulta", "Exame"];
+/** When the appointment has no time, the day-before reminder goes out at this hour. */
+export const HORA_VESPERA_SEM_HORARIO = "09:00";
+
+export function somarDias(ymd: string, dias: number) {
+  const d = parseYMD(ymd);
+  return toYMD(new Date(d.getFullYear(), d.getMonth(), d.getDate() + dias));
+}
+
+/** Appointments still pending tomorrow, with the time (today) to send their 24h reminder. */
+export function avisosDeVespera(todos: Dados[], dia = hojeYMD()) {
+  const amanha = somarDias(dia, 1);
+  return resolverSituacoes(todos.filter((d) => !d.evento || d.situacao || d.acao))
+    .filter(
+      (d) =>
+        d.cuidado !== undefined &&
+        CUIDADOS_COM_VESPERA.includes(d.cuidado) &&
+        d.data === amanha &&
+        compromissoPendente(d, dia),
+    )
+    .map((item) => ({ item, hora: item.hora || HORA_VESPERA_SEM_HORARIO }));
 }

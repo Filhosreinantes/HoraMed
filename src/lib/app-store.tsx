@@ -3,7 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { conectarUsuaria } from "./notificacoes";
 import { supabase } from "./supabase";
-import { nowLocalISO, resolverSituacoes, uid, type Dados, type Item, type Pessoa } from "./cuidados";
+import { nowLocalISO, resolverSituacoes, type Dados, type Item, type Pessoa } from "./cuidados";
 
 interface Ctx {
   user: User;
@@ -85,8 +85,11 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     let lista = (ps ?? []) as Pessoa[];
     if (lista.length === 0) {
       const agora = nowLocalISO();
-      const nova = { id: uid(), user_id: user.id, nome: "Meu Tesouro", emoji: "🌸", tema: "azul", criado_em: agora, atualizado_em: agora };
-      const { error: e2 } = await supabase.from("pedacinho_pessoas").insert(nova);
+      // Id fixo por conta: se duas telas carregarem juntas, a segunda criação é ignorada.
+      const nova = { id: `inicial-${user.id}`, user_id: user.id, nome: "Meu Tesouro", emoji: "🌸", tema: "azul", criado_em: agora, atualizado_em: agora };
+      const { error: e2 } = await supabase
+        .from("pedacinho_pessoas")
+        .upsert(nova, { onConflict: "id", ignoreDuplicates: true });
       if (e2) toast.error("Não foi possível criar o perfil inicial.");
       else lista = [nova as unknown as Pessoa];
     }

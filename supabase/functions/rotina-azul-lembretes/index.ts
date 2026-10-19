@@ -6,7 +6,13 @@
 //   { acao: "teste" }            → notificação de teste para a usuária logada (JWT)
 //   { acao: "limpar-agendados" } → cancela no OneSignal os agendamentos do sistema antigo
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { lembretesDoDia, type Dados } from "../../../src/lib/cuidados.ts";
+import {
+  avisosDeVespera,
+  lembretesDoDia,
+  tituloEvento,
+  type Dados,
+  type Item,
+} from "../../../src/lib/cuidados.ts";
 
 const FUSO_PADRAO = "America/Sao_Paulo"; // quem ainda não salvou o fuso do aparelho
 const JANELA_MIN = 5; // tolera atrasos do cron sem perder lembretes
@@ -91,7 +97,8 @@ async function enviarDevidos() {
   const { data: regs, error } = await db
     .from("pedacinho_registros")
     .select("user_id, pessoa_id, dados")
-    .in("dados->>cuidado", ["Medicação", "Medicação_Log"]); // medicações, acompanhamentos e doses
+    // medicações (com doses e edições) e consultas/exames para o aviso de véspera
+    .in("dados->>cuidado", ["Medicação", "Medicação_Log", "Consulta", "Exame"]);
   if (error) throw new Error(`ler registros: ${error.message}`);
 
   // Agrupa por usuária: o histórico de cada uma é resolvido separadamente.
@@ -110,6 +117,7 @@ async function enviarDevidos() {
   const fusos = new Map((prefs ?? []).map((p) => [p.user_id as string, fusoValido(p.fuso)]));
 
   const devidos: { userId: string; l: ReturnType<typeof lembretesDoDia>[number]; data: string }[] = [];
+  const vesperas: { userId: string; item: Item; data: string }[] = [];
   for (const [userId, todos] of porUsuaria) {
     // Os últimos minutos no relógio da usuária (o horário "08:00" é local dela).
     const fuso = fusos.get(userId) ?? FUSO_PADRAO;
@@ -119,11 +127,16 @@ async function enviarDevidos() {
       for (const l of lembretesDoDia(todos, dia)) {
         if (horasDoDia.has(l.hora)) devidos.push({ userId, l, data: dia });
       }
+      for (const v of avisosDeVespera(todos, dia)) {
+        if (horasDoDia.has(v.hora)) vesperas.push({ userId, item: v.item, data: dia });
+      }
     }
   }
-  if (devidos.length === 0) return { enviados: 0 };
+  if (devidos.length === 0 && vesperas.length === 0) return { enviados: 0 };
 
-  const pessoaIds = [...new Set(devidos.map((d) => d.l.med.pessoaId))];
+  const pessoaIds = [
+    ...new Set([...devidos.map((d) => d.l.med.pessoaId), ...vesperas.map((v) => v.item.pessoaId)]),
+  ];
   const { data: pessoas } = await db.from("pedacinho_pessoas").select("id, nome").in("id", pessoaIds);
   const nomes = new Map((pessoas ?? []).map((p) => [p.id, p.nome as string]));
 
@@ -162,7 +175,39 @@ async function enviarDevidos() {
       console.error("[lembretes]", e);
     }
   }
-  return { enviados, devidos: devidos.length };
+  // Aviso 24h antes de consultas e exames (uma vez por compromisso).
+  for (const v of vesperas) {
+    const { data: reserva } = await db
+      .from("rotina_lembretes_enviados")
+      .upsert(
+        { item_id: v.item.id, data: v.data, horario: "vespera", user_id: v.userId },
+        { onConflict: "item_id,data,horario", ignoreDuplicates: true },
+      )
+      .select("item_id");
+    if (!reserva?.length) continue;
+
+    const nome = nomes.get(v.item.pessoaId);
+    const titulo = `📅 Amanhã: ${tituloEvento(v.item, "proximo")}`;
+    const texto = [
+      v.item.hora ? `Às ${v.item.hora}` : "Amanhã",
+      v.item.local,
+      nome && `para ${nome}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    try {
+      const r = await enviarPush(v.userId, titulo, texto, `vespera-${v.item.id}`);
+      if (!r.semDispositivo) enviados++;
+    } catch (e) {
+      await db
+        .from("rotina_lembretes_enviados")
+        .delete()
+        .match({ item_id: v.item.id, data: v.data, horario: "vespera" });
+      console.error("[lembretes]", e);
+    }
+  }
+
+  return { enviados, devidos: devidos.length, vesperas: vesperas.length };
 }
 
 /** Notificação de teste para quem está logada: no máximo uma por minuto. */

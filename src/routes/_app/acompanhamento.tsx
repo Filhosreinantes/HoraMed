@@ -263,7 +263,7 @@ function Acompanhamento() {
               <li key={`${a.med.id}-${a.horario}-${idx}`} className="flex flex-col gap-2 rounded-xl border border-gold/20 bg-background/50 p-3">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="font-semibold text-sm">{a.med.medicamento} <span className="text-xs text-muted-foreground font-normal">({a.med.dosagem})</span></p>
+                    <p className="font-semibold text-sm">{a.med.medicamento}{a.med.dosagem && <span className="text-xs text-muted-foreground font-normal"> ({a.med.dosagem})</span>}</p>
                     <p className="text-xs text-muted-foreground">Horário: {a.horario}</p>
                   </div>
                   {a.log ? (

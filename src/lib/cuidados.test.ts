@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gerarSessoes, medicacaoEmUso, resolverSituacoes, formatData, ordenarPorDataHora, compromissoPendente, tituloEvento, medicacoesComLembrete, horarioDoLog, doseRegistrada, lembretesDoDia, type Dados } from "./cuidados";
+import { gerarSessoes, medicacaoEmUso, resolverSituacoes, formatData, ordenarPorDataHora, compromissoPendente, tituloEvento, medicacoesComLembrete, horarioDoLog, doseRegistrada, lembretesDoDia, avisosDeVespera, type Dados } from "./cuidados";
 
 describe("regras de cuidados", () => {
   const registro = (dados: Partial<Dados>): Dados => ({ id: "a", pessoaId: "p", criadoEm: "2026-10-17", titulo: "Predsin", ...dados });
@@ -118,5 +118,64 @@ describe("doses registradas e segundo aviso", () => {
   });
   it("não insiste depois da meia-noite", () => {
     expect(resumo([{ ...med, horarios: ["23:50"] }])).toEqual(["lembrete@23:50"]);
+  });
+});
+
+describe("editar/excluir sem alterar o original", () => {
+  const med: Dados = {
+    id: "m", pessoaId: "p", criadoEm: "2026-10-01T08:00:00", titulo: "Medicação · Predsin",
+    cuidado: "Medicação", medicamento: "Predsin", horarios: ["08:00"], inicio: "2026-10-01", fim: "2026-10-30",
+  };
+  const mudanca = (acao: "editar" | "excluir", criadoEm: string, alteracoes?: Partial<Dados>): Dados => ({
+    id: `x-${criadoEm}`, pessoaId: "p", criadoEm, titulo: "x", cuidado: "Medicação", evento: true, parentId: "m", acao, alteracoes,
+  });
+
+  it("aplica as edições em ordem e preserva o registro original", () => {
+    const todos = [
+      med,
+      mudanca("editar", "2026-10-05T10:00:00", { horarios: ["09:00", "21:00"], fim: "" }),
+      mudanca("editar", "2026-10-03T10:00:00", { dosagem: "5 ml", horarios: ["07:00"] }),
+    ];
+    const [r] = resolverSituacoes(todos);
+    expect(r?.horarios).toEqual(["09:00", "21:00"]);
+    expect(r?.dosagem).toBe("5 ml");
+    expect(r?.fim).toBe("");
+    expect(r?.situacao).toBeUndefined(); // edição não é acompanhamento
+    expect(med.horarios).toEqual(["08:00"]);
+    expect(medicacoesComLembrete(todos, "2026-11-15").map((d) => d.horarios)).toEqual([["09:00", "21:00"]]);
+  });
+  it("edição não troca id, pessoa nem tipo", () => {
+    const [r] = resolverSituacoes([med, mudanca("editar", "2026-10-05T10:00:00", { id: "outro", pessoaId: "q", cuidado: "Consulta" })]);
+    expect([r?.id, r?.pessoaId, r?.cuidado]).toEqual(["m", "p", "Medicação"]);
+  });
+  it("exclusão esconde a medicação e para os lembretes", () => {
+    const todos = [med, mudanca("excluir", "2026-10-05T10:00:00")];
+    expect(resolverSituacoes(todos)).toEqual([]);
+    expect(medicacoesComLembrete(todos, "2026-10-10")).toEqual([]);
+  });
+});
+
+describe("aviso 24h antes", () => {
+  const consulta = (dados: Partial<Dados> = {}): Dados => ({
+    id: "c", pessoaId: "p", criadoEm: "2026-10-01T08:00:00", titulo: "Consulta · Pediatria", cuidado: "Consulta",
+    data: "2026-10-20", hora: "14:30", ...dados,
+  });
+  const avisos = (todos: Dados[], dia: string) => avisosDeVespera(todos, dia).map((a) => `${a.item.id}@${a.hora}`);
+
+  it("avisa na véspera, no mesmo horário do compromisso", () => {
+    expect(avisos([consulta()], "2026-10-19")).toEqual(["c@14:30"]);
+    expect(avisos([consulta()], "2026-10-18")).toEqual([]);
+    expect(avisos([consulta()], "2026-10-20")).toEqual([]);
+  });
+  it("sem horário, avisa às 09:00 da véspera; vale para exames e não para terapias", () => {
+    expect(avisos([consulta({ hora: undefined }), consulta({ id: "e", cuidado: "Exame" }), consulta({ id: "t", cuidado: "Terapia" })], "2026-10-19"))
+      .toEqual(["c@09:00", "e@14:30"]);
+  });
+  it("não avisa se já foi cancelado ou registrado", () => {
+    const cancelou: Dados = { id: "ev", pessoaId: "p", criadoEm: "2026-10-10T09:00:00", titulo: "x", cuidado: "Consulta", evento: true, parentId: "c", situacao: "cancelado" };
+    expect(avisos([consulta(), cancelou], "2026-10-19")).toEqual([]);
+  });
+  it("atravessa o fim do mês", () => {
+    expect(avisos([consulta({ data: "2026-11-01" })], "2026-10-31")).toEqual(["c@14:30"]);
   });
 });

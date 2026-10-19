@@ -12,6 +12,11 @@ export function iniciarNotificacoes() {
     serviceWorkerParam: { scope: "/oneSignal/" },
     // No computador, o lembrete fica na tela até ser tocado.
     persistNotification: true,
+    // A boas-vindas padrão do OneSignal vem em inglês ("Thanks for subscribing!").
+    welcomeNotification: {
+      title: "Rotina Azul",
+      message: "Pronto! Os lembretes dos remédios vão chegar aqui. 💙",
+    },
   })
     .then(() => true)
     .catch((err) => {
