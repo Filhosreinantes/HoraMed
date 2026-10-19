@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { X, ChevronLeft, Check, Clock, History, Search } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
-  EMOJI, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
+  EMOJI, doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
   nowLocalISO, uid, type Cuidado, type Situacao, type Dados
 } from "@/lib/cuidados";
 import { Botao, Divisor, Pill, SeletorTesouro } from "@/components/ui-kit";
@@ -71,11 +71,7 @@ function Acompanhamento() {
       const horarios = m.horarios && m.horarios.length > 0 ? m.horarios : (m.frequencia ? m.frequencia.split(",") : ["08:00"]);
       horarios.forEach((h: string) => {
         const hClean = h.trim();
-        const log = logs.find((i: any) =>
-          i.parentId === m.id &&
-          i.data === hoje &&
-          i.titulo.includes(hClean)
-        );
+        const log = doseRegistrada(logs, m.id, hoje, hClean);
         arr.push({ med: m, horario: hClean, log });
       });
     });
@@ -96,7 +92,7 @@ function Acompanhamento() {
 
     const dados: Dados = {
       id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo,
-      cuidado: "Medicação_Log" as any, evento: true, parentId: item.id, data: hoje,
+      cuidado: "Medicação_Log" as any, evento: true, parentId: item.id, data: hoje, horario,
     };
 
     const ok = await salvarRegistros([dados], "medicacao_logs");

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Pencil, Plus, LogOut } from "lucide-react";
 import { toast } from "sonner";
-import { ativarNotificacoes, MENSAGEM } from "@/lib/notificacoes";
+import { NotificacoesCartao } from "@/components/notificacoes-cartao";
 import { useApp } from "@/lib/app-store";
 import { supabase } from "@/lib/supabase";
 import { formatData, nowLocalISO, uid, type Pessoa } from "@/lib/cuidados";
@@ -33,19 +33,6 @@ function Perfil() {
   const { ativa, user, recarregar, setAtivaId } = useApp();
   const [form, setForm] = useState<Partial<Pessoa> | null>(null);
   const [sair, setSair] = useState(false);
-
-  // ✅ ATIVAR LEMBRETES
-  const ativarLembretes = async () => {
-    try {
-      const estado = await ativarNotificacoes(user.id);
-      if (estado === "ativas") toast.success("Lembretes ativados neste aparelho! 💙");
-      else if (estado === "pendente") toast.error('Permissão não concedida. Toque em "Permitir" para receber os lembretes.');
-      else toast.error(MENSAGEM[estado], { duration: 8000 });
-    } catch (error) {
-      console.error("Erro no OneSignal:", error);
-      toast.error("Erro ao ativar as notificações.");
-    }
-  };
 
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,13 +80,8 @@ function Perfil() {
         <Plus className="h-5 w-5" /> Adicionar outro Tesouro
       </Botao>
 
-      {/* ✅ BOTÃO DE LEMBRETES */}
-      <button
-        onClick={ativarLembretes}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gold/50 bg-card py-3 font-semibold shadow-soft text-foreground transition hover:bg-muted"
-      >
-        🔔 Ativar Lembretes de Medicação
-      </button>
+      {/* Lembretes: ativar, reativar, desativar e testar neste aparelho */}
+      <NotificacoesCartao />
 
       <Divisor />
 

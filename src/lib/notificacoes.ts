@@ -1,4 +1,5 @@
 import OneSignal from "react-onesignal";
+import { supabase } from "./supabase";
 
 let pronto: Promise<boolean> | null = null;
 
@@ -9,6 +10,8 @@ export function iniciarNotificacoes() {
     appId: "c1ce9bf7-7bd7-4d39-9b90-294a304b4500",
     serviceWorkerPath: "/oneSignal/OneSignalSDKWorker.js",
     serviceWorkerParam: { scope: "/oneSignal/" },
+    // No computador, o lembrete fica na tela até ser tocado.
+    persistNotification: true,
   })
     .then(() => true)
     .catch((err) => {
@@ -70,4 +73,25 @@ export async function ativarNotificacoes(userId: string): Promise<EstadoNotifica
     await conectarUsuaria(userId);
   }
   return estadoNotificacoes();
+}
+
+/** Para de receber lembretes neste aparelho (a permissão do navegador continua). */
+export async function desativarNotificacoes(): Promise<EstadoNotificacoes> {
+  if (await iniciarNotificacoes()) await OneSignal.User.PushSubscription.optOut();
+  return estadoNotificacoes();
+}
+
+/** Pede ao servidor uma notificação de teste para a conta logada. */
+export async function enviarNotificacaoTeste() {
+  const { data, error } = await supabase.functions.invoke("rotina-azul-lembretes", {
+    body: { acao: "teste" },
+  });
+  if (error) {
+    const msg = await error.context
+      ?.json?.()
+      .then((j: { error?: string }) => j.error)
+      .catch(() => null);
+    throw new Error(msg || "Não foi possível enviar o teste.");
+  }
+  return (data as { enviado: boolean }).enviado;
 }

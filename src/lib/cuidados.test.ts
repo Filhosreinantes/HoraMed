@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gerarSessoes, medicacaoEmUso, resolverSituacoes, formatData, ordenarPorDataHora, compromissoPendente, tituloEvento, medicacoesComLembrete, type Dados } from "./cuidados";
+import { gerarSessoes, medicacaoEmUso, resolverSituacoes, formatData, ordenarPorDataHora, compromissoPendente, tituloEvento, medicacoesComLembrete, horarioDoLog, doseRegistrada, lembretesDoDia, type Dados } from "./cuidados";
 
 describe("regras de cuidados", () => {
   const registro = (dados: Partial<Dados>): Dados => ({ id: "a", pessoaId: "p", criadoEm: "2026-10-17", titulo: "Predsin", ...dados });
@@ -90,5 +90,33 @@ describe("lembretes de medicação", () => {
   });
   it("ignora medicação sem horários e outros cuidados", () => {
     expect(ids([med({ horarios: [] }), med({ id: "c", cuidado: "Consulta" })], "2026-10-16")).toEqual([]);
+  });
+});
+
+describe("doses registradas e segundo aviso", () => {
+  const med: Dados = {
+    id: "m", pessoaId: "p", criadoEm: "2026-10-01T08:00:00", titulo: "Medicação · Predsin",
+    cuidado: "Medicação", medicamento: "Predsin", horarios: ["08:00", "20:00"], inicio: "2026-10-01",
+  };
+  const log = (titulo: string, extra: Partial<Dados> = {}): Dados => ({
+    id: titulo, pessoaId: "p", criadoEm: "2026-10-18T09:00:00", titulo, evento: true, parentId: "m", data: "2026-10-18", ...extra,
+  });
+  const resumo = (todos: Dados[]) => lembretesDoDia(todos, "2026-10-18").map((l) => `${l.tipo}@${l.hora}`);
+
+  it("atraso de 08:00 para 20:00 não marca a dose das 20:00", () => {
+    const atrasou = log("Atrasou: Predsin (08:00 -> 20:00)");
+    expect(horarioDoLog(atrasou)).toBe("08:00");
+    expect(doseRegistrada([atrasou], "m", "2026-10-18", "08:00")).toBeTruthy();
+    expect(doseRegistrada([atrasou], "m", "2026-10-18", "20:00")).toBeUndefined();
+  });
+  it("usa o campo horario quando existe", () => {
+    expect(horarioDoLog(log("Tomou: Predsin", { horario: "20:00" }))).toBe("20:00");
+  });
+  it("avisa no horário e insiste 15 minutos depois enquanto a dose não é registrada", () => {
+    expect(resumo([med])).toEqual(["lembrete@08:00", "insistir@08:15", "lembrete@20:00", "insistir@20:15"]);
+    expect(resumo([med, log("Tomou: Predsin (08:00)")])).toEqual(["lembrete@20:00", "insistir@20:15"]);
+  });
+  it("não insiste depois da meia-noite", () => {
+    expect(resumo([{ ...med, horarios: ["23:50"] }])).toEqual(["lembrete@23:50"]);
   });
 });

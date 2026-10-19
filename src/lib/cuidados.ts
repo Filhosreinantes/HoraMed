@@ -31,6 +31,8 @@ export interface Dados {
   dosagem?: string | undefined;
   frequencia?: string | undefined;
   horarios?: string[] | undefined;
+  /** Dose log: the scheduled time this record refers to ("08:00"). */
+  horario?: string | undefined;
   inicio?: string | undefined;
   fim?: string | undefined;
   situacao?: Situacao | undefined;
@@ -204,4 +206,49 @@ export function medicacoesComLembrete(todos: Dados[], hoje = hojeYMD()) {
       medicacaoEmUso(d, hoje) &&
       d.situacao !== "cancelado",
   );
+}
+
+/** Scheduled time a dose log refers to: its field, or "(08:00)" / "(08:00 -> 09:30)" in older titles. */
+export function horarioDoLog(d: Dados) {
+  return d.horario ?? d.titulo.match(/\((\d{2}:\d{2})(?:\s*->|\))/)?.[1];
+}
+
+/** Dose log ("Tomou" or "Atrasou") for one scheduled time of a medication on a day. */
+export function doseRegistrada(todos: Dados[], medId: string, dia: string, horario: string) {
+  return todos.find(
+    (d) => d.evento && d.parentId === medId && d.data === dia && horarioDoLog(d) === horario,
+  );
+}
+
+export const INSISTIR_APOS_MIN = 15;
+
+function somarMinutos(hora: string, min: number) {
+  const [h = 0, m = 0] = hora.split(":").map(Number);
+  const t = h * 60 + m + min;
+  if (t >= 24 * 60) return null; // não atravessa a meia-noite
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
+export type Lembrete = {
+  med: Item;
+  horario: string; // horário da dose
+  hora: string; // quando enviar
+  tipo: "lembrete" | "insistir";
+};
+
+/**
+ * Reminders for a day: one at each dose time and, if the dose is still not
+ * registered, another INSISTIR_APOS_MIN minutes later.
+ */
+export function lembretesDoDia(todos: Dados[], dia = hojeYMD()): Lembrete[] {
+  const out: Lembrete[] = [];
+  for (const med of medicacoesComLembrete(todos, dia)) {
+    for (const horario of med.horarios ?? []) {
+      if (doseRegistrada(todos, med.id, dia, horario)) continue;
+      out.push({ med, horario, hora: horario, tipo: "lembrete" });
+      const depois = somarMinutos(horario, INSISTIR_APOS_MIN);
+      if (depois) out.push({ med, horario, hora: depois, tipo: "insistir" });
+    }
+  }
+  return out;
 }

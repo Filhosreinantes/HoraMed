@@ -3,9 +3,10 @@
 // (horário de Brasília) e marca cada um em rotina_lembretes_enviados, então
 // chamadas extras não geram envios repetidos.
 //   {}                          → envia os lembretes devidos
+//   { acao: "teste" }            → notificação de teste para a usuária logada (JWT)
 //   { acao: "limpar-agendados" } → cancela no OneSignal os agendamentos do sistema antigo
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { medicacoesComLembrete, type Dados } from "../../../src/lib/cuidados.ts";
+import { lembretesDoDia, type Dados } from "../../../src/lib/cuidados.ts";
 
 const FUSO = "America/Sao_Paulo";
 const JANELA_MIN = 5; // tolera atrasos do cron sem perder lembretes
@@ -21,8 +22,17 @@ const chave = Deno.env.get("ONESIGNAL_REST_KEY")!;
 // Chaves novas do OneSignal começam com "os_v2_" e usam "Key"; as antigas, "Basic".
 const autorizacao = chave?.startsWith("os_v2_") ? `Key ${chave}` : `Basic ${chave}`;
 
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, "Content-Type": "application/json" },
+  });
 }
 
 /** Data (YYYY-MM-DD) e hora (HH:MM) de um instante no fuso de Brasília. */
@@ -73,7 +83,7 @@ async function enviarDevidos() {
   const { data: regs, error } = await db
     .from("pedacinho_registros")
     .select("user_id, pessoa_id, dados")
-    .eq("dados->>cuidado", "Medicação");
+    .in("dados->>cuidado", ["Medicação", "Medicação_Log"]); // medicações, acompanhamentos e doses
   if (error) throw new Error(`ler registros: ${error.message}`);
 
   // Agrupa por usuária: o histórico de cada uma é resolvido separadamente.
@@ -84,44 +94,45 @@ async function enviarDevidos() {
     porUsuaria.set(r.user_id, lista);
   }
 
-  const devidos: { userId: string; med: Dados; data: string; hora: string }[] = [];
+  const devidos: { userId: string; l: ReturnType<typeof lembretesDoDia>[number]; data: string }[] = [];
   for (const [userId, todos] of porUsuaria) {
     for (const dia of dias) {
       const horasDoDia = new Set(momentos.filter((m) => m.data === dia).map((m) => m.hora));
-      for (const med of medicacoesComLembrete(todos, dia)) {
-        for (const hora of med.horarios ?? []) {
-          if (horasDoDia.has(hora)) devidos.push({ userId, med, data: dia, hora });
-        }
+      for (const l of lembretesDoDia(todos, dia)) {
+        if (horasDoDia.has(l.hora)) devidos.push({ userId, l, data: dia });
       }
     }
   }
   if (devidos.length === 0) return { enviados: 0 };
 
-  const pessoaIds = [...new Set(devidos.map((d) => d.med.pessoaId))];
+  const pessoaIds = [...new Set(devidos.map((d) => d.l.med.pessoaId))];
   const { data: pessoas } = await db.from("pedacinho_pessoas").select("id, nome").in("id", pessoaIds);
   const nomes = new Map((pessoas ?? []).map((p) => [p.id, p.nome as string]));
 
   let enviados = 0;
   for (const d of devidos) {
+    const { med, horario, tipo } = d.l;
+    // Chave do envio: o 2º aviso tem chave própria para não colidir com o 1º.
+    const chave = tipo === "insistir" ? `${horario}+insistir` : horario;
     // Reserva o envio; se outra execução já reservou, pula.
     const { data: reserva } = await db
       .from("rotina_lembretes_enviados")
       .upsert(
-        { item_id: d.med.id, data: d.data, horario: d.hora, user_id: d.userId },
+        { item_id: med.id, data: d.data, horario: chave, user_id: d.userId },
         { onConflict: "item_id,data,horario", ignoreDuplicates: true },
       )
       .select("item_id");
     if (!reserva?.length) continue;
 
-    const nome = nomes.get(d.med.pessoaId);
-    const remedio = [d.med.medicamento || "a medicação", d.med.dosagem].filter(Boolean).join(" ");
+    const nome = nomes.get(med.pessoaId);
+    const remedio = [med.medicamento || "a medicação", med.dosagem].filter(Boolean).join(" ");
+    const de = nome ? ` de ${nome}` : "";
+    const [titulo, texto] =
+      tipo === "insistir"
+        ? [`⏰ Dose das ${horario} ainda não registrada`, `${remedio}${de}. Toque para registrar.`]
+        : [`💊 Hora do remédio${de}`, `${horario} · ${remedio}`];
     try {
-      const r = await enviarPush(
-        d.userId,
-        `💊 Hora do remédio${nome ? ` de ${nome}` : ""}`,
-        `${d.hora} · ${remedio}`,
-        `med-${d.med.id}-${d.data}-${d.hora}`,
-      );
+      const r = await enviarPush(d.userId, titulo, texto, `med-${med.id}-${d.data}-${horario}`);
       if (r.semDispositivo) console.log(`[lembretes] sem dispositivo inscrito: ${d.userId}`);
       else enviados++;
     } catch (e) {
@@ -129,11 +140,36 @@ async function enviarDevidos() {
       await db
         .from("rotina_lembretes_enviados")
         .delete()
-        .match({ item_id: d.med.id, data: d.data, horario: d.hora });
+        .match({ item_id: med.id, data: d.data, horario: chave });
       console.error("[lembretes]", e);
     }
   }
   return { enviados, devidos: devidos.length };
+}
+
+/** Notificação de teste para quem está logada: no máximo uma por minuto. */
+async function enviarTeste(req: Request) {
+  const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+  const { data, error } = await db.auth.getUser(token);
+  if (error || !data.user) return json({ error: "faça login novamente" }, 401);
+
+  const agora = emBrasilia(new Date());
+  const { data: reserva } = await db
+    .from("rotina_lembretes_enviados")
+    .upsert(
+      { item_id: `teste-${data.user.id}`, data: agora.data, horario: agora.hora, user_id: data.user.id },
+      { onConflict: "item_id,data,horario", ignoreDuplicates: true },
+    )
+    .select("item_id");
+  if (!reserva?.length) return json({ error: "aguarde um minuto para testar de novo" }, 429);
+
+  const r = await enviarPush(
+    data.user.id,
+    "🔔 Teste do Rotina Azul",
+    "Está tudo certo! Os lembretes de medicação vão chegar assim.",
+    `teste-${data.user.id}`,
+  );
+  return json({ enviado: !r.semDispositivo });
 }
 
 /** Cancela os envios futuros que o sistema antigo (agendar-lembretes) deixou no OneSignal. */
@@ -161,9 +197,11 @@ async function limparAgendados() {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
     const body = await req.json().catch(() => ({}));
+    if (body?.acao === "teste") return await enviarTeste(req);
     if (body?.acao === "limpar-agendados") return json(await limparAgendados());
     return json(await enviarDevidos());
   } catch (e) {
