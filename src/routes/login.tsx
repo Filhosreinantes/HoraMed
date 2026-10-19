@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { Botao, Campo, Divisor } from "@/components/ui-kit";
+import { CheckoutPix } from "@/components/checkout-pix";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
@@ -126,78 +127,7 @@ function Login() {
       </div>
 
       {/* ═══ MODAL DE COMPRA PIX ═══ */}
-      {pixAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm space-y-4 rounded-3xl bg-white p-6 shadow-xl">
-            <div className="text-center">
-              <h2 className="font-display text-2xl font-bold text-foreground">Assinar Rotina Azul</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Acesso mensal · R$ 5,00</p>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-bold text-muted-foreground">Nome completo</label>
-                <input type="text" placeholder="Seu nome" className="field w-full mt-1" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-muted-foreground">E-mail</label>
-                {/* ✅ ID adicionado */}
-                <input
-                  id="email-comprador"
-                  type="email"
-                  placeholder="seu@email.com"
-                  className="field w-full mt-1"
-                />
-                <p className="text-[0.65rem] text-muted-foreground mt-1">Enviaremos o acesso para este e-mail.</p>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-muted-foreground">CPF</label>
-                <input type="text" placeholder="000.000.000-00" className="field w-full mt-1" />
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                onClick={() => setPixAberto(false)}
-                className="flex-1 rounded-full border border-gray-300 py-2.5 text-sm font-bold text-gray-600"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={async () => {
-                  // ✅ Pega o e-mail pelo ID do input
-                  const inputEmail = document.getElementById("email-comprador") as HTMLInputElement;
-                  const emailCliente = inputEmail?.value?.trim();
-                  const ref = localStorage.getItem("afiliado_ref");
-
-                  // ✅ Validação: impede de ir sem e-mail
-                  if (!emailCliente) {
-                    toast.error("Informe seu e-mail para continuar.");
-                    return;
-                  }
-
-                  // ✅ Salva o clique com o e-mail para o Webhook cruzar depois
-                  if (ref) {
-                    const { error } = await supabase.from("affiliate_clicks").insert({
-                      codigo_ref: ref,
-                      email_cliente: emailCliente,
-                      app_origem: "Rotina Azul",
-                    });
-                    if (error) console.error("Erro ao registrar compra:", error);
-                  }
-
-                  // ✅ Abre o PagBank
-                  window.open("https://pag.ae/82f-9CE1a", "_blank");
-                  setPixAberto(false);
-                }}
-                className="flex-1 rounded-full bg-[#00B87C] py-2.5 text-sm font-bold text-white shadow-md"
-              >
-                Ir para o Pagamento
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {pixAberto && <CheckoutPix emailInicial={email} onFechar={() => setPixAberto(false)} />}
     </main>
   );
 }
