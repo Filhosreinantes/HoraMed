@@ -107,15 +107,15 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   // ✅ INICIALIZAÇÃO DO ONESIGNAL
-  useEffect(() => {
-    OneSignal.init({
-      appId: "SEU_APP_ID_AQUI", // ⚠️ Substitua pelo ID do seu app no painel do OneSignal
-      serviceWorkerPath: "onesignal/OneSignalSDKWorker.js",
-      serviceWorkerParam: { scope: "/onesignal/" },
-      notifyButton: { enable: false }, // Desativa o botão padrão para não quebrar o layout
-      allowLocalhostAsSecureOrigin: true, // Permite testar no seu computador (localhost)
-    }).catch((err) => console.error("Erro ao iniciar OneSignal:", err));
-  }, []);
+useEffect(() => {
+  OneSignal.init({
+    appId: "c1ce9bf7-7bd7-4d39-9b90-294a304b4500", // ✅ Seu App ID aqui
+    serviceWorkerPath: "onesignal/OneSignalSDKWorker.js",
+    serviceWorkerParam: { scope: "/onesignal/" },
+    notifyButton: { enable: false }, 
+    allowLocalhostAsSecureOrigin: true, 
+  }).catch((err) => console.error("Erro ao iniciar OneSignal:", err));
+}, []);
 
   return (
     <QueryClientProvider client={queryClient}>
