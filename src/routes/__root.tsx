@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
-import OneSignal from "react-onesignal"; // ✅ Import do OneSignal
+import OneSignal from "react-onesignal";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -115,11 +115,11 @@ function RootComponent() {
 
     OneSignal.init({
       appId: "c1ce9bf7-7bd7-4d39-9b90-294a304b4500",
-      // ✅ Barra no início — caminho absoluto
-      serviceWorkerPath: "/onesignal/OneSignalSDKWorker.js",
-      serviceWorkerParam: { scope: "/onesignal/" },
-      notifyButton: { enable: true }, // sino de notificação
-      allowLocalhostAsSecureOrigin: false, // ✅ produção
+      // ✅ "oneSignal" com S maiúsculo no caminho
+      serviceWorkerPath: "/oneSignal/OneSignalSDKWorker.js",
+      serviceWorkerParam: { scope: "/oneSignal/" },
+      notifyButton: { enable: true }, // ✅ OBRIGATÓRIO ESTAR TRUE pro sino aparecer
+      allowLocalhostAsSecureOrigin: false,
     }).catch((err) => console.error("Erro ao iniciar OneSignal:", err));
   }, []);
 
