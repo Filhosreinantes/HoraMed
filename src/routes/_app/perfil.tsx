@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pencil, Plus, LogOut } from "lucide-react";
-import OneSignal from "react-onesignal";
 import { toast } from "sonner";
+import OneSignal from "react-onesignal";
 import { useApp } from "@/lib/app-store";
 import { supabase } from "@/lib/supabase";
 import { formatData, nowLocalISO, uid, type Pessoa } from "@/lib/cuidados";
@@ -33,40 +33,20 @@ function Perfil() {
   const { ativa, user, recarregar, setAtivaId } = useApp();
   const [form, setForm] = useState<Partial<Pessoa> | null>(null);
   const [sair, setSair] = useState(false);
-  const [notifPermissao, setNotifPermissao] = useState<NotificationPermission>("default");
-  const [ativando, setAtivando] = useState(false);
 
-  // Lê o estado atual da permissão (client-only)
-  useEffect(() => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-    setNotifPermissao(Notification.permission);
-  }, []);
-
+  // ✅ NOVA FUNÇÃO DE ATIVAR LEMBRETES
   const ativarLembretes = async () => {
-    if (typeof window === "undefined" || !("Notification" in window)) {
-      toast.error("Seu navegador não suporta notificações.");
-      return;
-    }
-    setAtivando(true);
     try {
-      if (OneSignal.initialized) {
-        await OneSignal.Notifications.requestPermission();
+      await OneSignal.Notifications.requestPermission();
+      if (OneSignal.Notifications.permission) {
+        OneSignal.login(user.id); // Garante o vínculo do device com o ID do banco
+        toast.success("Lembretes ativados com sucesso! 💙");
       } else {
-        await Notification.requestPermission();
+        toast.error("Você precisa permitir as notificações no navegador.");
       }
-      const novaPermissao = Notification.permission;
-      setNotifPermissao(novaPermissao);
-
-      if (novaPermissao === "granted") {
-        toast.success("Lembretes ativados! 💙");
-      } else if (novaPermissao === "denied") {
-        toast.error("Notificações bloqueadas. Habilite nas configurações do navegador.");
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error("Não foi possível ativar os lembretes.");
-    } finally {
-      setAtivando(false);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao ativar as notificações.");
     }
   };
 
@@ -116,22 +96,12 @@ function Perfil() {
         <Plus className="h-5 w-5" /> Adicionar outro Tesouro
       </Botao>
 
-      {/* ✅ Lembretes de notificação */}
+      {/* ✅ NOVO BOTÃO DE LEMBRETES */}
       <button
-        type="button"
         onClick={ativarLembretes}
-        disabled={ativando || notifPermissao === "granted"}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gold/50 bg-card py-3 font-semibold shadow-soft text-foreground disabled:opacity-70"
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gold/50 bg-card py-3 font-semibold shadow-soft text-foreground transition hover:bg-muted"
       >
-        {notifPermissao === "granted" ? (
-          <>✅ Lembretes ativados</>
-        ) : notifPermissao === "denied" ? (
-          <>🔕 Notificações bloqueadas</>
-        ) : ativando ? (
-          <>Ativando…</>
-        ) : (
-          <>🔔 Ativar Lembretes de Medicação</>
-        )}
+        🔔 Ativar Lembretes de Medicação
       </button>
 
       <Divisor />
