@@ -86,9 +86,14 @@ async function enviarPush(userId: string, titulo: string, texto: string, topico:
     }),
   });
   const corpo = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(`OneSignal ${res.status}: ${JSON.stringify(corpo)}`);
-  // Sem celular inscrito não é erro do sistema: não adianta tentar de novo.
-  return { semDispositivo: !corpo.id };
+  const detalhe = JSON.stringify(corpo.errors ?? corpo).slice(0, 300);
+  console.log(`[onesignal] ${res.status} id=${corpo.id ?? ""} ${corpo.errors ? detalhe : ""}`);
+  // Sem aparelho inscrito (ou ligado a esta conta) o OneSignal responde 200 sem id,
+  // ou 400 citando aliases/assinantes: não é falha do sistema nem adianta repetir.
+  const semAparelho = !corpo.id && (res.ok || /alias|subscri|player/i.test(detalhe));
+  if (semAparelho) return { semDispositivo: true, detalhe };
+  if (!res.ok) throw new Error(`OneSignal ${res.status}: ${detalhe}`);
+  return { semDispositivo: false, detalhe };
 }
 
 async function enviarDevidos() {
@@ -216,23 +221,32 @@ async function enviarTeste(req: Request) {
   const { data, error } = await db.auth.getUser(token);
   if (error || !data.user) return json({ error: "faça login novamente" }, 401);
 
-  const agora = noFuso(new Date());
-  const { data: reserva } = await db
+  // No máximo um teste a cada 10 s; o limite só conta testes que de fato foram tentados.
+  const item = `teste-${data.user.id}`;
+  const { count } = await db
     .from("rotina_lembretes_enviados")
-    .upsert(
-      { item_id: `teste-${data.user.id}`, data: agora.data, horario: agora.hora, user_id: data.user.id },
-      { onConflict: "item_id,data,horario", ignoreDuplicates: true },
-    )
-    .select("item_id");
-  if (!reserva?.length) return json({ error: "aguarde um minuto para testar de novo" }, 429);
+    .select("item_id", { count: "exact", head: true })
+    .eq("item_id", item)
+    .gt("enviado_em", new Date(Date.now() - 10_000).toISOString());
+  if ((count ?? 0) > 0) return json({ error: "aguarde alguns segundos para testar de novo" }, 429);
 
-  const r = await enviarPush(
-    data.user.id,
-    "🔔 Teste do Rotina Azul",
-    "Está tudo certo! Os lembretes de medicação vão chegar assim.",
-    `teste-${data.user.id}`,
-  );
-  return json({ enviado: !r.semDispositivo });
+  const hoje = noFuso(new Date()).data;
+  await db.from("rotina_lembretes_enviados").insert({
+    item_id: item, data: hoje, horario: new Date().toISOString(), user_id: data.user.id,
+  });
+
+  try {
+    const r = await enviarPush(
+      data.user.id,
+      "🔔 Teste do Rotina Azul",
+      "Está tudo certo! Os lembretes de medicação vão chegar assim.",
+      `teste-${data.user.id}-${Date.now()}`, // cada teste aparece, sem substituir o anterior
+    );
+    return json({ enviado: !r.semDispositivo, motivo: r.semDispositivo ? "sem-aparelho" : undefined });
+  } catch (e) {
+    console.error("[lembretes] teste", e);
+    return json({ enviado: false, motivo: "falha-envio" });
+  }
 }
 
 /** Cancela os envios futuros que o sistema antigo (agendar-lembretes) deixou no OneSignal. */

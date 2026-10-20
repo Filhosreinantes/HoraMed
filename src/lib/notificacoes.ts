@@ -8,8 +8,9 @@ export function iniciarNotificacoes() {
   if (typeof window === "undefined") return Promise.resolve(false);
   pronto ??= OneSignal.init({
     appId: "c1ce9bf7-7bd7-4d39-9b90-294a304b4500",
-    serviceWorkerPath: "/oneSignal/OneSignalSDKWorker.js",
-    serviceWorkerParam: { scope: "/oneSignal/" },
+    // Os arquivos OneSignalSDKWorker.js e OneSignalSDKUpdaterWorker.js ficam na RAIZ do site
+    // (public/). O SDK ignora serviceWorkerPath/serviceWorkerParam sem
+    // serviceWorkerOverrideForTypical, e procura os arquivos na raiz: era isso que quebrava.
     // No computador, o lembrete fica na tela até ser tocado.
     persistNotification: true,
     // A boas-vindas padrão do OneSignal vem em inglês ("Thanks for subscribing!").
@@ -68,9 +69,9 @@ export const MENSAGEM: Record<Exclude<EstadoNotificacoes, "ativas" | "pendente">
   "instalar-ios":
     'No iPhone, primeiro instale o app: toque em Compartilhar e depois em "Adicionar à Tela de Início". Abra o Rotina Azul pelo ícone e ative os lembretes.',
   bloqueadas:
-    "As notificações estão bloqueadas para este site. Libere nas configurações do navegador e tente de novo.",
+    "As notificações estão bloqueadas para este site. Libere nas configurações do navegador.",
   "nao-carregou":
-    "O sistema de lembretes foi bloqueado neste navegador. No Brave, toque no ícone do leão e desligue o Shields para este site; se usar bloqueador de anúncios, libere este site. Depois recarregue a página.",
+    "Um bloqueador do navegador impediu os lembretes. Libere este site no bloqueador e recarregue a página.",
   "sem-suporte": "Este navegador não recebe notificações. Tente pelo Chrome no celular.",
 };
 
@@ -104,5 +105,5 @@ export async function enviarNotificacaoTeste() {
       .catch(() => null);
     throw new Error(msg || "Não foi possível enviar o teste.");
   }
-  return (data as { enviado: boolean }).enviado;
+  return data as { enviado: boolean; motivo?: "sem-aparelho" | "falha-envio" };
 }

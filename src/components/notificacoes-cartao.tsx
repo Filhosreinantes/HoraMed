@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
 import {
   ativarNotificacoes,
+  conectarUsuaria,
   desativarNotificacoes,
   enviarNotificacaoTeste,
   estadoNotificacoes,
@@ -18,9 +19,6 @@ const TITULO: Record<EstadoNotificacoes, string> = {
   "nao-carregou": "🛡️ Um bloqueador impediu os lembretes",
   "sem-suporte": "⚠️ Este navegador não recebe notificações",
 };
-
-const COMO_LIBERAR =
-  'Toque no cadeado (ou nos ⋮) ao lado do endereço do site → Configurações do site → Notificações → Permitir. Depois toque em "Verificar de novo".';
 
 /** Estado e controles dos lembretes deste aparelho: ativar, reativar, desativar e testar. */
 export function NotificacoesCartao() {
@@ -62,9 +60,15 @@ export function NotificacoesCartao() {
 
   const testar = () =>
     executar(async () => {
-      const enviado = await enviarNotificacaoTeste();
+      // Garante que este aparelho está ligado à conta antes de o servidor procurar por ele.
+      await conectarUsuaria(user.id);
+      const { enviado, motivo } = await enviarNotificacaoTeste();
       if (enviado) toast.success("Teste enviado! Deve chegar em alguns segundos.");
-      else toast.error("Nenhum aparelho inscrito. Desative e ative os lembretes de novo.");
+      else if (motivo === "sem-aparelho")
+        toast.error(
+          "Não encontramos este aparelho na sua conta. Desative e ative os lembretes de novo.",
+        );
+      else toast.error("Não foi possível enviar o teste agora. Tente de novo em instantes.");
     });
 
   if (!estado) return null;
@@ -116,7 +120,7 @@ export function NotificacoesCartao() {
 
       {estado === "bloqueadas" && (
         <>
-          <p className="text-xs text-muted-foreground">{COMO_LIBERAR}</p>
+          <p className="text-xs text-muted-foreground">{MENSAGEM.bloqueadas}</p>
           <button
             onClick={verificar}
             disabled={ocupado}
