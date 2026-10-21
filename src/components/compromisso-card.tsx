@@ -16,6 +16,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
 
   const pendente = (item.situacao ?? "proximo") === "proximo";
   const ehMedicamento = item.cuidado === "Medicação";
+  const mostraEstoque = item.dosagemUnidade !== "ml" && item.estoqueAtual !== undefined;
 
   const quando = ehMedicamento
     ? [item.inicio && `desde ${formatData(item.inicio)}`, item.fim ? `até ${formatData(item.fim)}` : "uso contínuo"].filter(Boolean).join(" · ")
@@ -57,7 +58,6 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
       <article className="overflow-hidden rounded-2xl border border-gold/30 bg-card shadow-soft transition-all">
         <div className="flex w-full items-center gap-3 p-3 text-left text-foreground">
           
-          {/* ÍCONE / FOTO */}
           <button onClick={() => setExpandido((v) => !v)} className="shrink-0">
             {item.fotoUrl ? (
               <img src={item.fotoUrl} alt={item.medicamento} className={`${compacto ? "h-10 w-10" : "h-14 w-14"} rounded-xl object-cover border border-gold/30 shadow-sm`} />
@@ -76,7 +76,8 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
             {ehMedicamento ? (
               <div className={`mt-1 flex flex-col gap-0.5 ${compacto ? "text-[11px]" : "text-sm"} text-muted-foreground`}>
                 <span>{item.dosagem}</span>
-                {item.estoqueAtual !== undefined && <span>Restam {item.estoqueAtual} un.</span>}
+                {/* ✅ Só mostra estoque se não for ml */}
+                {mostraEstoque && <span>Restam {item.estoqueAtual} un.</span>}
               </div>
             ) : (
               <>
@@ -89,7 +90,6 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
             )}
           </div>
 
-          {/* AÇÕES: Se for compacto e compromisso pendente, mostra os botões na lateral */}
           {compacto && pendente && !ehMedicamento ? (
             <div className="flex flex-col gap-1 shrink-0">
               <button onClick={() => registrar("feito")} className="text-[10px] font-bold text-white px-2 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Compareceu</button>
