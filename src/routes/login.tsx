@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { Botao, Campo, Divisor } from "@/components/ui-kit";
 import { CheckoutPix } from "@/components/checkout-pix";
+import { ehAppAndroid, urlDoSite } from "@/lib/plataforma";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
@@ -63,7 +64,7 @@ function Login() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password: senha,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: urlDoSite() },
     });
     setOcupado(false);
     if (error) { toast.error("Não foi possível criar a conta: " + error.message); return; }
@@ -74,7 +75,7 @@ function Login() {
   const esqueci = async () => {
     if (!email) { toast.error("Digite seu e-mail primeiro."); return; }
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/redefinir-senha`,
+      redirectTo: `${urlDoSite()}/redefinir-senha`,
     });
     if (error) { toast.error("Não foi possível enviar o e-mail."); return; }
     toast.success("Enviamos um link para redefinir sua senha.");
@@ -101,6 +102,8 @@ function Login() {
       </form>
 
       {/* ═══ LOJA FILHOS REINANTES ═══ */}
+      {/* No app Android não há venda: a Play Store só aceita pagamento pelo Google Play. */}
+      {!ehAppAndroid() && (
       <div className="mt-8 border-t border-gold/30 pt-6">
         <h2 className="mb-4 text-center font-display text-sm font-bold uppercase tracking-widest text-gold">
           Loja Filhos Reinantes
@@ -125,6 +128,7 @@ function Login() {
           </button>
         </div>
       </div>
+      )}
 
       {/* ═══ MODAL DE COMPRA PIX ═══ */}
       {pixAberto && <CheckoutPix emailInicial={email} onFechar={() => setPixAberto(false)} />}

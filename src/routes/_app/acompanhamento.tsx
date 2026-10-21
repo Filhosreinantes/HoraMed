@@ -4,7 +4,7 @@ import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pil
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
-  nowLocalISO, uid, type Cuidado, type Situacao, type Dados, parseYMD
+  nowLocalISO, uid, type Cuidado, type Situacao, type Dados, type Item, parseYMD
 } from "@/lib/cuidados";
 import { Botao, Divisor, Pill, SeletorTesouro } from "@/components/ui-kit";
 import { CompromissoCard } from "@/components/compromisso-card";

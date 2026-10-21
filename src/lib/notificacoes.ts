@@ -1,11 +1,13 @@
 import OneSignal from "react-onesignal";
+import { ehAppAndroid } from "./alarmes";
 import { supabase } from "./supabase";
 
 let pronto: Promise<boolean> | null = null;
 
 /** Inicializa o OneSignal uma única vez. Resolve false se não carregar (bloqueador, sem suporte). */
 export function iniciarNotificacoes() {
-  if (typeof window === "undefined") return Promise.resolve(false);
+  // No app Android os lembretes são alarmes locais (alarmes.ts); push web não funciona no WebView.
+  if (typeof window === "undefined" || ehAppAndroid()) return Promise.resolve(false);
   pronto ??= OneSignal.init({
     appId: "c1ce9bf7-7bd7-4d39-9b90-294a304b4500",
     // Os arquivos OneSignalSDKWorker.js e OneSignalSDKUpdaterWorker.js ficam na RAIZ do site

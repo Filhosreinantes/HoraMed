@@ -100,7 +100,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
       <article className={`overflow-hidden rounded-2xl border transition-all ${editando ? "border-[var(--tema)] shadow-md bg-white" : "border-gold/30 bg-card shadow-soft"}`}>
         <div className="flex w-full items-center gap-3 p-3 text-left text-foreground">
           
-          <button onClick={() => setExpandido((v) => !v)} className="shrink-0">
+          <button onClick={() => setExpandido((v) => !v)} aria-expanded={expandido} aria-controls={detalhesId} aria-label={expandido ? "Esconder detalhes" : "Ver detalhes"} className="shrink-0">
             {item.fotoUrl ? (
               <img src={item.fotoUrl} alt={item.medicamento} className={`${compacto ? "h-10 w-10" : "h-14 w-14"} rounded-xl object-cover border border-gold/30 shadow-sm`} />
             ) : (
@@ -143,10 +143,10 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
                 </>
               ) : (
                 <>
-                  <button onClick={iniciarEdicao} className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Pencil className="h-4 w-4" /></button>
-                  <button onClick={excluir} className="p-1 text-muted-foreground hover:text-red-500 transition"><Trash2 className="h-4 w-4" /></button>
+                  <button onClick={iniciarEdicao} aria-label="Editar" className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={excluir} aria-label="Excluir" className="p-1 text-muted-foreground hover:text-red-500 transition"><Trash2 className="h-4 w-4" /></button>
                   {ehMedicamento && (
-                    <button onClick={() => setAlarmeAberto(true)} className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Clock className="h-4 w-4" /></button>
+                    <button onClick={() => setAlarmeAberto(true)} aria-label="Registrar dose" className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Clock className="h-4 w-4" /></button>
                   )}
                 </>
               )}

@@ -234,6 +234,8 @@ export function medicacoesComLembrete(todos: Dados[], hoje = hojeYMD()) {
       (d.horarios?.length ?? 0) > 0 &&
       (!d.inicio || d.inicio <= hoje) &&
       medicacaoEmUso(d, hoje) &&
+      // Dias da semana escolhidos (0 = domingo); sem escolha, todos os dias.
+      (!d.diasSemana?.length || d.diasSemana.includes(parseYMD(hoje).getDay())) &&
       d.situacao !== "cancelado",
   );
 }

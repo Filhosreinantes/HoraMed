@@ -52,7 +52,7 @@ function Criar() {
 
   const calcularHorarios = () => {
     if (!horaInicial) return [];
-    const [h, m] = horaInicial.split(":").map(Number);
+    const [h = 0, m = 0] = horaInicial.split(":").map(Number);
     const intervalHours = 24 / vezesAoDia;
     const horarios = [];
 

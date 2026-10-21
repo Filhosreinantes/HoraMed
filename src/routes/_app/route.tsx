@@ -4,8 +4,10 @@ import { Calendar, Plus, User } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { AppProvider, useApp } from "@/lib/app-store";
 import { desconectarUsuaria } from "@/lib/notificacoes";
+import { ehAppAndroid, limparAlarmes } from "@/lib/alarmes";
 import { CheckoutPix } from "@/components/checkout-pix";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
+import { ConfiabilidadePrompt } from "@/components/confiabilidade";
 
 export const Route = createFileRoute("/_app")({
   ssr: false,
@@ -36,6 +38,7 @@ function Layout() {
       if (ev === "SIGNED_OUT") {
         // Este aparelho deixa de receber os lembretes da conta que saiu.
         desconectarUsuaria();
+        limparAlarmes();
         navigate({ to: "/login", replace: true });
       }
     });
@@ -88,15 +91,24 @@ function Shell() {
           <h2 className="mt-4 font-display text-2xl font-bold italic text-[#2C4A6B]">
             Assine o Rotina Azul
           </h2>
-          <p className="mt-2 text-sm text-[#7A8A9A]">
-            Sua assinatura não está ativa. Libere o acesso completo para organizar a rotina dos seus Tesouros.
-          </p>
-          <button
-            onClick={() => setComprando(true)}
-            className="mt-6 block w-full rounded-2xl bg-[#5B92C7] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#4a7eb3]"
-          >
-            Assinar agora por R$ 5,00/mês
-          </button>
+          {/* No app Android não há venda: a Play Store só aceita pagamento pelo Google Play. */}
+          {ehAppAndroid() ? (
+            <p className="mt-2 text-sm text-[#7A8A9A]">
+              Sua assinatura não está ativa nesta conta.
+            </p>
+          ) : (
+            <>
+              <p className="mt-2 text-sm text-[#7A8A9A]">
+                Sua assinatura não está ativa. Libere o acesso completo para organizar a rotina dos seus Tesouros.
+              </p>
+              <button
+                onClick={() => setComprando(true)}
+                className="mt-6 block w-full rounded-2xl bg-[#5B92C7] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#4a7eb3]"
+              >
+                Assinar agora por R$ 5,00/mês
+              </button>
+            </>
+          )}
           <button
             onClick={checarAssinatura}
             className="mt-3 block w-full text-xs font-semibold text-[#5B92C7]"
@@ -135,7 +147,7 @@ function Shell() {
       <div className="mx-auto min-h-screen max-w-lg px-4 pb-28 pt-6">
         <Outlet />
       </div>
-      <NotificationPrompt />
+      {ehAppAndroid() ? <ConfiabilidadePrompt /> : <NotificationPrompt />}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/40 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
         <div className="mx-auto flex max-w-lg">
           <Link to="/acompanhamento" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>

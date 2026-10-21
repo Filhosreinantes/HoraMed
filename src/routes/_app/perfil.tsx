@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Pencil, Plus, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { NotificacoesCartao } from "@/components/notificacoes-cartao";
+import { ConfiabilidadeCartao } from "@/components/confiabilidade";
+import { ehAppAndroid } from "@/lib/alarmes";
 import { useApp } from "@/lib/app-store";
 import { supabase } from "@/lib/supabase";
 import { formatData, nowLocalISO, uid, type Pessoa } from "@/lib/cuidados";
@@ -81,7 +83,7 @@ function Perfil() {
       </Botao>
 
       {/* Lembretes: ativar, reativar, desativar e testar neste aparelho */}
-      <NotificacoesCartao />
+      {ehAppAndroid() ? <ConfiabilidadeCartao /> : <NotificacoesCartao />}
 
       <Divisor />
 

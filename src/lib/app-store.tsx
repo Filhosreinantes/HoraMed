@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
+import { App as AppNativo } from "@capacitor/app";
+import { agendarAlarmes, ehAppAndroid } from "./alarmes";
 import { conectarUsuaria } from "./notificacoes";
 import { supabase } from "./supabase";
 import { nowLocalISO, resolverSituacoes, type Dados, type Item, type Pessoa } from "./cuidados";
@@ -111,6 +113,20 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
 
   useEffect(() => {
     recarregar();
+  }, [recarregar]);
+
+  // No app Android, os lembretes são alarmes do próprio celular: reagenda a cada mudança.
+  useEffect(() => {
+    if (!carregando) agendarAlarmes(registros, pessoas);
+  }, [carregando, registros, pessoas]);
+
+  // Ao voltar para o app, busca o que mudou em outros aparelhos (e reagenda os alarmes).
+  useEffect(() => {
+    if (!ehAppAndroid()) return;
+    const ouvinte = AppNativo.addListener("resume", () => recarregar());
+    return () => {
+      ouvinte.then((o) => o.remove());
+    };
   }, [recarregar]);
 
   const setAtivaId = (id: string) => {

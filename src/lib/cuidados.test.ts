@@ -88,6 +88,12 @@ describe("lembretes de medicação", () => {
     const tomou = evento({ titulo: "Tomou: Predsin (08:00)", criadoEm: "2026-10-16T08:00:00" });
     expect(ids([med(), cancelou, tomou], "2026-10-16")).toEqual([]);
   });
+  it("só avisa nos dias da semana escolhidos", () => {
+    // 2026-10-19 é segunda (1); 2026-10-20 é terça (2).
+    expect(ids([med({ diasSemana: [1, 3, 5] })], "2026-10-19")).toEqual(["m"]);
+    expect(ids([med({ diasSemana: [1, 3, 5] })], "2026-10-20")).toEqual([]);
+    expect(ids([med({ diasSemana: [] })], "2026-10-20")).toEqual(["m"]);
+  });
   it("ignora medicação sem horários e outros cuidados", () => {
     expect(ids([med({ horarios: [] }), med({ id: "c", cuidado: "Consulta" })], "2026-10-16")).toEqual([]);
   });
