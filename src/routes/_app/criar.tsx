@@ -68,7 +68,7 @@ function Criar() {
         if (med.estoqueAtual !== undefined) setEstoqueAtual(String(med.estoqueAtual));
         if (med.horarios && med.horarios.length > 0) {
           setVezesAoDia(med.horarios.length);
-          setHoraInicial(med.horarios[0]);
+          setHoraInicial(med.horarios[0] || "08:00"); // ✅ Correção de tipagem aqui
         }
         if (med.diasSemana) setDiasSemana(med.diasSemana);
         if (med.fotoUrl) setFotoUrl(med.fotoUrl);
