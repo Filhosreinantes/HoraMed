@@ -109,13 +109,10 @@ function Criar() {
       lista = [{ ...base, id: uid(), titulo: `Exame · ${f.tipoExame}`, tipoExame: f.tipoExame, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, recomendacoes: f.recomendacoes }];
     } else if (tipo === "Medicação") {
       const horariosCalculados = calcularHorarios();
-      const grupoId = uid(); // ✅ Identificador para agrupar os remédios depois, se precisar
-
-      // ✅ AQUI ESTÁ A MÁGICA: Geramos um item separado para cada horário!
-      lista = horariosCalculados.map((hora) => ({
+      // ✅ Salva APENAS UM registro com a lista de horários.
+      lista = [{
         ...base,
         id: uid(),
-        grupoId: grupoId,
         titulo: `Medicação · ${f.medicamento}`,
         medicamento: f.medicamento,
         dosagem: `${dosagemValor} ${dosagemUnidade}`.trim(),
@@ -123,7 +120,6 @@ function Criar() {
         dosagemUnidade: dosagemUnidade || undefined,
         estoqueAtual: estoqueAtual ? Number(estoqueAtual) : undefined,
         horarios: horariosCalculados,
-        hora: hora, // ✅ Hora individual para a agenda e histórico
         frequencia: `${vezesAoDia}x ao dia`,
         profissional: f.profissional,
         especialidade: f.especialidade,
@@ -131,7 +127,7 @@ function Criar() {
         fim: f.fim || undefined,
         fotoUrl: fotoUrl,
         diasSemana: diasSemana,
-      }));
+      }];
     } else {
       const prog = f.programacao as Programacao;
       const meses = Number(f.meses);
@@ -151,7 +147,7 @@ function Criar() {
     const ok = await salvarRegistros(lista);
     setSalvando(false);
     if (ok) {
-      toast.success(lista.length > 1 ? `${lista.length} agendamentos criados!` : "Agendamento guardado!");
+      toast.success(lista.length > 1 ? `${lista.length} sessões agendadas!` : "Agendamento guardado!");
       navigate({ to: "/acompanhamento" });
     }
   };
