@@ -35,6 +35,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
     setExpandido(true);
   };
 
+  // ✅ Correção: Salvar edições SEMPRE em "acontecimentos"
   const salvarEdicao = async (isRemarcar: boolean = false) => {
     if (salvando) return;
     setSalvando(true);
@@ -44,7 +45,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
       const ok = await salvarRegistros([{
         id: uid(), pessoaId, criadoEm: nowLocalISO(), titulo: isRemarcar ? `Remarcado` : `Editado`,
         cuidado, evento: true, parentId: id, acao: "editar", alteracoes
-      }], cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos");
+      }], "acontecimentos");
 
       if (ok) {
         toast.success(isRemarcar ? "Sessão remarcada com sucesso!" : "Editado com sucesso!");
@@ -69,7 +70,6 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
 
       const itensParaSalvar: Dados[] = [dadosLog];
 
-      // ✅ Controle de estoque automático se for remédio e "Tomou"
       if (ehMedicamento && situacao === "feito" && mostraEstoque) {
         const qtdTomada = Number(item.dosagemValor || 1);
         const novoEstoque = Math.max(0, (item.estoqueAtual || 0) - qtdTomada);
@@ -79,7 +79,9 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
         });
       }
 
-      const ok = await salvarRegistros(itensParaSalvar, item.cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos");
+      // O log de medicação em si fica na tabela dele, mas o "acontecimento" fica em acontecimentos
+      const tabela = item.cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos";
+      const ok = await salvarRegistros(itensParaSalvar, tabela);
 
       if (ok) {
         toast.success("Acompanhamento registrado!");
@@ -92,9 +94,13 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
     }
   };
 
+  // ✅ Correção: Exclusão SEMPRE em "acontecimentos"
   const excluir = async () => {
     if (confirm("Tem certeza que deseja excluir?")) {
-      await salvarRegistros([{ id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo: "Excluído", cuidado: item.cuidado, evento: true, parentId: item.id, acao: "excluir" }], item.cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos");
+      await salvarRegistros([{ 
+        id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo: "Excluído", 
+        cuidado: item.cuidado, evento: true, parentId: item.id, acao: "excluir" 
+      }], "acontecimentos");
       toast.success("Excluído!");
     }
   };
