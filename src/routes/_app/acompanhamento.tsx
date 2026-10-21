@@ -90,7 +90,7 @@ function Acompanhamento() {
       const horarios = m.horarios || [];
       let horariosValidos = horarios;
       if (m.inicio === hoje && horarios.length > 0) {
-        const horaInicio = horarios[0];
+        const horaInicio = horarios[0] ?? "";
         horariosValidos = horarios.filter((h: string) => h >= horaInicio);
       }
 
@@ -129,7 +129,7 @@ function Acompanhamento() {
         if (diasDaSemana.includes(diaSemana)) {
           let horariosValidos = horarios;
           if (dataIteracao === dataInicio) {
-            const horaInicio = horarios[0];
+            const horaInicio = horarios[0] ?? "";
             horariosValidos = horarios.filter((h: string) => h >= horaInicio);
           }
           const dosesPendentes = horariosValidos.filter((h: string) => {

@@ -8,11 +8,9 @@ import { DIAS_SEMANA, gerarSessoes, nowLocalISO, uid, hojeYMD, type Cuidado, typ
 import { Botao, Campo, Divisor, SeletorTesouro } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/_app/criar")({
-  validateSearch: (search: Record<string, unknown>): { duplicar?: string } => {
-    return {
-      duplicar: (search.duplicar as string) || undefined,
-    };
-  },
+  validateSearch: (search: Record<string, unknown>): { duplicar?: string | undefined } => ({
+    duplicar: (search["duplicar"] as string) || undefined,
+  }),
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },
@@ -50,11 +48,14 @@ function Criar() {
 
   const [salvando, setSalvando] = useState(false);
 
-  // Preenchimento automático ao clicar em "Renovar"
+  // Preenchimento automático ao clicar em "Renovar": uma vez só, senão uma recarga dos
+  // dados (ex.: ao voltar para o app) apagaria o que a pessoa já editou no formulário.
+  const preenchido = useRef<string | null>(null);
   useEffect(() => {
-    if (duplicar && itens.length > 0) {
+    if (duplicar && itens.length > 0 && preenchido.current !== duplicar) {
       const med = itens.find(i => i.id === duplicar);
       if (med && med.cuidado === "Medicação") {
+        preenchido.current = duplicar;
         setTipo("Medicação");
         setF(prev => ({
           ...prev,
