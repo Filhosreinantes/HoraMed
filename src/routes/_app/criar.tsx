@@ -1,13 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { Camera, Loader2, X, Clock, CalendarDays, Stethoscope, Leaf, FileText, Pill } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import { supabase } from "@/lib/supabase";
-import { DIAS_SEMANA, gerarSessoes, nowLocalISO, uid, type Cuidado, type Dados, type Programacao } from "@/lib/cuidados";
+import { DIAS_SEMANA, gerarSessoes, nowLocalISO, uid, hojeYMD, type Cuidado, type Dados, type Programacao } from "@/lib/cuidados";
 import { Botao, Campo, Divisor, SeletorTesouro } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/_app/criar")({
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      duplicar: (search.duplicar as string) || undefined,
+    };
+  },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },
@@ -25,7 +30,8 @@ type K = "data"|"hora"|"local"|"profissional"|"especialidade"|"tipoTerapia"|"tip
 type F = Partial<Record<K, string>>;
 
 function Criar() {
-  const { ativa, salvarRegistros } = useApp();
+  const { duplicar } = Route.useSearch();
+  const { ativa, salvarRegistros, itens } = useApp(); // ✅ Adicionado 'itens'
   const navigate = useNavigate();
   const [tipo, setTipo] = useState<Cuidado | null>(null);
   const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1" });
@@ -43,6 +49,32 @@ function Criar() {
   const [estoqueAtual, setEstoqueAtual] = useState("");
 
   const [salvando, setSalvando] = useState(false);
+
+  // ✅ LÓGICA DE PREENCHIMENTO AUTOMÁTICO
+  useEffect(() => {
+    if (duplicar && itens.length > 0) {
+      const med = itens.find(i => i.id === duplicar);
+      if (med && med.cuidado === "Medicação") {
+        setTipo("Medicação");
+        setF(prev => ({
+          ...prev,
+          medicamento: med.medicamento || "",
+          profissional: med.profissional || "",
+          especialidade: med.especialidade || "",
+          inicio: hojeYMD(), // Começa a nova programação hoje
+        }));
+        if (med.dosagemValor) setDosagemValor(String(med.dosagemValor));
+        if (med.dosagemUnidade) setDosagemUnidade(med.dosagemUnidade);
+        if (med.estoqueAtual !== undefined) setEstoqueAtual(String(med.estoqueAtual));
+        if (med.horarios && med.horarios.length > 0) {
+          setVezesAoDia(med.horarios.length);
+          setHoraInicial(med.horarios[0]);
+        }
+        if (med.diasSemana) setDiasSemana(med.diasSemana);
+        if (med.fotoUrl) setFotoUrl(med.fotoUrl);
+      }
+    }
+  }, [duplicar, itens]);
 
   const set = (k: K) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
@@ -109,7 +141,6 @@ function Criar() {
       lista = [{ ...base, id: uid(), titulo: `Exame · ${f.tipoExame}`, tipoExame: f.tipoExame, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, recomendacoes: f.recomendacoes }];
     } else if (tipo === "Medicação") {
       const horariosCalculados = calcularHorarios();
-      // ✅ Salva APENAS UM registro com a lista de horários.
       lista = [{
         ...base,
         id: uid(),
@@ -159,7 +190,7 @@ function Criar() {
           Rotina Azul <span className="text-3xl not-italic">💙</span>
         </h1>
         <p className="text-sm font-semibold tracking-widest uppercase mt-1" style={{ color: "var(--tema)" }}>
-          Novo compromisso
+          {duplicar ? "Renovar Programação" : "Novo compromisso"}
         </p>
       </header>
       <SeletorTesouro prefixo="Para" />
@@ -219,7 +250,7 @@ function Criar() {
           >
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>
-                {tipo === "Medicação" ? "Nova Medicação" : `Novo(a) ${tipo}`}
+                {tipo === "Medicação" ? (duplicar ? "Renovar Medicação" : "Nova Medicação") : `Novo(a) ${tipo}`}
               </h2>
               <button
                 type="button"
