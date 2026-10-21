@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, Info, RefreshCw } from "lucide-react";
+import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, RefreshCw } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -56,7 +56,18 @@ function Acompanhamento() {
   const meds = itens.filter((i) => i.cuidado === "Medicação");
   const emUso = ordenarPorDataHora(meds.filter((m) => medicacaoEmUso(m)));
   const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
-  const continuos = emUso.filter(m => !m.fim); 
+
+  // ✅ Filtra os remédios contínuos para mostrar apenas o mais recente de cada nome (evita duplicar ao renovar)
+  const continuos = useMemo(() => {
+    const mapa = new Map();
+    emUso.filter(m => !m.fim).forEach(m => {
+      const existente = mapa.get(m.medicamento);
+      if (!existente || (m.inicio || "") > (existente.inicio || "")) {
+        mapa.set(m.medicamento, m);
+      }
+    });
+    return Array.from(mapa.values());
+  }, [emUso]);
 
   const proximos = useMemo(() => {
     let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação"));
@@ -389,28 +400,39 @@ function Acompanhamento() {
           Todos os próximos agendamentos
         </h2>
 
+        {/* ✅ AQUI ESTÁ A SIMPLIFICAÇÃO: Só duas linhas com data e botão */}
         {continuos.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-2xl text-xs space-y-2 mb-3 shadow-sm">
-            <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 shrink-0 mt-0.5" />
-              <p>
-                Para manter o app rápido, a lista abaixo exibe apenas os próximos 15 dias.
-                Se precisar ver mais adiante, renove a programação:
-              </p>
-            </div>
-            <div className="space-y-1 mt-2">
-              {continuos.map(m => (
-                <div key={m.id} className="flex justify-between items-center bg-white/60 p-2 rounded-lg border border-amber-100">
-                  <span className="font-semibold">{m.medicamento}</span>
+          <div className="space-y-2 mb-4">
+            {continuos.map(m => {
+              const inicioDate = parseYMD(m.inicio || hoje);
+              const limiteDate = new Date(inicioDate.getTime());
+              limiteDate.setDate(limiteDate.getDate() + 15);
+              const dataFormatada = `${String(limiteDate.getDate()).padStart(2, '0')}/${String(limiteDate.getMonth() + 1).padStart(2, '0')}/${limiteDate.getFullYear()}`;
+              
+              // Verifica se já se passaram 10 dias do início (faltam 5 dias para acabar)
+              const hojeDate = parseYMD(hoje);
+              const diasPassados = Math.floor((hojeDate.getTime() - inicioDate.getTime()) / (1000 * 3600 * 24));
+              const aviso = diasPassados >= 10;
+
+              return (
+                <div key={m.id} className={`flex justify-between items-center p-3 rounded-xl border shadow-sm ${aviso ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+                  <div className="flex flex-col">
+                    <span className={`font-semibold text-sm ${aviso ? 'text-red-900' : 'text-amber-900'}`}>
+                      {m.medicamento} <span className="text-[10px] font-normal opacity-70 ml-1">(Uso contínuo)</span>
+                    </span>
+                    <span className={`text-[11px] ${aviso ? 'text-red-700 font-bold' : 'text-amber-700'}`}>
+                      {aviso ? "⚠️ Renove agora! " : ""}Agendado até {dataFormatada}
+                    </span>
+                  </div>
                   <button
-                    onClick={() => navigate({ to: "/criar", search: { duplicar: m.id } as any })} // ✅ Correção de tipagem do Router
-                    className="flex items-center gap-1 font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-2 py-1 rounded-md transition"
+                    onClick={() => navigate({ to: "/criar", search: { duplicar: m.id } as any })}
+                    className={`flex items-center gap-1 font-bold text-xs px-3 py-1.5 rounded-lg transition ${aviso ? 'text-red-700 bg-red-100 hover:bg-red-200' : 'text-amber-700 bg-amber-100 hover:bg-amber-200'}`}
                   >
-                    <RefreshCw className="h-3 w-3" /> Renovar
+                    <RefreshCw className="h-3.5 w-3.5" /> Renovar
                   </button>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
 
