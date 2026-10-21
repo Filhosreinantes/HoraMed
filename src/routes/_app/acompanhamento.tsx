@@ -101,13 +101,14 @@ function Acompanhamento() {
     const titulo = novoHorario ? `Atrasou: ${item.medicamento} (${horario} -> ${novoHorario})` : `Tomou: ${item.medicamento} (${horario})`;
     const dados: Dados = { id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo, cuidado: "Medicação_Log" as any, evento: true, parentId: item.id, data: hoje, horario };
 
-    // Atualiza o estoque (se existir e não for ml)
-    const itensParaSalvar: Dados[] = [dados];
-    if (item.estoqueAtual !== undefined && item.dosagemUnidade !== "ml") {
+    let ok = await salvarRegistros([dados], "medicacao_logs");
+
+    // Desconto de estoque (se existir e não for ml): vai em "acontecimentos",
+    // porque o app-store só aplica edições vindas dessa tabela.
+    if (ok && item.estoqueAtual !== undefined && item.dosagemUnidade !== "ml") {
       const qtdTomada = Number(item.dosagemValor || 1);
       const novoEstoque = Math.max(0, item.estoqueAtual - qtdTomada);
-      
-      itensParaSalvar.push({
+      ok = await salvarRegistros([{
         id: uid(),
         pessoaId: item.pessoaId,
         criadoEm: nowLocalISO(),
@@ -117,10 +118,9 @@ function Acompanhamento() {
         parentId: item.id,
         acao: "editar",
         alteracoes: { estoqueAtual: novoEstoque }
-      });
+      }], "acontecimentos");
     }
 
-    const ok = await salvarRegistros(itensParaSalvar, "medicacao_logs");
     if (ok) {
       toast.success(novoHorario ? "Atraso registrado!" : "Medicação registrada e estoque atualizado!");
       setAtrasoModal(null);
