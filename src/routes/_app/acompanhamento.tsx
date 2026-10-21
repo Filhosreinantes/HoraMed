@@ -95,7 +95,7 @@ function Acompanhamento() {
     return <div className="space-y-3 p-4"><Skeleton className="h-40 rounded-3xl bg-muted" /><Skeleton className="h-40 rounded-3xl bg-muted" /></div>;
   }
 
-  // --- MENU INICIAL (DASHBOARD - IGUAL AO DESENHO) ---
+  // --- MENU INICIAL (DASHBOARD) ---
   if (view === "menu") {
     return (
       <div className="mx-auto max-w-lg space-y-6 py-6 pb-24">
@@ -105,10 +105,14 @@ function Acompanhamento() {
 
         <div className="px-4"><SeletorTesouro /></div>
 
-        {/* BLOCO 1: REMÉDIOS DE HOJE */}
+        {/* ✅ BLOCO 1: REMÉDIOS DE HOJE (Título dentro do bloco) */}
         <section className="px-4 mt-6">
-          <h2 className="font-display text-xl font-bold italic mb-3" style={{ color: "var(--tema-escuro)" }}>Lembretes de Hoje</h2>
-          <div className="notebook p-4 space-y-3" style={{ boxShadow: "0 0 30px 5px var(--tema-claro)", border: "1px solid var(--tema)" }}>
+          <div className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 30px 5px var(--tema-claro)", border: "1px solid var(--tema)" }}>
+            <div className="flex items-center gap-2 border-b border-border/50 pb-3 mb-3">
+              <PillIcon className="h-5 w-5" style={{ color: "var(--tema)" }} />
+              <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>Remédios</h2>
+            </div>
+
             {agendaHoje.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhum remédio para hoje.</p>
             ) : (
@@ -135,21 +139,23 @@ function Acompanhamento() {
           </div>
         </section>
 
-        {/* BLOCO 2: COMPROMISSOS DE HOJE */}
+        {/* ✅ BLOCO 2: COMPROMISSOS DE HOJE (Título dentro do bloco) */}
         <section className="px-4 mt-6">
-          <h2 className="font-display text-xl font-bold italic mb-3" style={{ color: "var(--tema-escuro)" }}>Compromissos</h2>
-          <div className="space-y-3">
-            {proximos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum compromisso agendado.</p>
-            ) : (
-              // Filtra apenas os de hoje e mostra no formato do desenho
-              proximos.filter(i => i.data === hoje).map((i) => (
-                <CompromissoCard key={i.id} item={i} compacto />
-              ))
-            )}
-            {proximos.filter(i => i.data === hoje).length === 0 && proximos.length > 0 && (
-               <p className="text-sm text-muted-foreground">Nenhum compromisso para hoje.</p>
-            )}
+          <div className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 30px 5px var(--tema-claro)", border: "1px solid var(--tema)" }}>
+            <div className="flex items-center gap-2 border-b border-border/50 pb-3 mb-3">
+              <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />
+              <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>Compromissos</h2>
+            </div>
+
+            <div className="space-y-3">
+              {proximos.filter(i => i.data === hoje).length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum compromisso para hoje.</p>
+              ) : (
+                proximos.filter(i => i.data === hoje).map((i) => (
+                  <CompromissoCard key={i.id} item={i} compacto />
+                ))
+              )}
+            </div>
           </div>
         </section>
 
@@ -173,7 +179,7 @@ function Acompanhamento() {
     );
   }
 
-  // --- TELA DE COMPROMISSOS (Mantida igual) ---
+  // --- TELA DE COMPROMISSOS ---
   if (view === "compromissos") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -182,48 +188,52 @@ function Acompanhamento() {
         </Botao>
         <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Compromissos</h1></header>
         <SeletorTesouro />
-        <div className="mt-6">
-          <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2">
-            <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} /> Panorama dos cuidados médicos
+        
+        <div className="notebook p-5 mt-4" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
+          <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2 mb-1">
+            <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} /> Panorama dos cuidados
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">Toque em um dos blocos para ver os detalhes abaixo.</p>
-        </div>
-        <div className="flex gap-2 pt-2">
-          <Pill ativo={periodo === "mes"} onClick={() => setPeriodo("mes")}>Este mês</Pill>
-          <Pill ativo={periodo === "ano"} onClick={() => setPeriodo("ano")}>Este ano</Pill>
-          <Pill ativo={periodo === "tudo"} onClick={() => setPeriodo("tudo")}>Tudo</Pill>
-        </div>
-        <div className="grid gap-3 pt-2">
-          {(["Consulta", "Terapia", "Exame"] as Cuidado[]).map((c) => {
-            const doTipo = filtrados.filter((i) => i.cuidado === c);
-            return (
-              <div key={c} className="notebook p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-display text-lg font-semibold italic" style={{ color: "var(--tema-escuro)" }}>
-                    {c === "Consulta" && <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />}
-                    {c === "Terapia" && <Leaf className="h-5 w-5" style={{ color: "var(--tema)" }} />}
-                    {c === "Exame" && <FileText className="h-5 w-5" style={{ color: "var(--tema)" }} />}
-                    <span>{c}</span>
+          <p className="text-sm text-muted-foreground mb-4">Toque em um dos blocos para ver os detalhes abaixo.</p>
+          
+          <div className="flex gap-2 mb-4">
+            <Pill ativo={periodo === "mes"} onClick={() => setPeriodo("mes")}>Este mês</Pill>
+            <Pill ativo={periodo === "ano"} onClick={() => setPeriodo("ano")}>Este ano</Pill>
+            <Pill ativo={periodo === "tudo"} onClick={() => setPeriodo("tudo")}>Tudo</Pill>
+          </div>
+
+          <div className="grid gap-3">
+            {(["Consulta", "Terapia", "Exame"] as Cuidado[]).map((c) => {
+              const doTipo = filtrados.filter((i) => i.cuidado === c);
+              return (
+                <div key={c} className="bg-muted/30 rounded-xl p-4 border border-border/50">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-display text-lg font-semibold italic" style={{ color: "var(--tema-escuro)" }}>
+                      {c === "Consulta" && <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />}
+                      {c === "Terapia" && <Leaf className="h-5 w-5" style={{ color: "var(--tema)" }} />}
+                      {c === "Exame" && <FileText className="h-5 w-5" style={{ color: "var(--tema)" }} />}
+                      <span>{c}</span>
+                    </div>
+                    <span className="font-display text-2xl font-bold" style={{ color: "var(--tema)" }}>{doTipo.length}</span>
                   </div>
-                  <span className="font-display text-2xl font-bold" style={{ color: "var(--tema)" }}>{doTipo.length}</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {LINHAS.map(({ s, label }) => {
+                      const n = doTipo.filter((i) => (i.situacao ?? "proximo") === s).length;
+                      const ativo = drill && drill.cuidado === c && drill.situacao === s;
+                      return (
+                        <Botao variant="ghost" key={s} onClick={() => setDrill({ cuidado: c, situacao: s })} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${ativo ? "bg-primary text-primary-foreground" : "bg-white border border-border/50 shadow-sm"}`}>
+                          <span>{label}</span><strong>{n}</strong>
+                        </Botao>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {LINHAS.map(({ s, label }) => {
-                    const n = doTipo.filter((i) => (i.situacao ?? "proximo") === s).length;
-                    const ativo = drill && drill.cuidado === c && drill.situacao === s;
-                    return (
-                      <Botao variant="ghost" key={s} onClick={() => setDrill({ cuidado: c, situacao: s })} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${ativo ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                        <span>{label}</span><strong>{n}</strong>
-                      </Botao>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
+
         {drill && (
-          <section className="notebook space-y-3 p-4">
+          <section className="notebook space-y-3 p-4 mt-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">{drill.cuidado} · {LINHAS.find((l) => l.s === drill.situacao)?.label}</h3>
               <Botao variant="ghost" onClick={() => setDrill(null)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-semibold"><X className="h-4 w-4" /> Fechar</Botao>
@@ -235,7 +245,9 @@ function Acompanhamento() {
             )}
           </section>
         )}
+
         <Divisor />
+        
         <section className="space-y-3">
           <h2 className="text-xl font-semibold">Todos os próximos compromissos</h2>
           <p className="text-xs text-muted-foreground mb-2">Toque no card para abrir e dar baixa.</p>
