@@ -4,7 +4,7 @@ import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pil
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
-  nowLocalISO, uid, type Cuidado, type Situacao, type Dados, type Item, parseYMD
+  nowLocalISO, uid, type Cuidado, type Situacao, type Dados, parseYMD
 } from "@/lib/cuidados";
 import { Botao, Divisor, Pill, SeletorTesouro } from "@/components/ui-kit";
 import { CompromissoCard } from "@/components/compromisso-card";
@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/acompanhamento")({
-  head: () => ({ meta: [{ title: "Acompanhamento · Rotina Azul" }] }),
+  head: () => ({ meta: [{ title: "Rotina Azul 💙" }] }),
   component: Acompanhamento,
 });
 
@@ -62,20 +62,32 @@ function Acompanhamento() {
     return lista;
   }, [itens, buscaProximos]);
 
+  // ✅ Lógica corrigida: mostra apenas a PRÓXIMA dose a ser tomada de cada remédio
   const agendaHoje = useMemo(() => {
     const arr: any[] = [];
+    const agora = new Date();
+    const horaAtualStr = `${String(agora.getHours()).padStart(2, "0")}:${String(agora.getMinutes()).padStart(2, "0")}`;
+
     emUso.forEach((m) => {
-      const horarios = m.horarios && m.horarios.length > 0 ? m.horarios : (m.frequencia ? m.frequencia.split(",") : ["08:00"]);
-      horarios.forEach((h: string) => {
-        const hClean = h.trim();
-        const log = doseRegistrada(logs, m.id, hoje, hClean);
-        arr.push({ med: m, horario: hClean, log });
+      const horarios = m.horarios || [];
+      const dosesPendentes = horarios.filter((h: string) => {
+        // Se já tomou essa dose hoje, pula
+        if (doseRegistrada(logs, m.id, hoje, h.trim())) return false;
+        // Se a hora do remédio já passou (e não é meia-noite), não mostra nos lembretes de AGORA (vai pro histórico ou pode ser atrasado)
+        return h.trim() >= horaAtualStr;
       });
+
+      // Pega a próxima dose pendente
+      if (dosesPendentes.length > 0) {
+        const proximaHora = dosesPendentes.sort()[0]; // A mais próxima
+        arr.push({ med: m, horario: proximaHora, log: null });
+      }
     });
+
     return arr.sort((a, b) => a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
-  const proximasDoses = agendaHoje.filter((a) => !a.log);
+  const proximasDoses = agendaHoje; // Usado na tela de medicações
 
   const logsFiltrados = useMemo(() => {
     return logs
@@ -84,12 +96,33 @@ function Acompanhamento() {
       .sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
   }, [logs, filtroMed, dataHistorico]);
 
+  // ✅ Função para salvar log e descontar do estoque
   const registrarMedicacao = async (item: any, horario: string, novoHorario?: string) => {
     const titulo = novoHorario ? `Atrasou: ${item.medicamento} (${horario} -> ${novoHorario})` : `Tomou: ${item.medicamento} (${horario})`;
     const dados: Dados = { id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo, cuidado: "Medicação_Log" as any, evento: true, parentId: item.id, data: hoje, horario };
-    const ok = await salvarRegistros([dados], "medicacao_logs");
+
+    // Atualiza o estoque (se existir e não for ml)
+    const itensParaSalvar: Dados[] = [dados];
+    if (item.estoqueAtual !== undefined && item.dosagemUnidade !== "ml") {
+      const qtdTomada = Number(item.dosagemValor || 1);
+      const novoEstoque = Math.max(0, item.estoqueAtual - qtdTomada);
+      
+      itensParaSalvar.push({
+        id: uid(),
+        pessoaId: item.pessoaId,
+        criadoEm: nowLocalISO(),
+        titulo: "Atualização de estoque",
+        cuidado: item.cuidado,
+        evento: true,
+        parentId: item.id,
+        acao: "editar",
+        alteracoes: { estoqueAtual: novoEstoque }
+      });
+    }
+
+    const ok = await salvarRegistros(itensParaSalvar, "medicacao_logs");
     if (ok) {
-      toast.success(novoHorario ? "Atraso registrado!" : "Medicação registrada!");
+      toast.success(novoHorario ? "Atraso registrado!" : "Medicação registrada e estoque atualizado!");
       setAtrasoModal(null);
     }
   };
@@ -120,21 +153,25 @@ function Acompanhamento() {
   if (view === "menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
-        <header className="text-center px-4 mb-2">
-          <h1 className="font-display text-3xl font-semibold italic">Acompanhamento</h1>
+        <header className="text-center px-4 mb-2 flex flex-col items-center">
+          <h1 className="font-display text-4xl font-bold italic text-[var(--tema-escuro)] flex items-center justify-center gap-2">
+            Rotina Azul <span className="text-3xl not-italic">💙</span>
+          </h1>
+          <p className="text-sm font-semibold tracking-widest uppercase mt-1" style={{ color: "var(--tema)" }}>
+            Acompanhamento
+          </p>
         </header>
 
         <div className="px-4"><SeletorTesouro /></div>
 
         <div className="px-4 mt-6">
           <h2 className="font-display text-xl font-bold italic mb-3 flex items-center gap-2">
-            <Clock className="h-5 w-5" style={{ color: "var(--tema)" }} /> Lembretes de Hoje
+            <Clock className="h-5 w-5" style={{ color: "var(--tema)" }} /> Próximas Medicações
           </h2>
 
           <div className="notebook p-4 space-y-3 mb-4" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
-            <p className="font-display text-base font-bold text-muted-foreground border-b border-border/50 pb-2">Medicações</p>
             {agendaHoje.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum remédio para hoje.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma medicação pendente para agora.</p>
             ) : (
               agendaHoje.map((a, idx) => (
                 <div key={idx} className="flex items-center justify-between border-b border-border/50 pb-2 last:border-0 last:pb-0">
@@ -147,14 +184,10 @@ function Acompanhamento() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-display font-bold text-lg" style={{ color: "var(--tema)" }}>{a.horario}</span>
-                    {a.log ? (
-                      <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-200">Tomou</span>
-                    ) : (
-                      <div className="flex flex-col gap-1">
-                        <button onClick={() => registrarMedicacao(a.med, a.horario)} className="text-[10px] font-bold text-white px-2 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Tomei</button>
-                        <button onClick={() => setAtrasoModal({ item: a.med, horario: a.horario })} className="text-[10px] font-bold rounded-md px-2 py-1 border" style={{ borderColor: "var(--tema)", color: "var(--tema-escuro)" }}>Atrasei</button>
-                      </div>
-                    )}
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => registrarMedicacao(a.med, a.horario)} className="text-[10px] font-bold text-white px-2 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Tomei</button>
+                      <button onClick={() => setAtrasoModal({ item: a.med, horario: a.horario })} className="text-[10px] font-bold rounded-md px-2 py-1 border" style={{ borderColor: "var(--tema)", color: "var(--tema-escuro)" }}>Atrasei</button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -162,7 +195,7 @@ function Acompanhamento() {
           </div>
 
           <div className="notebook p-4 space-y-3" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
-            <p className="font-display text-base font-bold text-muted-foreground border-b border-border/50 pb-2">Compromissos</p>
+            <p className="font-display text-base font-bold text-muted-foreground border-b border-border/50 pb-2">Compromissos de Hoje</p>
             <div className="space-y-3">
               {proximos.filter(i => i.data === hoje).length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhum compromisso para hoje.</p>
@@ -256,7 +289,6 @@ function Acompanhamento() {
 
         <Divisor />
         
-        {/* ✅ TODOS OS PRÓXIMOS COMPROMISSOS (Restaurado com o visual certo) */}
         <section className="space-y-3">
           <h2 className="text-xl font-semibold">Todos os próximos</h2>
           <select className="field text-sm p-2 w-full border-gold/30 bg-card mb-2" value={buscaProximos} onChange={(e) => setBuscaProximos(e.target.value)}>
@@ -311,7 +343,6 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* ✅ TODOS OS PRÓXIMOS AGENDAMENTOS (Data Visível forçada) */}
       <section className="space-y-3 mt-4">
         <h2 className="font-sans text-base font-semibold text-foreground">
           Todos os próximos agendamentos
