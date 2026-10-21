@@ -150,10 +150,14 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
               )}
             </div>
 
+            {/* ✅ BOTÕES COMPACTOS (COMPARECEU, FALTOU, CANCELOU) */}
             {compacto && pendente && !ehMedicamento && !editando && (
-              <div className="flex gap-1">
-                <button onClick={() => registrar("feito")} className="text-[10px] font-bold text-white px-2 py-0.5 rounded bg-[var(--tema)]">Compareceu</button>
-                <button onClick={() => registrar("faltou")} className="text-[10px] font-bold border border-[var(--tema)] text-[var(--tema-escuro)] px-2 py-0.5 rounded">Faltou</button>
+              <div className="flex flex-col gap-1 items-end">
+                <div className="flex gap-1">
+                  <button onClick={() => registrar("feito")} className="text-[10px] font-bold text-white px-2 py-0.5 rounded bg-[var(--tema)]">Compareceu</button>
+                  <button onClick={() => registrar("faltou")} className="text-[10px] font-bold border border-[var(--tema)] text-[var(--tema-escuro)] px-2 py-0.5 rounded">Faltou</button>
+                </div>
+                <button onClick={() => registrar("cancelado")} className="text-[10px] font-bold text-muted-foreground hover:text-red-500 transition">Cancelou</button>
               </div>
             )}
           </div>
