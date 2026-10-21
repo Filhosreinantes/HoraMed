@@ -2,6 +2,7 @@ export type Cuidado = "Consulta" | "Terapia" | "Exame" | "Medicação";
 export type Situacao = "proximo" | "feito" | "faltou" | "cancelado";
 
 
+
 export interface Pessoa {
   id: string;
   user_id: string;
