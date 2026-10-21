@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { Check, ChevronDown, X, Clock, Pencil, Trash2, Stethoscope, Leaf, FileText, Pill, Save, CalendarClock } from "lucide-react";
+import { Check, ChevronDown, X, Clock, Pencil, Trash2, Stethoscope, Leaf, FileText, Pill, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { Botao, Selo } from "@/components/ui-kit";
 import { useApp } from "@/lib/app-store";
@@ -14,7 +14,6 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
   const [alarmeAberto, setAlarmeAberto] = useState(false);
   const detalhesId = useId();
 
-  // ✅ Estados para edição no próprio card
   const [editando, setEditando] = useState(false);
   const [formEdicao, setFormEdicao] = useState<any>({});
 
@@ -120,6 +119,8 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
               <div className={`mt-1 flex flex-col gap-0.5 ${compacto ? "text-[11px]" : "text-sm"} text-muted-foreground`}>
                 <span>{item.dosagem}</span>
                 {mostraEstoque && <span>Restam {item.estoqueAtual} un.</span>}
+                {/* ✅ Força a data aparecer para agendamentos de medicação também */}
+                {item.data && item.hora && <span className="font-semibold text-accent">{formatData(item.data)} às {item.hora}</span>}
               </div>
             ) : (
               <>
@@ -136,7 +137,8 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
             <div className="flex items-center gap-1">
               {editando ? (
                 <>
-                  <button onClick={() => salvarEdicao(false)} disabled={salvando} className="p-1 text-green-600 hover:text-green-700 transition" title="Salvar"><Save className="h-5 w-5" /></button>
+                  {/* ✅ Ícone de Salvar trocado para Check */}
+                  <button onClick={() => salvarEdicao(false)} disabled={salvando} className="p-1 text-green-600 hover:text-green-700 transition" title="Salvar"><Check className="h-5 w-5" /></button>
                   <button onClick={() => setEditando(false)} disabled={salvando} className="p-1 text-red-500 hover:text-red-600 transition" title="Cancelar"><X className="h-5 w-5" /></button>
                 </>
               ) : (
@@ -150,7 +152,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
               )}
             </div>
 
-            {/* ✅ BOTÕES COMPACTOS (COMPARECEU, FALTOU, CANCELOU) */}
+            {/* ✅ BOTÕES COMPACTOS */}
             {compacto && pendente && !ehMedicamento && !editando && (
               <div className="flex flex-col gap-1 items-end">
                 <div className="flex gap-1">
@@ -163,7 +165,6 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
           </div>
         </div>
 
-        {/* DETALHES EXPANDIDOS OU MODO EDIÇÃO */}
         {expandido && (
           <div id={detalhesId} className="space-y-3 border-t border-border p-4 bg-muted/10">
             {editando ? (
@@ -186,7 +187,6 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
                   <input type="text" className="field text-sm col-span-2" placeholder="Profissional" value={formEdicao.profissional || ""} onChange={e => setFormEdicao({ ...formEdicao, profissional: e.target.value })} />
                 </div>
 
-                {/* ✅ BOTÃO DE REMARCAR (Só aparece se não for medicação) */}
                 {!ehMedicamento && (
                   <button 
                     onClick={() => salvarEdicao(true)} 
