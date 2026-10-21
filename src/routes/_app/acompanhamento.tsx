@@ -62,34 +62,48 @@ function Acompanhamento() {
     return lista;
   }, [itens, buscaProximos]);
 
-  // ✅ Lógica corrigida: mostra TODAS as doses pendentes de hoje, mesmo que a hora já tenha passado.
+  // ✅ Lógica corrigida: respeita a data de início, os dias da semana e as doses pendentes
   const agendaHoje = useMemo(() => {
     const arr: any[] = [];
     
     emUso.forEach((m) => {
-      // 1. Verifica se hoje é um dia ativo para o medicamento
+      // 1. Verifica se hoje está dentro do período (inicio e fim)
+      const dataInicio = m.inicio; // YYYY-MM-DD
+      const dataFim = m.fim; // YYYY-MM-DD ou undefined
+      if (dataInicio && hoje < dataInicio) return; // Ainda não começou
+      if (dataFim && hoje > dataFim) return; // Já terminou
+
+      // 2. Verifica se hoje é um dia ativo da semana
       const diasDaSemana = m.diasSemana || [0, 1, 2, 3, 4, 5, 6];
       const hojeIndex = new Date().getDay(); 
       if (!diasDaSemana.includes(hojeIndex)) return;
 
       const horarios = m.horarios || [];
       
-      // 2. Filtra os horários que ainda não foram tomados (seja no passado ou futuro)
-      const dosesPendentes = horarios.filter((h: string) => {
+      // 3. ✅ AQUI ESTÁ A MÁGICA: Filtro para o PRIMEIRO dia do tratamento.
+      // Se começou hoje, não mostra as doses de madrugada/manhã que pertencem ao dia seguinte.
+      let horariosValidos = horarios;
+      if (m.inicio === hoje && horarios.length > 0) {
+        const horaInicio = horarios[0]; // Ex: "16:00"
+        horariosValidos = horarios.filter((h: string) => h >= horaInicio);
+      }
+
+      // 4. Filtra os que já foram tomados
+      const dosesPendentes = horariosValidos.filter((h: string) => {
         return !doseRegistrada(logs, m.id, hoje, h.trim());
       });
 
-      // 3. Adiciona todas as doses pendentes na lista
+      // 5. Adiciona as doses pendentes na lista
       dosesPendentes.forEach((hora: string) => {
         arr.push({ med: m, horario: hora, log: null });
       });
     });
 
-    // 4. Ordena pelo horário para manter organizado
+    // 6. Ordena pelo horário para manter organizado
     return arr.sort((a, b) => a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
-  const proximasDoses = agendaHoje; // Usado na tela de medicações
+  const proximasDoses = agendaHoje;
 
   const logsFiltrados = useMemo(() => {
     return logs
@@ -98,14 +112,12 @@ function Acompanhamento() {
       .sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
   }, [logs, filtroMed, dataHistorico]);
 
-  // ✅ Função para salvar log e descontar do estoque
   const registrarMedicacao = async (item: any, horario: string, novoHorario?: string) => {
     const titulo = novoHorario ? `Atrasou: ${item.medicamento} (${horario} -> ${novoHorario})` : `Tomou: ${item.medicamento} (${horario})`;
     const dados: Dados = { id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo, cuidado: "Medicação_Log" as any, evento: true, parentId: item.id, data: hoje, horario };
 
     let ok = await salvarRegistros([dados], "medicacao_logs");
 
-    // Desconto de estoque (se existir e não for ml)
     if (ok && item.estoqueAtual !== undefined && item.dosagemUnidade !== "ml") {
       const qtdTomada = Number(item.dosagemValor || 1);
       const novoEstoque = Math.max(0, item.estoqueAtual - qtdTomada);
@@ -128,7 +140,6 @@ function Acompanhamento() {
     }
   };
 
-  // Exclui um registro do histórico de doses
   const excluirLog = async (log: any) => {
     if (!confirm("Excluir este registro de dose?")) return;
     const ok = await salvarRegistros([{
