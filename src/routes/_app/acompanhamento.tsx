@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { X, ChevronLeft, Check, Clock, History, Stethoscope, Pill as PillIcon } from "lucide-react";
+import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
-  EMOJI, doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
+  doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
   nowLocalISO, uid, type Cuidado, type Situacao, type Dados
 } from "@/lib/cuidados";
 import { Botao, Divisor, Pill, SeletorTesouro } from "@/components/ui-kit";
@@ -32,7 +32,6 @@ const LINHAS: { s: Situacao; label: string }[] = [
   { s: "proximo", label: "Próximos" },
 ];
 
-// ✅ CARD "PRÓXIMO REMÉDIO" (destaque no menu)
 function ProximoRemedioCard() {
   const { itens } = useApp();
   const [proximo, setProximo] = useState<{ item: any; horario: string } | null>(null);
@@ -232,6 +231,11 @@ function Acompanhamento() {
         </header>
         <SeletorTesouro />
 
+        {/* ✅ TEXTO INTRODUTÓRIO */}
+        <p className="text-sm text-muted-foreground mb-4">
+          Panorama dos cuidados médicos. Toque em um dos blocos (Compareceu, Faltou, etc.) para ver os detalhes abaixo.
+        </p>
+
         <div className="flex gap-2">
           <Pill ativo={periodo === "mes"} onClick={() => setPeriodo("mes")}>Este mês</Pill>
           <Pill ativo={periodo === "ano"} onClick={() => setPeriodo("ano")}>Este ano</Pill>
@@ -239,15 +243,20 @@ function Acompanhamento() {
         </div>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold">🩺 Cuidados médicos</h2>
+          <h2 className="text-xl font-semibold">Cuidados médicos</h2>
           <div className="grid gap-3">
             {(["Consulta", "Terapia", "Exame"] as Cuidado[]).map((c) => {
               const doTipo = filtrados.filter((i) => i.cuidado === c);
               return (
                 <div key={c} className="notebook p-4">
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="font-display text-lg font-semibold italic">{EMOJI[c]} {c}</p>
-                    <span className="font-display text-2xl font-bold text-gold">{doTipo.length}</span>
+                    <div className="flex items-center gap-2 font-display text-lg font-semibold italic" style={{ color: "var(--tema-escuro)" }}>
+                      {c === "Consulta" && <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />}
+                      {c === "Terapia" && <Leaf className="h-5 w-5" style={{ color: "var(--tema)" }} />}
+                      {c === "Exame" && <FileText className="h-5 w-5" style={{ color: "var(--tema)" }} />}
+                      <span>{c}</span>
+                    </div>
+                    <span className="font-display text-2xl font-bold" style={{ color: "var(--tema)" }}>{doTipo.length}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     {LINHAS.map(({ s, label }) => {
@@ -269,7 +278,7 @@ function Acompanhamento() {
         {drill && (
           <section className="notebook space-y-3 p-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">{EMOJI[drill.cuidado]} {drill.cuidado} · {LINHAS.find((l) => l.s === drill.situacao)?.label}</h3>
+              <h3 className="text-lg font-semibold">{drill.cuidado} · {LINHAS.find((l) => l.s === drill.situacao)?.label}</h3>
               <Botao variant="ghost" onClick={() => setDrill(null)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-semibold">
                 <X className="h-4 w-4" /> Fechar
               </Botao>
@@ -290,6 +299,11 @@ function Acompanhamento() {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Todos os próximos compromissos</h2>
           </div>
+
+          {/* ✅ TEXTO EXPLICATIVO */}
+          <p className="text-xs text-muted-foreground mb-2">
+            Toque no card para abrir e dar baixa (Compareceu/Faltou).
+          </p>
 
           <div className="flex items-center gap-2 mb-2">
             <select
@@ -334,7 +348,7 @@ function Acompanhamento() {
         style={{ boxShadow: "0 8px 25px -5px var(--tema-claro)", border: "1px solid var(--tema-claro)" }}
       >
         <div className="flex items-center gap-2 mb-2">
-          <Clock className="h-5 w-5 text-accent" />
+          <Clock className="h-5 w-5" style={{ color: "var(--tema)" }} />
           <h2 className="font-display text-xl font-bold italic text-foreground">Lembretes de Hoje</h2>
         </div>
 
@@ -382,8 +396,8 @@ function Acompanhamento() {
         style={{ boxShadow: "0 8px 25px -5px var(--tema-claro)", border: "1px solid var(--tema-claro)" }}
       >
         <div className="flex items-center gap-2 mb-2">
-          <History className="h-5 w-5 text-gold" />
-          <h2 className="text-lg font-semibold">Histórico</h2>
+          <History className="h-5 w-5" style={{ color: "var(--tema)" }} />
+          <h2 className="font-display text-xl font-bold italic text-foreground">Histórico</h2>
         </div>
 
         <div className="grid grid-cols-2 gap-2 mb-3">
@@ -409,7 +423,7 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* ✅ MEUS REMÉDIOS */}
+      {/* ✅ MEUS REMÉDIOS (enxuto) */}
       <section
         className="notebook p-5 space-y-4"
         style={{ boxShadow: "0 8px 25px -5px var(--tema-claro)", border: "1px solid var(--tema-claro)" }}
@@ -417,16 +431,18 @@ function Acompanhamento() {
         <h2 className="font-display text-xl font-bold italic text-foreground flex items-center gap-2">
           <PillIcon className="h-5 w-5" style={{ color: "var(--tema)" }} /> Meus Remédios
         </h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="notebook p-4 text-left">
-            <p className="text-sm text-muted-foreground">Em uso</p>
-            <p className="font-display text-3xl font-bold text-accent">{emUso.length}</p>
+
+        <div className="flex gap-3 mb-4 text-sm flex-wrap">
+          <div className="bg-muted/30 px-3 py-2 rounded-xl border border-border">
+            <span className="text-muted-foreground">Em uso: </span>
+            <strong className="text-[var(--tema)] text-lg">{emUso.length}</strong>
           </div>
-          <div className="notebook p-4 text-left">
-            <p className="text-sm text-muted-foreground">Encerrados</p>
-            <p className="font-display text-3xl font-bold text-gold">{encerradas.length}</p>
+          <div className="bg-muted/30 px-3 py-2 rounded-xl border border-border">
+            <span className="text-muted-foreground">Encerrados: </span>
+            <strong className="text-[var(--tema-escuro)] text-lg">{encerradas.length}</strong>
           </div>
         </div>
+
         <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
           {emUso.map((m) => <CompromissoCard key={m.id} item={m} />)}
         </div>
