@@ -3,7 +3,7 @@ import { Check, ChevronDown, X, Clock, Pencil, Trash2, Stethoscope, Leaf, FileTe
 import { toast } from "sonner";
 import { Botao, Selo } from "@/components/ui-kit";
 import { useApp } from "@/lib/app-store";
-import { formatData, nowLocalISO, subtitulo, tituloComTipo, tituloEvento, uid, type Item, type Situacao } from "@/lib/cuidados";
+import { formatData, nowLocalISO, subtitulo, tituloComTipo, tituloEvento, uid, type Item, type Situacao, type Dados } from "@/lib/cuidados";
 import { AlarmeModal } from "./alarme-modal";
 
 export function CompromissoCard({ item, compacto = false }: { item: Item; compacto?: boolean }) {
@@ -61,11 +61,25 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
     if (salvando) return;
     setSalvando(true);
     try {
-      const ok = await salvarRegistros([{
+      const dadosLog: Dados = {
         id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(),
         titulo: tituloEvento(item, situacao), cuidado: item.cuidado,
         situacao, observacaoAcompanhamento: nota, evento: true, parentId: item.id,
-      }], item.cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos");
+      };
+
+      const itensParaSalvar: Dados[] = [dadosLog];
+
+      // ✅ Controle de estoque automático se for remédio e "Tomou"
+      if (ehMedicamento && situacao === "feito" && mostraEstoque) {
+        const qtdTomada = Number(item.dosagemValor || 1);
+        const novoEstoque = Math.max(0, (item.estoqueAtual || 0) - qtdTomada);
+        itensParaSalvar.push({
+          id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo: "Atualização de estoque",
+          cuidado: item.cuidado, evento: true, parentId: item.id, acao: "editar", alteracoes: { estoqueAtual: novoEstoque }
+        });
+      }
+
+      const ok = await salvarRegistros(itensParaSalvar, item.cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos");
 
       if (ok) {
         toast.success("Acompanhamento registrado!");
@@ -100,7 +114,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
       <article className={`overflow-hidden rounded-2xl border transition-all ${editando ? "border-[var(--tema)] shadow-md bg-white" : "border-gold/30 bg-card shadow-soft"}`}>
         <div className="flex w-full items-center gap-3 p-3 text-left text-foreground">
           
-          <button onClick={() => setExpandido((v) => !v)} aria-expanded={expandido} aria-controls={detalhesId} aria-label={expandido ? "Esconder detalhes" : "Ver detalhes"} className="shrink-0">
+          <button onClick={() => setExpandido((v) => !v)} className="shrink-0">
             {item.fotoUrl ? (
               <img src={item.fotoUrl} alt={item.medicamento} className={`${compacto ? "h-10 w-10" : "h-14 w-14"} rounded-xl object-cover border border-gold/30 shadow-sm`} />
             ) : (
@@ -119,7 +133,6 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
               <div className={`mt-1 flex flex-col gap-0.5 ${compacto ? "text-[11px]" : "text-sm"} text-muted-foreground`}>
                 <span>{item.dosagem}</span>
                 {mostraEstoque && <span>Restam {item.estoqueAtual} un.</span>}
-                {/* ✅ Força a data aparecer para agendamentos de medicação também */}
                 {item.data && item.hora && <span className="font-semibold text-accent">{formatData(item.data)} às {item.hora}</span>}
               </div>
             ) : (
@@ -137,22 +150,20 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
             <div className="flex items-center gap-1">
               {editando ? (
                 <>
-                  {/* ✅ Ícone de Salvar trocado para Check */}
                   <button onClick={() => salvarEdicao(false)} disabled={salvando} className="p-1 text-green-600 hover:text-green-700 transition" title="Salvar"><Check className="h-5 w-5" /></button>
                   <button onClick={() => setEditando(false)} disabled={salvando} className="p-1 text-red-500 hover:text-red-600 transition" title="Cancelar"><X className="h-5 w-5" /></button>
                 </>
               ) : (
                 <>
-                  <button onClick={iniciarEdicao} aria-label="Editar" className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Pencil className="h-4 w-4" /></button>
-                  <button onClick={excluir} aria-label="Excluir" className="p-1 text-muted-foreground hover:text-red-500 transition"><Trash2 className="h-4 w-4" /></button>
+                  <button onClick={iniciarEdicao} className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={excluir} className="p-1 text-muted-foreground hover:text-red-500 transition"><Trash2 className="h-4 w-4" /></button>
                   {ehMedicamento && (
-                    <button onClick={() => setAlarmeAberto(true)} aria-label="Registrar dose" className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Clock className="h-4 w-4" /></button>
+                    <button onClick={() => setAlarmeAberto(true)} className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Clock className="h-4 w-4" /></button>
                   )}
                 </>
               )}
             </div>
 
-            {/* ✅ BOTÕES COMPACTOS */}
             {compacto && pendente && !ehMedicamento && !editando && (
               <div className="flex flex-col gap-1 items-end">
                 <div className="flex gap-1">
@@ -181,6 +192,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
                     <>
                       <input type="text" className="field text-sm col-span-2" placeholder="Nome do remédio" value={formEdicao.medicamento || ""} onChange={e => setFormEdicao({ ...formEdicao, medicamento: e.target.value })} />
                       <input type="text" className="field text-sm col-span-2" placeholder="Dosagem" value={formEdicao.dosagem || ""} onChange={e => setFormEdicao({ ...formEdicao, dosagem: e.target.value })} />
+                      <input type="number" className="field text-sm col-span-2" placeholder="Estoque atual" value={formEdicao.estoqueAtual || ""} onChange={e => setFormEdicao({ ...formEdicao, estoqueAtual: e.target.value })} />
                     </>
                   )}
                   <input type="text" className="field text-sm col-span-2" placeholder="Local" value={formEdicao.local || ""} onChange={e => setFormEdicao({ ...formEdicao, local: e.target.value })} />
