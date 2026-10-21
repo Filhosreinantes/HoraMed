@@ -8,7 +8,6 @@ import { DIAS_SEMANA, gerarSessoes, nowLocalISO, uid, hojeYMD, type Cuidado, typ
 import { Botao, Campo, Divisor, SeletorTesouro } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/_app/criar")({
-  // ✅ Tipagem simplificada e segura
   validateSearch: (search: Record<string, unknown>) => {
     return {
       duplicar: search.duplicar as string | undefined,
@@ -27,16 +26,16 @@ export const Route = createFileRoute("/_app/criar")({
   component: Criar,
 });
 
-type K = "data"|"hora"|"local"|"profissional"|"especialidade"|"tipoTerapia"|"tipoExame"|"recomendacoes"|"medicamento"|"frequencia"|"inicio"|"fim"|"programacao"|"meses"|"diaSemana";
+// ✅ Adicionado "prazoDias" na tipagem
+type K = "data"|"hora"|"local"|"profissional"|"especialidade"|"tipoTerapia"|"tipoExame"|"recomendacoes"|"medicamento"|"frequencia"|"inicio"|"fim"|"programacao"|"meses"|"diaSemana"|"prazoDias";
 type F = Partial<Record<K, string>>;
 
 function Criar() {
-  // ✅ Lê o parâmetro da URL de forma segura
   const { duplicar } = Route.useSearch() as { duplicar?: string };
   const { ativa, salvarRegistros, itens } = useApp(); 
   const navigate = useNavigate();
   const [tipo, setTipo] = useState<Cuidado | null>(null);
-  const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1" });
+  const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1", inicio: hojeYMD() });
 
   const [fotoUrl, setFotoUrl] = useState("");
   const [enviandoFoto, setEnviandoFoto] = useState<"caixa" | null>(null);
@@ -47,15 +46,14 @@ function Criar() {
   const [diasSemana, setDiasSemana] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
 
   const [dosagemValor, setDosagemValor] = useState("");
-  const [dosagemUnidade, setDosagemUnidade] = useState("Comprimido(s)");
+  // ✅ ml agora é a primeira opção (padrão)
+  const [dosagemUnidade, setDosagemUnidade] = useState("ml");
   const [estoqueAtual, setEstoqueAtual] = useState("");
 
   const [salvando, setSalvando] = useState(false);
 
-  // Preenchimento automático ao clicar em "Renovar"
   useEffect(() => {
     if (duplicar && itens.length > 0) {
-      // ✅ Usamos 'any' para o TypeScript não reclamar das propriedades
       const med: any = itens.find(i => i.id === duplicar);
       if (med && med.cuidado === "Medicação") {
         setTipo("Medicação");
@@ -71,7 +69,7 @@ function Criar() {
         if (med.estoqueAtual !== undefined) setEstoqueAtual(String(med.estoqueAtual));
         if (med.horarios && med.horarios.length > 0) {
           setVezesAoDia(med.horarios.length);
-          setHoraInicial(med.horarios[0] || "08:00"); // ✅ Fallback de segurança
+          setHoraInicial(med.horarios[0] || "08:00");
         }
         if (med.diasSemana) setDiasSemana(med.diasSemana);
         if (med.fotoUrl) setFotoUrl(med.fotoUrl);
@@ -135,6 +133,15 @@ function Criar() {
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ativa || !tipo) return;
+    
+    // ✅ Calcula a data de fim automaticamente se tiver prazo em dias
+    let fimCalculado = f.fim;
+    if (f.prazoDias && f.inicio) {
+      const dataInicio = new Date(f.inicio + "T12:00:00");
+      dataInicio.setDate(dataInicio.getDate() + Number(f.prazoDias) - 1);
+      fimCalculado = dataInicio.toISOString().split("T")[0];
+    }
+
     const base = { pessoaId: ativa.id, criadoEm: nowLocalISO(), cuidado: tipo, situacao: "proximo" as const };
     let lista: Dados[] = [];
 
@@ -158,7 +165,7 @@ function Criar() {
         profissional: f.profissional,
         especialidade: f.especialidade,
         inicio: f.inicio,
-        fim: f.fim || undefined,
+        fim: fimCalculado || undefined,
         fotoUrl: fotoUrl,
         diasSemana: diasSemana,
       }];
@@ -351,36 +358,51 @@ function Criar() {
               <>
                 <Campo label="Nome">{inp("medicamento", "text", true)}</Campo>
 
-                <div className="grid grid-cols-[1fr_2fr] gap-3">
-                  <Campo label="Qtd.">
+                <div className="grid grid-cols-[1.5fr_2fr] gap-3">
+                  {/* ✅ Mudou de "Qtd." para "Dosagem" */}
+                  <Campo label="Dosagem">
                     <input
                       className="field"
                       type="number"
-                      placeholder="Ex: 1"
+                      placeholder="Ex: 5"
                       value={dosagemValor}
                       onChange={(e) => setDosagemValor(e.target.value)}
                     />
                   </Campo>
                   <Campo label="Unidade">
                     <select className="field" value={dosagemUnidade} onChange={(e) => setDosagemUnidade(e.target.value)}>
-                      <option value="Comprimido(s)">Comprimido(s)</option>
+                      {/* ✅ ml agora é o primeiro */}
                       <option value="ml">ml (mililitros)</option>
                       <option value="Gotas">Gotas</option>
+                      <option value="Comprimido(s)">Comprimido(s)</option>
                       <option value="Cápsula(s)">Cápsula(s)</option>
                       <option value="Injeção">Injeção</option>
                     </select>
                   </Campo>
                 </div>
 
-                <Campo label="Controle de Estoque (Opcional)">
-                  <input
-                    className="field"
-                    type="number"
-                    placeholder="Ex: 30 (quantos tem na caixa)"
-                    value={estoqueAtual}
-                    onChange={(e) => setEstoqueAtual(e.target.value)}
-                  />
-                </Campo>
+                {/* ✅ Controle de Estoque Dinâmico */}
+                {(dosagemUnidade === "Comprimido(s)" || dosagemUnidade === "Cápsula(s)" || dosagemUnidade === "Injeção") ? (
+                  <Campo label="Controle de Estoque (unidades)">
+                    <input
+                      className="field"
+                      type="number"
+                      placeholder="Ex: 30 (quantos tem na caixa)"
+                      value={estoqueAtual}
+                      onChange={(e) => setEstoqueAtual(e.target.value)}
+                    />
+                  </Campo>
+                ) : (
+                  <Campo label="Volume do Frasco (ml)">
+                    <input
+                      className="field"
+                      type="number"
+                      placeholder="Ex: 100 (total do frasco)"
+                      value={estoqueAtual}
+                      onChange={(e) => setEstoqueAtual(e.target.value)}
+                    />
+                  </Campo>
+                )}
 
                 <div>
                   <span className="text-xs font-semibold block mb-1">Foto da Caixa</span>
@@ -459,11 +481,21 @@ function Criar() {
 
                 <Campo label="Profissional que prescreveu">{inp("profissional")}</Campo>
                 <Campo label="Especialidade">{inp("especialidade")}</Campo>
+                
+                {/* ✅ Início e Prazo em dias */}
                 <div className="grid grid-cols-2 gap-3">
                   <Campo label="Início">{inp("inicio", "date")}</Campo>
-                  <Campo label="Fim">{inp("fim", "date")}</Campo>
+                  <Campo label="Prazo (dias)">
+                    <input 
+                      className="field" 
+                      type="number" 
+                      placeholder="Ex: 5" 
+                      value={f.prazoDias ?? ""} 
+                      onChange={set("prazoDias")} 
+                    />
+                  </Campo>
                 </div>
-                <p className="text-xs text-muted-foreground">Deixe o fim em branco para uso contínuo.</p>
+                <p className="text-xs text-muted-foreground">Deixe o prazo em branco para uso contínuo.</p>
               </>
             )}
 
