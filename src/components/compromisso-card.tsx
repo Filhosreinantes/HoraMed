@@ -6,7 +6,7 @@ import { useApp } from "@/lib/app-store";
 import { formatData, nowLocalISO, subtitulo, tituloComTipo, tituloEvento, uid, type Item, type Situacao } from "@/lib/cuidados";
 import { AlarmeModal } from "./alarme-modal";
 
-export function CompromissoCard({ item }: { item: Item }) {
+export function CompromissoCard({ item, compacto = false }: { item: Item; compacto?: boolean }) {
   const { salvarRegistros } = useApp();
   const [expandido, setExpandido] = useState(false);
   const [nota, setNota] = useState("");
@@ -57,29 +57,33 @@ export function CompromissoCard({ item }: { item: Item }) {
       <article className="overflow-hidden rounded-2xl border border-gold/30 bg-card shadow-soft transition-all">
         <div className="flex w-full items-center gap-3 p-3 text-left text-foreground">
 
-          {/* ✅ FOTO OU ÍCONE DO CUIDADO */}
+          {/* ✅ FOTO OU ÍCONE DO CUIDADO (tamanho adaptável com compacto) */}
           <button onClick={() => setExpandido((v) => !v)} className="shrink-0">
             {item.fotoUrl ? (
-              <img src={item.fotoUrl} alt={item.medicamento} className="h-14 w-14 rounded-xl object-cover border border-gold/30 shadow-sm" />
+              <img
+                src={item.fotoUrl}
+                alt={item.medicamento}
+                className={`${compacto ? "h-8 w-8" : "h-14 w-14"} rounded-xl object-cover border border-gold/30 shadow-sm`}
+              />
             ) : (
               <span
-                className="grid h-14 w-14 place-items-center rounded-xl"
+                className={`grid ${compacto ? "h-8 w-8" : "h-14 w-14"} place-items-center rounded-xl`}
                 style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
               >
-                {item.cuidado === "Consulta" && <Stethoscope className="h-7 w-7" />}
-                {item.cuidado === "Terapia" && <Leaf className="h-7 w-7" />}
-                {item.cuidado === "Exame" && <FileText className="h-7 w-7" />}
-                {item.cuidado === "Medicação" && <Pill className="h-7 w-7" />}
-                {!item.cuidado && <span className="text-2xl">📌</span>}
+                {item.cuidado === "Consulta" && <Stethoscope className={compacto ? "h-4 w-4" : "h-7 w-7"} />}
+                {item.cuidado === "Terapia" && <Leaf className={compacto ? "h-4 w-4" : "h-7 w-7"} />}
+                {item.cuidado === "Exame" && <FileText className={compacto ? "h-4 w-4" : "h-7 w-7"} />}
+                {item.cuidado === "Medicação" && <Pill className={compacto ? "h-4 w-4" : "h-7 w-7"} />}
+                {!item.cuidado && <span className={compacto ? "text-base" : "text-2xl"}>📌</span>}
               </span>
             )}
           </button>
 
           <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setExpandido((v) => !v)}>
-            <p className="break-words font-semibold text-lg">{tituloComTipo(item)}</p>
+            <p className={`break-words font-semibold ${compacto ? "text-sm" : "text-lg"}`}>{tituloComTipo(item)}</p>
 
             {ehMedicamento ? (
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {item.dosagem && <span>{item.dosagem}</span>}
                 {item.frequencia && <span>• {item.frequencia}</span>}
                 {item.horarios && item.horarios.length > 0 && (
@@ -95,35 +99,35 @@ export function CompromissoCard({ item }: { item: Item }) {
             )}
           </div>
 
-          {/* ✅ AÇÕES: RELÓGIO (MED) OU EXPANDIR + EDITAR/EXCLUIR */}
+          {/* ✅ AÇÕES */}
           <div className="flex items-center gap-1 shrink-0">
             {ehMedicamento && (
               <button
                 onClick={() => setAlarmeAberto(true)}
-                className="grid h-10 w-10 place-items-center rounded-full transition hover:opacity-80"
+                className={`grid ${compacto ? "h-7 w-7" : "h-10 w-10"} place-items-center rounded-full transition hover:opacity-80`}
                 style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
                 aria-label="Abrir alarme"
               >
-                <Clock className="h-5 w-5" />
+                <Clock className={compacto ? "h-3.5 w-3.5" : "h-5 w-5"} />
               </button>
             )}
             <button
               onClick={() => alert("Abrir modal de edição")}
-              className="p-2 text-muted-foreground hover:text-[var(--tema)]"
+              className={`${compacto ? "p-1" : "p-2"} text-muted-foreground hover:text-[var(--tema)]`}
               aria-label="Editar"
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil className={compacto ? "h-3 w-3" : "h-4 w-4"} />
             </button>
             <button
               onClick={() => alert("Confirmar exclusão")}
-              className="p-2 text-muted-foreground hover:text-red-500"
+              className={`${compacto ? "p-1" : "p-2"} text-muted-foreground hover:text-red-500`}
               aria-label="Excluir"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className={compacto ? "h-3 w-3" : "h-4 w-4"} />
             </button>
             {!ehMedicamento && (
-              <button onClick={() => setExpandido((v) => !v)} className="p-2">
-                <ChevronDown className={`h-5 w-5 transition-transform ${expandido ? "rotate-180" : ""}`} />
+              <button onClick={() => setExpandido((v) => !v)} className={compacto ? "p-1" : "p-2"}>
+                <ChevronDown className={`${compacto ? "h-4 w-4" : "h-5 w-5"} transition-transform ${expandido ? "rotate-180" : ""}`} />
               </button>
             )}
           </div>
