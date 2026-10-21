@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Botao, Selo } from "@/components/ui-kit";
 import { useApp } from "@/lib/app-store";
 import { EMOJI, formatData, nowLocalISO, subtitulo, tituloComTipo, tituloEvento, uid, type Item, type Situacao } from "@/lib/cuidados";
-import { AlarmeModal } from "./alarme-modal"; // Vamos criar este arquivo no próximo passo
+import { AlarmeModal } from "./alarme-modal";
 
 export function CompromissoCard({ item }: { item: Item }) {
   const { salvarRegistros } = useApp();
@@ -13,7 +13,7 @@ export function CompromissoCard({ item }: { item: Item }) {
   const [salvando, setSalvando] = useState(false);
   const [alarmeAberto, setAlarmeAberto] = useState(false);
   const detalhesId = useId();
-  
+
   const pendente = (item.situacao ?? "proximo") === "proximo";
   const ehMedicamento = item.cuidado === "Medicação";
 
@@ -30,7 +30,7 @@ export function CompromissoCard({ item }: { item: Item }) {
         titulo: tituloEvento(item, situacao), cuidado: item.cuidado,
         situacao, observacaoAcompanhamento: nota, evento: true, parentId: item.id,
       }], item.cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos");
-      
+
       if (ok) {
         toast.success("Acompanhamento registrado!");
         setNota("");
@@ -56,7 +56,7 @@ export function CompromissoCard({ item }: { item: Item }) {
     <>
       <article className="overflow-hidden rounded-2xl border border-gold/30 bg-card shadow-soft transition-all">
         <div className="flex w-full items-center gap-3 p-3 text-left text-foreground">
-          
+
           {/* ✅ FOTO DO REMÉDIO OU EMOJI */}
           <button onClick={() => setExpandido((v) => !v)} className="shrink-0">
             {item.fotoUrl ? (
@@ -70,24 +70,14 @@ export function CompromissoCard({ item }: { item: Item }) {
 
           <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setExpandido((v) => !v)}>
             <p className="break-words font-semibold text-lg">{tituloComTipo(item)}</p>
-            
-            {/* ✅ PÍLULAS COLORIDAS PARA MEDICAMENTOS */}
+
+            {/* ✅ MEDICAMENTOS: TEXTO SIMPLES (SEM PÍLULAS COLORIDAS) */}
             {ehMedicamento ? (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {item.dosagem && (
-                  <span className="flex items-center gap-1 rounded-md bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-700">
-                    <Pill className="h-3 w-3" /> {item.dosagem}
-                  </span>
-                )}
-                {item.frequencia && (
-                  <span className="flex items-center gap-1 rounded-md bg-orange-100 px-2 py-1 text-xs font-semibold text-orange-700">
-                    <Clock className="h-3 w-3" /> {item.frequencia}
-                  </span>
-                )}
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                {item.dosagem && <span>{item.dosagem}</span>}
+                {item.frequencia && <span>• {item.frequencia}</span>}
                 {item.horarios && item.horarios.length > 0 && (
-                  <span className="flex items-center gap-1 rounded-md bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">
-                    <Clock className="h-3 w-3" /> {item.horarios[0]}
-                  </span>
+                  <span>• {item.horarios.join(", ")}</span>
                 )}
               </div>
             ) : (
@@ -101,9 +91,10 @@ export function CompromissoCard({ item }: { item: Item }) {
 
           {/* ✅ BOTÃO DE ALARME PARA MEDICAMENTOS */}
           {ehMedicamento ? (
-            <button 
+            <button
               onClick={() => setAlarmeAberto(true)}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-green-100 text-green-600 transition hover:bg-green-200"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition hover:opacity-80"
+              style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
               aria-label="Abrir alarme"
             >
               <Clock className="h-5 w-5" />
@@ -126,8 +117,7 @@ export function CompromissoCard({ item }: { item: Item }) {
                 </div>
               ))}
             </dl>
-            
-            {/* FOTOS EXTRAS SE HOUVER */}
+
             {(item.fotoUrl || item.fotoPilula) && (
               <div className="flex gap-2 pt-2">
                 {item.fotoUrl && (
@@ -159,11 +149,10 @@ export function CompromissoCard({ item }: { item: Item }) {
         )}
       </article>
 
-      {/* ✅ RENDERIZA O MODAL DE ALARME SE ESTIVER ABERTO */}
       {alarmeAberto && (
-        <AlarmeModal 
-          item={item} 
-          fechar={() => setAlarmeAberto(false)} 
+        <AlarmeModal
+          item={item}
+          fechar={() => setAlarmeAberto(false)}
         />
       )}
     </>
