@@ -30,23 +30,26 @@ function Criar() {
   const [tipo, setTipo] = useState<Cuidado | null>(null);
   const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1" });
   
-  // Estados de Medicação
+  // Estados para Medicação
   const [fotoUrl, setFotoUrl] = useState("");
-  const [enviandoFoto, setEnviandoFoto] = useState(false);
+  const [fotoPilula, setFotoPilula] = useState("");
+  const [enviandoFoto, setEnviandoFoto] = useState<"caixa" | "pilula" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const filePilulaRef = useRef<HTMLInputElement>(null);
   
   const [vezesAoDia, setVezesAoDia] = useState(1);
   const [horaInicial, setHoraInicial] = useState("08:00");
   const [diasSemana, setDiasSemana] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
 
   const [salvando, setSalvando] = useState(false);
+  
   const set = (k: K) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
   const inp = (k: K, type = "text", req = false) => (
     <input className="field" type={type} required={req} value={f[k] ?? ""} onChange={set(k)} />
   );
 
-  // ✅ Lógica para calcular horários automaticamente
+  // ✅ Calcula os horários automaticamente
   const calcularHorarios = () => {
     if (!horaInicial) return [];
     const [h, m] = horaInicial.split(":").map(Number);
@@ -70,11 +73,12 @@ function Criar() {
     );
   };
 
-  const fazerUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ✅ Upload de Fotos
+  const fazerUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>, tipoFoto: "caixa" | "pilula") => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    setEnviandoFoto(true);
+    setEnviandoFoto(tipoFoto);
     const extensao = file.name.split(".").pop();
     const nomeArquivo = `${Date.now()}-${Math.random().toString(36).substring(7)}.${extensao}`;
 
@@ -82,14 +86,16 @@ function Criar() {
     
     if (error) {
       console.error(error);
-      toast.error("Erro ao enviar a foto. Tente novamente.");
-      setEnviandoFoto(false);
+      toast.error("Erro ao enviar a foto.");
+      setEnviandoFoto(null);
       return;
     }
     
     const { data: publicUrl } = supabase.storage.from("medicamentos").getPublicUrl(data.path);
-    setFotoUrl(publicUrl.publicUrl);
-    setEnviandoFoto(false);
+    if (tipoFoto === "caixa") setFotoUrl(publicUrl.publicUrl);
+    else setFotoPilula(publicUrl.publicUrl);
+    
+    setEnviandoFoto(null);
     toast.success("Foto anexada!");
   };
 
@@ -117,8 +123,9 @@ function Criar() {
         especialidade: f.especialidade, 
         inicio: f.inicio, 
         fim: f.fim || undefined,
-        fotoUrl: fotoUrl, // ✅ Salva a foto
-        diasSemana: diasSemana, // ✅ Salva os dias
+        fotoUrl: fotoUrl,
+        fotoPilula: fotoPilula,
+        diasSemana: diasSemana,
       }];
     } else {
       const prog = f.programacao as Programacao;
@@ -234,25 +241,44 @@ function Criar() {
               <Campo label="Nome">{inp("medicamento", "text", true)}</Campo>
               <Campo label="Dosagem">{inp("dosagem")}</Campo>
 
-              {/* ✅ NOVO: FOTO DO REMÉDIO */}
-              <div>
-                <span className="text-sm font-semibold block mb-1">Foto do Remédio (Opcional)</span>
-                {fotoUrl ? (
-                  <div className="relative w-24 h-24 overflow-hidden rounded-xl border border-gold/40">
-                    <img src={fotoUrl} alt="Remédio" className="h-full w-full object-cover" />
-                    <button type="button" onClick={() => setFotoUrl("")} className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white">
-                      <X className="h-3 w-3" />
+              {/* ✅ FOTOS */}
+              <div className="flex gap-4">
+                <div>
+                  <span className="text-xs font-semibold block mb-1">Foto da Caixa</span>
+                  {fotoUrl ? (
+                    <div className="relative w-20 h-20 overflow-hidden rounded-xl border border-gold/40">
+                      <img src={fotoUrl} alt="Caixa" className="h-full w-full object-cover" />
+                      <button type="button" onClick={() => setFotoUrl("")} className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="flex h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed border-gold/40 bg-muted/30">
+                      {enviandoFoto === "caixa" ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Camera className="h-5 w-5 text-muted-foreground" />}
                     </button>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => fileInputRef.current?.click()} className="flex h-24 w-24 items-center justify-center rounded-xl border-2 border-dashed border-gold/40 bg-muted/30">
-                    {enviandoFoto ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <Camera className="h-6 w-6 text-muted-foreground" />}
-                  </button>
-                )}
-                <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={fazerUploadFoto} className="hidden" />
+                  )}
+                  <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={(e) => fazerUploadFoto(e, "caixa")} className="hidden" />
+                </div>
+
+                <div>
+                  <span className="text-xs font-semibold block mb-1">Foto da Pílula</span>
+                  {fotoPilula ? (
+                    <div className="relative w-20 h-20 overflow-hidden rounded-xl border border-gold/40">
+                      <img src={fotoPilula} alt="Pílula" className="h-full w-full object-cover" />
+                      <button type="button" onClick={() => setFotoPilula("")} className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => filePilulaRef.current?.click()} className="flex h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed border-gold/40 bg-muted/30">
+                      {enviandoFoto === "pilula" ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Camera className="h-5 w-5 text-muted-foreground" />}
+                    </button>
+                  )}
+                  <input type="file" accept="image/*" capture="environment" ref={filePilulaRef} onChange={(e) => fazerUploadFoto(e, "pilula")} className="hidden" />
+                </div>
               </div>
 
-              {/* ✅ NOVO: HORÁRIOS INTELIGENTES */}
+              {/* ✅ HORÁRIOS INTELIGENTES */}
               <div className="space-y-3">
                 <span className="text-sm font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Horários</span>
                 <div className="grid grid-cols-2 gap-3">
@@ -274,7 +300,7 @@ function Criar() {
                 </div>
               </div>
 
-              {/* ✅ NOVO: DIAS DA SEMANA */}
+              {/* ✅ DIAS DA SEMANA */}
               <div className="space-y-3">
                 <span className="text-sm font-semibold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Dias da Semana</span>
                 <p className="text-xs text-muted-foreground">Desmarque os dias em que NÃO vai tomar o remédio.</p>
