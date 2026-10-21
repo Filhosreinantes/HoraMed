@@ -29,18 +29,18 @@ function Criar() {
   const navigate = useNavigate();
   const [tipo, setTipo] = useState<Cuidado | null>(null);
   const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1" });
-  
+
   // Estados para Medicação
   const [fotoUrl, setFotoUrl] = useState("");
   const [enviandoFoto, setEnviandoFoto] = useState<"caixa" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [vezesAoDia, setVezesAoDia] = useState(1);
   const [horaInicial, setHoraInicial] = useState("08:00");
   const [diasSemana, setDiasSemana] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
 
   const [salvando, setSalvando] = useState(false);
-  
+
   const set = (k: K) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
   const inp = (k: K, type = "text", req = false) => (
@@ -75,23 +75,23 @@ function Criar() {
   const fazerUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     setEnviandoFoto("caixa");
     const extensao = file.name.split(".").pop();
     const nomeArquivo = `${Date.now()}-${Math.random().toString(36).substring(7)}.${extensao}`;
 
     const { data, error } = await supabase.storage.from("medicamentos").upload(nomeArquivo, file);
-    
+
     if (error) {
       console.error(error);
       toast.error("Erro ao enviar a foto.");
       setEnviandoFoto(null);
       return;
     }
-    
+
     const { data: publicUrl } = supabase.storage.from("medicamentos").getPublicUrl(data.path);
     setFotoUrl(publicUrl.publicUrl);
-    
+
     setEnviandoFoto(null);
     toast.success("Foto anexada!");
   };
@@ -101,24 +101,24 @@ function Criar() {
     if (!ativa || !tipo) return;
     const base = { pessoaId: ativa.id, criadoEm: nowLocalISO(), cuidado: tipo, situacao: "proximo" as const };
     let lista: Dados[] = [];
-    
+
     if (tipo === "Consulta") {
       lista = [{ ...base, id: uid(), titulo: `Consulta${f.especialidade ? ` · ${f.especialidade}` : ""}`, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, especialidade: f.especialidade }];
     } else if (tipo === "Exame") {
       lista = [{ ...base, id: uid(), titulo: `Exame · ${f.tipoExame}`, tipoExame: f.tipoExame, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, recomendacoes: f.recomendacoes }];
     } else if (tipo === "Medicação") {
       const horariosCalculados = calcularHorarios();
-      lista = [{ 
-        ...base, 
-        id: uid(), 
-        titulo: `Medicação · ${f.medicamento}`, 
-        medicamento: f.medicamento, 
-        dosagem: f.dosagem, 
-        horarios: horariosCalculados, 
-        frequencia: `${vezesAoDia}x ao dia`, 
-        profissional: f.profissional, 
-        especialidade: f.especialidade, 
-        inicio: f.inicio, 
+      lista = [{
+        ...base,
+        id: uid(),
+        titulo: `Medicação · ${f.medicamento}`,
+        medicamento: f.medicamento,
+        dosagem: f.dosagem,
+        horarios: horariosCalculados,
+        frequencia: `${vezesAoDia}x ao dia`,
+        profissional: f.profissional,
+        especialidade: f.especialidade,
+        inicio: f.inicio,
         fim: f.fim || undefined,
         fotoUrl: fotoUrl,
         diasSemana: diasSemana,
@@ -137,7 +137,7 @@ function Criar() {
         ...(programaId ? { programa: true, programaId, duracaoMeses: meses, frequencia: prog, diaSemana: prog === "semanal" ? DIAS_SEMANA[dia] : undefined } : {}),
       }));
     }
-    
+
     setSalvando(true);
     const ok = await salvarRegistros(lista);
     setSalvando(false);
@@ -153,8 +153,8 @@ function Criar() {
         Novo compromisso
       </h1>
       <SeletorTesouro prefixo="Para" />
-      
-      {/* ✅ PARTE 1: EFEITO AURA NOS 4 CARDS */}
+
+      {/* ✅ CARDS COM EFEITO AURA */}
       <div className="grid grid-cols-2 gap-3">
         {[
           { tipo: "Consulta", icone: Stethoscope },
@@ -172,21 +172,21 @@ function Criar() {
               }`}
               style={{
                 borderColor: selecionado ? "var(--tema)" : "transparent",
-                boxShadow: selecionado 
-                  ? "0 8px 24px -6px var(--tema-claro)" 
+                boxShadow: selecionado
+                  ? "0 10px 25px -5px var(--tema)"
                   : "0 4px 12px -4px rgba(0,0,0,0.05)",
               }}
             >
-              <div 
+              <div
                 className="grid h-12 w-12 place-items-center rounded-full transition-colors"
-                style={{ 
-                  backgroundColor: selecionado ? "var(--tema-claro)" : "#F5F5F5", 
-                  color: selecionado ? "var(--tema-escuro)" : "#888" 
+                style={{
+                  backgroundColor: selecionado ? "var(--tema-claro)" : "#F5F5F5",
+                  color: selecionado ? "var(--tema-escuro)" : "#888",
                 }}
               >
                 <Icone className="h-6 w-6" />
               </div>
-              <span 
+              <span
                 className="font-display text-sm font-bold italic transition-colors"
                 style={{ color: selecionado ? "var(--tema-escuro)" : "#4A4A4A" }}
               >
@@ -197,13 +197,13 @@ function Criar() {
         })}
       </div>
 
-      {/* ✅ PARTE 2: FORMULÁRIO ELEGANTE (ACORDEÃO) */}
+      {/* ✅ FORMULÁRIO ELEGANTE (ACORDEÃO) */}
       {tipo && (
         <div className="relative mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="fixed inset-0 z-0" onClick={() => setTipo(null)} />
-          
-          <form 
-            onSubmit={guardar} 
+
+          <form
+            onSubmit={guardar}
             className="relative z-10 space-y-5 rounded-[2rem] bg-white p-6 shadow-xl"
             style={{ border: "1px solid var(--tema-claro)", borderTop: "4px solid var(--tema)" }}
           >
@@ -212,32 +212,34 @@ function Criar() {
               <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>
                 {tipo === "Medicação" ? "Nova Medicação" : `Novo(a) ${tipo}`}
               </h2>
-              <button 
-                type="button" 
-                onClick={() => setTipo(null)} 
+              <button
+                type="button"
+                onClick={() => setTipo(null)}
                 className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-200"
               >
                 <X className="h-3 w-3" /> Fechar
               </button>
             </div>
 
-            {/* ✅ ESTILO APLICADO AOS INPUTS */}
+            {/* ✅ ESTILO DOS CAMPOS */}
             <style>{`
               form input.field, form select.field, form textarea.field {
                 border-radius: 1rem;
-                border-color: var(--tema-claro);
-                background-color: #FAFAFA;
+                border: 1.5px solid #E2E8F0;
+                background-color: #FFFFFF;
                 font-family: var(--font-sans);
+                padding: 0.75rem 1rem;
               }
               form input.field:focus, form select.field:focus, form textarea.field:focus {
                 border-color: var(--tema);
-                background-color: white;
                 box-shadow: 0 0 0 3px var(--tema-claro);
+                outline: none;
               }
               form label > span {
                 font-family: var(--font-display);
                 font-style: italic;
-                color: #555;
+                color: var(--tema-escuro);
+                font-weight: 600;
               }
             `}</style>
 
@@ -253,7 +255,7 @@ function Criar() {
                 <Campo label="Especialidade">{inp("especialidade")}</Campo>
               </>
             )}
-            
+
             {/* CAMPOS: TERAPIA */}
             {tipo === "Terapia" && (
               <>
@@ -290,7 +292,7 @@ function Criar() {
                 )}
               </>
             )}
-            
+
             {/* CAMPOS: EXAME */}
             {tipo === "Exame" && (
               <>
@@ -306,7 +308,7 @@ function Criar() {
                 </Campo>
               </>
             )}
-            
+
             {/* CAMPOS: MEDICAÇÃO */}
             {tipo === "Medicação" && (
               <>
@@ -319,30 +321,30 @@ function Criar() {
                   {fotoUrl ? (
                     <div className="relative w-20 h-20 overflow-hidden rounded-xl border border-gold/40">
                       <img src={fotoUrl} alt="Caixa" className="h-full w-full object-cover" />
-                      <button 
-                        type="button" 
-                        onClick={() => setFotoUrl("")} 
+                      <button
+                        type="button"
+                        onClick={() => setFotoUrl("")}
                         className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white"
                       >
                         <X className="h-3 w-3" />
                       </button>
                     </div>
                   ) : (
-                    <button 
-                      type="button" 
-                      onClick={() => fileInputRef.current?.click()} 
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
                       className="flex h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed border-gold/40 bg-muted/30"
                     >
                       {enviandoFoto === "caixa" ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Camera className="h-5 w-5 text-muted-foreground" />}
                     </button>
                   )}
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    capture="environment" 
-                    ref={fileInputRef} 
-                    onChange={fazerUploadFoto} 
-                    className="hidden" 
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    ref={fileInputRef}
+                    onChange={fazerUploadFoto}
+                    className="hidden"
                   />
                 </div>
 
@@ -363,7 +365,7 @@ function Criar() {
                     </Campo>
                   </div>
                   <div className="rounded-xl bg-sky/30 p-3 text-sm text-primary">
-                    <strong>Horários gerados: </strong> 
+                    <strong>Horários gerados: </strong>
                     {calcularHorarios().join(" • ")}
                   </div>
                 </div>
@@ -400,14 +402,14 @@ function Criar() {
                 <p className="text-xs text-muted-foreground">Deixe o fim em branco para uso contínuo.</p>
               </>
             )}
-            
+
             <Divisor />
-            
-            {/* ✅ BOTÃO DE SALVAR ELEGANTE */}
-            <div className="pt-2">
-              <Botao 
-                type="submit" 
-                disabled={salvando} 
+
+            {/* ✅ BOTÃO DE SALVAR COM ESPAÇO EXTRA */}
+            <div className="pt-4 pb-24">
+              <Botao
+                type="submit"
+                disabled={salvando}
                 className="w-full rounded-full py-3 text-base font-bold shadow-lg transition-transform hover:scale-[1.01]"
                 style={{ backgroundColor: "var(--tema)", color: "white" }}
               >
