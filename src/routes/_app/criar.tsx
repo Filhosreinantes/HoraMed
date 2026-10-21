@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { Camera, Loader2, X, Clock, CalendarDays } from "lucide-react";
+import { Camera, Loader2, X, Clock, CalendarDays, Stethoscope, Leaf, FileText, Pill } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import { supabase } from "@/lib/supabase";
-import { DIAS_SEMANA, EMOJI, gerarSessoes, nowLocalISO, uid, type Cuidado, type Dados, type Programacao } from "@/lib/cuidados";
+import { DIAS_SEMANA, gerarSessoes, nowLocalISO, uid, type Cuidado, type Dados, type Programacao } from "@/lib/cuidados";
 import { Botao, Campo, Divisor, SeletorTesouro } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/_app/criar")({
@@ -153,25 +153,41 @@ function Criar() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-3xl font-semibold">Novo compromisso</h1>
+      <h1 className="font-display text-3xl font-semibold italic text-foreground text-center">
+        Novo compromisso
+      </h1>
       <SeletorTesouro prefixo="Para" />
       
       <div className="grid grid-cols-2 gap-3">
-        {(["Consulta", "Terapia", "Exame", "Medicação"] as Cuidado[]).map((c) => (
+        {[
+          { tipo: "Consulta", icone: Stethoscope },
+          { tipo: "Terapia", icone: Leaf },
+          { tipo: "Exame", icone: FileText },
+          { tipo: "Medicação", icone: Pill },
+        ].map(({ tipo: c, icone: Icone }) => (
           <button
             key={c}
-            onClick={() => setTipo(c)}
-            className={`flex flex-col items-center gap-1 rounded-3xl border p-5 shadow-soft transition ${tipo === c ? "border-primary bg-sky" : "border-gold/40 bg-card"}`}
+            onClick={() => setTipo(c as Cuidado)}
+            className={`notebook flex flex-col items-center justify-center gap-2 p-4 transition hover:bg-muted/10 ${
+              tipo === c ? "border-[var(--tema)] ring-2 ring-[var(--tema-claro)]" : "border-gold/60"
+            }`}
           >
-            <span className="text-4xl">{EMOJI[c]}</span>
-            <span className="font-display text-lg font-semibold italic">{c}</span>
+            <div 
+              className="grid h-12 w-12 place-items-center rounded-full"
+              style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
+            >
+              <Icone className="h-6 w-6" />
+            </div>
+            <span className="font-display text-base font-semibold italic text-foreground">
+              {c}
+            </span>
           </button>
         ))}
       </div>
 
       {tipo && (
         <form onSubmit={guardar} className="notebook space-y-4 p-5">
-          <h2 className="text-xl font-semibold">{EMOJI[tipo]} {tipo}</h2>
+          <h2 className="text-xl font-semibold">{tipo}</h2>
           
           {tipo === "Consulta" && (
             <>
