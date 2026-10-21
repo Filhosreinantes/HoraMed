@@ -195,8 +195,7 @@ export function resolverSituacoes(todos: Dados[]) {
 
   // ✅ Filtra os itens que estão na lista negra
   return todos
-return todos
-    .filter((d) => !d.evento) // ✅ Agora deixamos passar os itens que tem evento (para podermos ler a exclusão)
+    .filter((d) => !d.evento)
     .filter((d) => !excluidos.has(d.id)) // ✅ E aqui removemos os que foram marcados como excluídos
     .map((original) => {
       const d = aplicarEdicoes(original, edicoes.get(original.id));
