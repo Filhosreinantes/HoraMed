@@ -13,10 +13,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/acompanhamento")({
   head: () => ({
-    meta: [
-      { title: "Acompanhamento · Rotina Azul" },
-      { name: "description", content: "Panorama de consultas, terapias, exames e medicações." },
-    ],
+    meta: [{ title: "Acompanhamento · Rotina Azul" }],
   }),
   component: Acompanhamento,
 });
@@ -60,9 +57,7 @@ function Acompanhamento() {
 
   const proximos = useMemo(() => {
     let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação"));
-    if (buscaProximos) {
-      lista = lista.filter((i) => i.cuidado === buscaProximos);
-    }
+    if (buscaProximos) lista = lista.filter((i) => i.cuidado === buscaProximos);
     return lista;
   }, [itens, buscaProximos]);
 
@@ -79,8 +74,6 @@ function Acompanhamento() {
     return arr.sort((a, b) => a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
-  const proximasDoses = agendaHoje.filter((a) => !a.log);
-
   const logsFiltrados = useMemo(() => {
     return logs
       .filter((i: any) => !filtroMed || i.titulo.toLowerCase().includes(filtroMed.toLowerCase()))
@@ -88,27 +81,9 @@ function Acompanhamento() {
       .sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
   }, [logs, filtroMed, dataHistorico]);
 
-  // ✅ Calcula em que dia o remédio acaba (estoque / consumo diário)
-  const calcularFimEstoque = (med: any) => {
-    if (!med.estoqueAtual || !med.horarios || med.horarios.length === 0) return null;
-    const consumoDiario = Number(med.dosagemValor || 1) * med.horarios.length;
-    const diasRestantes = Math.floor(med.estoqueAtual / consumoDiario);
-    if (diasRestantes <= 0) return "Hoje";
-    const dataFim = new Date();
-    dataFim.setDate(dataFim.getDate() + diasRestantes);
-    return dataFim.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-  };
-
   const registrarMedicacao = async (item: any, horario: string, novoHorario?: string) => {
-    const titulo = novoHorario
-      ? `Atrasou: ${item.medicamento} (${horario} -> ${novoHorario})`
-      : `Tomou: ${item.medicamento} (${horario})`;
-
-    const dados: Dados = {
-      id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo,
-      cuidado: "Medicação_Log" as any, evento: true, parentId: item.id, data: hoje, horario,
-    };
-
+    const titulo = novoHorario ? `Atrasou: ${item.medicamento} (${horario} -> ${novoHorario})` : `Tomou: ${item.medicamento} (${horario})`;
+    const dados: Dados = { id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo, cuidado: "Medicação_Log" as any, evento: true, parentId: item.id, data: hoje, horario };
     const ok = await salvarRegistros([dados], "medicacao_logs");
     if (ok) {
       toast.success(novoHorario ? "Atraso registrado!" : "Medicação registrada!");
@@ -117,129 +92,107 @@ function Acompanhamento() {
   };
 
   if (carregando) {
-    return (
-      <div className="space-y-3 p-4">
-        <Skeleton className="h-40 rounded-3xl bg-muted" />
-        <Skeleton className="h-40 rounded-3xl bg-muted" />
-      </div>
-    );
+    return <div className="space-y-3 p-4"><Skeleton className="h-40 rounded-3xl bg-muted" /><Skeleton className="h-40 rounded-3xl bg-muted" /></div>;
   }
 
-  // --- MENU INICIAL (DASHBOARD) ---
+  // --- MENU INICIAL (DASHBOARD - IGUAL AO DESENHO) ---
   if (view === "menu") {
     return (
-      <div className="mx-auto max-w-lg space-y-5 py-6">
-        <header className="text-center mb-6">
-          <h1 className="text-3xl font-semibold">Acompanhamento</h1>
-          <p className="text-sm text-muted-foreground">O que você quer ver hoje?</p>
+      <div className="mx-auto max-w-lg space-y-6 py-6 pb-24">
+        <header className="text-center">
+          <h1 className="font-display text-3xl font-semibold italic">Acompanhamento</h1>
         </header>
 
-        <div className="px-4">
-          <SeletorTesouro />
-        </div>
+        <div className="px-4"><SeletorTesouro /></div>
 
-        {/* ✅ BLOCO 1: REMÉDIOS DE HOJE */}
+        {/* BLOCO 1: REMÉDIOS DE HOJE */}
         <section className="px-4 mt-6">
-          <h2 className="font-display text-xl font-bold italic mb-3" style={{ color: "var(--tema-escuro)" }}>
-            Lembretes de Hoje
-          </h2>
-          <div
-            className="notebook p-4 space-y-3"
-            style={{ boxShadow: "0 0 30px 5px var(--tema-claro)", border: "1px solid var(--tema)" }}
-          >
+          <h2 className="font-display text-xl font-bold italic mb-3" style={{ color: "var(--tema-escuro)" }}>Lembretes de Hoje</h2>
+          <div className="notebook p-4 space-y-3" style={{ boxShadow: "0 0 30px 5px var(--tema-claro)", border: "1px solid var(--tema)" }}>
             {agendaHoje.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhum remédio para hoje.</p>
             ) : (
               agendaHoje.map((a, idx) => (
-                <div key={idx} className="flex items-center justify-between border-b border-border/50 pb-2 last:border-0 last:pb-0">
+                <div key={idx} className="flex items-center justify-between border-b border-border/50 pb-3 last:border-0 last:pb-0">
                   <div>
                     <p className="font-bold text-sm">{a.med.medicamento}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {a.horario}
-                      {a.med.estoqueAtual !== undefined && ` · Restam ${a.med.estoqueAtual} ${a.med.dosagemUnidade?.toLowerCase() ?? ""}`}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{a.med.dosagem} · Restam {a.med.estoqueAtual ?? 0} un.</p>
                   </div>
-                  {a.log ? (
-                    <span className="text-xs font-bold text-green-600 flex items-center gap-1">
-                      <Check className="h-3 w-3" /> Tomou
-                    </span>
-                  ) : (
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => registrarMedicacao(a.med, a.horario)}
-                        className="rounded-full bg-[var(--tema)] px-2 py-1 text-[10px] font-bold text-white shadow-sm"
-                      >
-                        Tomei
-                      </button>
-                      <button
-                        onClick={() => setAtrasoModal({ item: a.med, horario: a.horario })}
-                        className="rounded-full border border-[var(--tema)] px-2 py-1 text-[10px] font-bold text-[var(--tema-escuro)]"
-                      >
-                        Atrasei
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="font-display font-bold text-lg" style={{ color: "var(--tema)" }}>{a.horario}</span>
+                    {a.log ? (
+                      <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-200">Tomou</span>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        <button onClick={() => registrarMedicacao(a.med, a.horario)} className="text-[10px] font-bold text-white px-2 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Tomei</button>
+                        <button onClick={() => setAtrasoModal({ item: a.med, horario: a.horario })} className="text-[10px] font-bold rounded-md px-2 py-1 border" style={{ borderColor: "var(--tema)", color: "var(--tema-escuro)" }}>Atrasei</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))
             )}
           </div>
         </section>
 
-        {/* ✅ BLOCO 2: PRÓXIMOS COMPROMISSOS */}
+        {/* BLOCO 2: COMPROMISSOS DE HOJE */}
         <section className="px-4 mt-6">
-          <h2 className="font-display text-xl font-bold italic mb-3" style={{ color: "var(--tema-escuro)" }}>
-            Próximos Compromissos
-          </h2>
-          <div className="space-y-2">
+          <h2 className="font-display text-xl font-bold italic mb-3" style={{ color: "var(--tema-escuro)" }}>Compromissos</h2>
+          <div className="space-y-3">
             {proximos.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhum compromisso agendado.</p>
             ) : (
-              proximos.slice(0, 3).map((i) => (
+              // Filtra apenas os de hoje e mostra no formato do desenho
+              proximos.filter(i => i.data === hoje).map((i) => (
                 <CompromissoCard key={i.id} item={i} compacto />
               ))
             )}
-            <button
-              onClick={() => setView("compromissos")}
-              className="w-full text-center text-sm font-semibold py-2"
-              style={{ color: "var(--tema)" }}
-            >
-              Ver todos os compromissos →
-            </button>
+            {proximos.filter(i => i.data === hoje).length === 0 && proximos.length > 0 && (
+               <p className="text-sm text-muted-foreground">Nenhum compromisso para hoje.</p>
+            )}
           </div>
         </section>
+
+        {/* BOTÕES DE NAVEGAÇÃO INFERIORES */}
+        <div className="grid grid-cols-2 gap-4 px-4 mt-8">
+          <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-5 transition hover:bg-muted/10">
+            <div className="grid h-12 w-12 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
+              <Stethoscope className="h-6 w-6" />
+            </div>
+            <span className="font-display text-base font-semibold italic text-foreground text-center">Compromissos</span>
+          </button>
+
+          <button onClick={() => setView("medicacoes")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-5 transition hover:bg-muted/10">
+            <div className="grid h-12 w-12 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
+              <PillIcon className="h-6 w-6" />
+            </div>
+            <span className="font-display text-base font-semibold italic text-foreground text-center">Medicação</span>
+          </button>
+        </div>
       </div>
     );
   }
 
-  // --- TELA DE COMPROMISSOS ---
+  // --- TELA DE COMPROMISSOS (Mantida igual) ---
   if (view === "compromissos") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground">
           <ChevronLeft className="h-4 w-4" /> Voltar ao menu
         </Botao>
-
-        <header>
-          <h1 className="font-display text-3xl font-semibold italic text-foreground">Compromissos</h1>
-        </header>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Compromissos</h1></header>
         <SeletorTesouro />
-
         <div className="mt-6">
           <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2">
-            <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />
-            Panorama dos cuidados médicos
+            <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} /> Panorama dos cuidados médicos
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Toque em um dos blocos (Compareceu, Faltou, etc.) para ver os detalhes abaixo.
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Toque em um dos blocos para ver os detalhes abaixo.</p>
         </div>
-
         <div className="flex gap-2 pt-2">
           <Pill ativo={periodo === "mes"} onClick={() => setPeriodo("mes")}>Este mês</Pill>
           <Pill ativo={periodo === "ano"} onClick={() => setPeriodo("ano")}>Este ano</Pill>
           <Pill ativo={periodo === "tudo"} onClick={() => setPeriodo("tudo")}>Tudo</Pill>
         </div>
-
         <div className="grid gap-3 pt-2">
           {(["Consulta", "Terapia", "Exame"] as Cuidado[]).map((c) => {
             const doTipo = filtrados.filter((i) => i.cuidado === c);
@@ -269,49 +222,29 @@ function Acompanhamento() {
             );
           })}
         </div>
-
         {drill && (
           <section className="notebook space-y-3 p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">{drill.cuidado} · {LINHAS.find((l) => l.s === drill.situacao)?.label}</h3>
-              <Botao variant="ghost" onClick={() => setDrill(null)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-semibold">
-                <X className="h-4 w-4" /> Fechar
-              </Botao>
+              <Botao variant="ghost" onClick={() => setDrill(null)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-semibold"><X className="h-4 w-4" /> Fechar</Botao>
             </div>
             {filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao).length === 0 ? (
               <p className="text-sm text-muted-foreground">Nada por aqui.</p>
             ) : (
-              ordenarPorDataHora(filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)).map((i) => (
-                <CompromissoCard key={i.id} item={i} />
-              ))
+              ordenarPorDataHora(filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)).map((i) => <CompromissoCard key={i.id} item={i} />)
             )}
           </section>
         )}
-
         <Divisor />
-
         <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Todos os próximos compromissos</h2>
-          </div>
-
-          <p className="text-xs text-muted-foreground mb-2">
-            Toque no card para abrir e dar baixa (Compareceu/Faltou).
-          </p>
-
-          <div className="flex items-center gap-2 mb-2">
-            <select
-              className="field text-sm p-2 w-full border-gold/30 bg-card"
-              value={buscaProximos}
-              onChange={(e) => setBuscaProximos(e.target.value)}
-            >
-              <option value="">Todos os tipos</option>
-              <option value="Consulta">Consulta</option>
-              <option value="Terapia">Terapia</option>
-              <option value="Exame">Exame</option>
-            </select>
-          </div>
-
+          <h2 className="text-xl font-semibold">Todos os próximos compromissos</h2>
+          <p className="text-xs text-muted-foreground mb-2">Toque no card para abrir e dar baixa.</p>
+          <select className="field text-sm p-2 w-full border-gold/30 bg-card mb-2" value={buscaProximos} onChange={(e) => setBuscaProximos(e.target.value)}>
+            <option value="">Todos os tipos</option>
+            <option value="Consulta">Consulta</option>
+            <option value="Terapia">Terapia</option>
+            <option value="Exame">Exame</option>
+          </select>
           {proximos.length === 0 ? (
             <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso agendado.</p>
           ) : (
@@ -324,85 +257,22 @@ function Acompanhamento() {
     );
   }
 
-  // --- TELA DE MEDICAÇÕES ---
+  // --- TELA DE MEDICAÇÕES (SEM o bloco Lembretes de Hoje) ---
   return (
     <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
       <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold">
         <ChevronLeft className="h-4 w-4" /> Voltar ao menu
       </Botao>
 
-      <header>
-        <h1 className="text-2xl font-semibold">Medicações</h1>
-      </header>
+      <header><h1 className="text-2xl font-semibold">Medicações</h1></header>
       <SeletorTesouro />
 
-      {/* ✅ LEMBRETES DE HOJE — com estoque */}
-      <section
-        className="notebook p-5 space-y-4 relative"
-        style={{
-          boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)",
-          border: "2px solid var(--tema)",
-        }}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <Clock className="h-5 w-5" style={{ color: "var(--tema)" }} />
-          <h2 className="font-display text-xl font-bold italic text-foreground">Lembretes de Hoje</h2>
-        </div>
-
-        {agendaHoje.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma medicação agendada para hoje.</p>
-        ) : (
-          <ul className="space-y-2">
-            {agendaHoje.map((a, idx) => (
-              <li key={`${a.med.id}-${a.horario}-${idx}`} className="flex flex-col gap-2 rounded-xl border border-gold/20 bg-background/50 p-3">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-semibold text-sm">{a.med.medicamento}{a.med.dosagem && <span className="text-xs text-muted-foreground font-normal"> ({a.med.dosagem})</span>}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Horário: {a.horario}
-                      {a.med.estoqueAtual !== undefined && ` · Restam ${a.med.estoqueAtual} ${a.med.dosagemUnidade?.toLowerCase() ?? ""}`}
-                    </p>
-                  </div>
-                  {a.log ? (
-                    <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-bold text-green-700">
-                      <Check className="h-3 w-3" /> {a.log.titulo.includes("Atrasou") ? "Atrasou" : "Tomou"}
-                    </span>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => registrarMedicacao(a.med, a.horario)}
-                        className="rounded-full bg-[var(--tema)] px-4 py-2 text-xs font-bold text-white shadow-sm"
-                      >
-                        Tomou
-                      </button>
-                      <button
-                        onClick={() => setAtrasoModal({ item: a.med, horario: a.horario })}
-                        className="rounded-full border border-[var(--tema)] bg-transparent px-4 py-2 text-xs font-bold text-[var(--tema-escuro)]"
-                      >
-                        Atrasei
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
       {/* HISTÓRICO */}
-      <section
-        className="notebook p-5 space-y-4 relative"
-        style={{
-          boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)",
-          border: "2px solid var(--tema)",
-        }}
-      >
+      <section className="notebook p-5 space-y-4 relative" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
         <div className="flex items-center gap-2 mb-2">
           <History className="h-4 w-4" style={{ color: "var(--tema)" }} />
           <h2 className="font-sans text-base font-semibold text-foreground">Histórico das doses tomadas</h2>
         </div>
-
         <div className="grid grid-cols-2 gap-2 mb-3">
           <input type="date" className="field text-sm p-2" value={dataHistorico} onChange={(e) => setDataHistorico(e.target.value)} />
           <select className="field text-sm p-2" value={filtroMed} onChange={(e) => setFiltroMed(e.target.value)}>
@@ -410,7 +280,6 @@ function Acompanhamento() {
             {emUso.map(m => <option key={m.id} value={m.medicamento}>{m.medicamento}</option>)}
           </select>
         </div>
-
         {logsFiltrados.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum registro encontrado.</p>
         ) : (
@@ -426,81 +295,20 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* MEUS REMÉDIOS + previsão de término */}
-      <section
-        className="notebook p-5 space-y-4 relative"
-        style={{
-          boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)",
-          border: "2px solid var(--tema)",
-        }}
-      >
+      {/* MEUS REMÉDIOS */}
+      <section className="notebook p-5 space-y-4 relative" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
         <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
           <PillIcon className="h-4 w-4" style={{ color: "var(--tema)" }} /> Meus Remédios
         </h2>
-
         <div className="flex gap-2">
-          <Pill ativo={filtroRemedios === "uso"} onClick={() => setFiltroRemedios("uso")}>
-            Em uso ({emUso.length})
-          </Pill>
-          <Pill ativo={filtroRemedios === "encerrados"} onClick={() => setFiltroRemedios("encerrados")}>
-            Encerrados ({encerradas.length})
-          </Pill>
+          <Pill ativo={filtroRemedios === "uso"} onClick={() => setFiltroRemedios("uso")}>Em uso ({emUso.length})</Pill>
+          <Pill ativo={filtroRemedios === "encerrados"} onClick={() => setFiltroRemedios("encerrados")}>Encerrados ({encerradas.length})</Pill>
         </div>
-
         <div className="space-y-2 mt-2">
           {filtroRemedios === "uso"
-            ? emUso.map((m) => {
-                const previsao = calcularFimEstoque(m);
-                return (
-                  <div key={m.id} className="space-y-1">
-                    <CompromissoCard item={m} compacto />
-                    {previsao && (
-                      <p className="text-xs text-muted-foreground pl-2">
-                        Dia {previsao} acaba seu remédio.
-                      </p>
-                    )}
-                  </div>
-                );
-              })
+            ? emUso.map(m => <CompromissoCard key={m.id} item={m} compacto />)
             : encerradas.map(m => <CompromissoCard key={m.id} item={m} compacto />)
           }
-        </div>
-      </section>
-
-      {/* TODOS OS PRÓXIMOS AGENDAMENTOS (doses futuras de hoje) */}
-      <section className="space-y-3 mt-8 pb-24">
-        <h2 className="font-sans text-base font-semibold text-foreground">
-          Todos os próximos agendamentos
-        </h2>
-
-        <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
-          {proximasDoses.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">Nenhuma dose pendente para hoje.</p>
-          ) : (
-            proximasDoses.map((a, idx) => (
-              <div
-                key={idx}
-                className="notebook flex items-center justify-between p-3"
-                style={{ borderColor: "var(--tema-claro)" }}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="grid h-8 w-8 place-items-center rounded-full"
-                    style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
-                  >
-                    <PillIcon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">{a.med.medicamento}</p>
-                    <p className="text-xs text-muted-foreground">{a.med.dosagem}</p>
-                  </div>
-                </div>
-                <span className="font-display font-bold text-lg" style={{ color: "var(--tema)" }}>
-                  {a.horario}
-                </span>
-              </div>
-            ))
-          )}
         </div>
       </section>
 
@@ -510,12 +318,7 @@ function Acompanhamento() {
           <div className="w-full max-w-sm space-y-4 rounded-3xl bg-card p-5 shadow-xl">
             <h3 className="font-display text-lg font-bold text-foreground">Atrasou a medicação</h3>
             <p className="text-sm text-muted-foreground">Qual o novo horário que você deu a dose do {atrasoModal.item.medicamento}?</p>
-            <input
-              type="time"
-              className="w-full rounded-xl border p-2"
-              defaultValue={new Date().toTimeString().slice(0, 5)}
-              onChange={(e) => setAtrasoModal({ ...atrasoModal, novoHorario: e.target.value } as any)}
-            />
+            <input type="time" className="w-full rounded-xl border p-2" defaultValue={new Date().toTimeString().slice(0, 5)} onChange={(e) => setAtrasoModal({ ...atrasoModal, novoHorario: e.target.value } as any)} />
             <div className="flex gap-2">
               <button onClick={() => setAtrasoModal(null)} className="flex-1 rounded-full border py-2 text-sm font-bold text-muted-foreground">Cancelar</button>
               <button onClick={() => {
