@@ -1,4 +1,3 @@
-
 import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { useApp } from "@/lib/app-store";
@@ -44,6 +43,7 @@ export function SeletorTesouro({
           <span className="text-[0.65rem] font-bold uppercase tracking-wider text-gold">
             {prefixo}
           </span>
+          {/* ✅ Nome reduzido para text-base */}
           <span className="truncate font-display text-base font-bold text-foreground">
             {ativa.emoji} {nomeCurto(ativa.nome)}
           </span>
