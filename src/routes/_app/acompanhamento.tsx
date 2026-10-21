@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane } from "lucide-react";
+import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2 } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -125,6 +125,22 @@ function Acompanhamento() {
       toast.success(novoHorario ? "Atraso registrado!" : "Medicação registrada e estoque atualizado!");
       setAtrasoModal(null);
     }
+  };
+
+  // Exclui um registro do histórico de doses (grava um evento "excluir" que o app-store aplica).
+  const excluirLog = async (log: any) => {
+    if (!confirm("Excluir este registro de dose?")) return;
+    const ok = await salvarRegistros([{
+      id: uid(),
+      pessoaId: log.pessoaId,
+      criadoEm: nowLocalISO(),
+      titulo: "Excluído",
+      cuidado: "Medicação_Log" as any,
+      evento: true,
+      parentId: log.id,
+      acao: "excluir",
+    }], "medicacao_logs");
+    if (ok) toast.success("Registro excluído!");
   };
 
   const duracaoViagem = () => {
@@ -337,6 +353,7 @@ function Acompanhamento() {
                 <span className="text-green-600">✓</span>
                 <span className="flex-1 text-foreground">{l.titulo}</span>
                 <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
+                <button onClick={() => excluirLog(l)} className="p-1 text-muted-foreground hover:text-red-500 transition" title="Excluir registro"><Trash2 className="h-4 w-4" /></button>
               </li>
             ))}
           </ul>
