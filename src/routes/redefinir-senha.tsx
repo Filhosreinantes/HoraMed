@@ -28,7 +28,7 @@ function Redefinir() {
     if (error) { toast.error("Não foi possível alterar a senha."); return; }
     toast.success("Senha alterada!");
     navigate({ to: "/acompanhamento", replace: true });
-  };
+  }; // TESTE 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
       <form onSubmit={salvar} className="notebook space-y-4 p-6">
