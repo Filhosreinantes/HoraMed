@@ -6,7 +6,6 @@ import { useApp } from "@/lib/app-store";
 import { formatData, nowLocalISO, subtitulo, tituloComTipo, tituloEvento, uid, type Item, type Situacao, type Dados } from "@/lib/cuidados";
 import { AlarmeModal } from "./alarme-modal";
 
-
 export function CompromissoCard({ item, compacto = false }: { item: Item; compacto?: boolean }) {
   const { salvarRegistros } = useApp();
   const [expandido, setExpandido] = useState(false);
