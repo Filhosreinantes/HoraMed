@@ -242,8 +242,12 @@ export function horarioDoLog(d: Dados) {
 }
 
 export function doseRegistrada(todos: Dados[], medId: string, dia: string, horario: string) {
+  // Registros de dose excluídos pela usuária deixam de contar como "tomada".
+  const excluidos = new Set(todos.filter((d) => d.acao === "excluir" && d.parentId).map((d) => d.parentId));
   return todos.find(
-    (d) => d.evento && d.parentId === medId && d.data === dia && horarioDoLog(d) === horario,
+    (d) =>
+      d.evento && !d.acao && !excluidos.has(d.id) &&
+      d.parentId === medId && d.data === dia && horarioDoLog(d) === horario,
   );
 }
 
