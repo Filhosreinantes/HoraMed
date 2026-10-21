@@ -1,9 +1,9 @@
 import { useId, useState } from "react";
-import { Check, ChevronDown, X, Clock, Pill } from "lucide-react";
+import { Check, ChevronDown, X, Clock, Pencil, Trash2, Stethoscope, Leaf, FileText, Pill } from "lucide-react";
 import { toast } from "sonner";
 import { Botao, Selo } from "@/components/ui-kit";
 import { useApp } from "@/lib/app-store";
-import { EMOJI, formatData, nowLocalISO, subtitulo, tituloComTipo, tituloEvento, uid, type Item, type Situacao } from "@/lib/cuidados";
+import { formatData, nowLocalISO, subtitulo, tituloComTipo, tituloEvento, uid, type Item, type Situacao } from "@/lib/cuidados";
 import { AlarmeModal } from "./alarme-modal";
 
 export function CompromissoCard({ item }: { item: Item }) {
@@ -57,13 +57,20 @@ export function CompromissoCard({ item }: { item: Item }) {
       <article className="overflow-hidden rounded-2xl border border-gold/30 bg-card shadow-soft transition-all">
         <div className="flex w-full items-center gap-3 p-3 text-left text-foreground">
 
-          {/* ✅ FOTO DO REMÉDIO OU EMOJI */}
+          {/* ✅ FOTO OU ÍCONE DO CUIDADO */}
           <button onClick={() => setExpandido((v) => !v)} className="shrink-0">
             {item.fotoUrl ? (
               <img src={item.fotoUrl} alt={item.medicamento} className="h-14 w-14 rounded-xl object-cover border border-gold/30 shadow-sm" />
             ) : (
-              <span className="grid h-14 w-14 place-items-center rounded-xl bg-muted/50 text-3xl">
-                {item.cuidado ? EMOJI[item.cuidado] : "📌"}
+              <span
+                className="grid h-14 w-14 place-items-center rounded-xl"
+                style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
+              >
+                {item.cuidado === "Consulta" && <Stethoscope className="h-7 w-7" />}
+                {item.cuidado === "Terapia" && <Leaf className="h-7 w-7" />}
+                {item.cuidado === "Exame" && <FileText className="h-7 w-7" />}
+                {item.cuidado === "Medicação" && <Pill className="h-7 w-7" />}
+                {!item.cuidado && <span className="text-2xl">📌</span>}
               </span>
             )}
           </button>
@@ -71,7 +78,6 @@ export function CompromissoCard({ item }: { item: Item }) {
           <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setExpandido((v) => !v)}>
             <p className="break-words font-semibold text-lg">{tituloComTipo(item)}</p>
 
-            {/* ✅ MEDICAMENTOS: TEXTO SIMPLES (SEM PÍLULAS COLORIDAS) */}
             {ehMedicamento ? (
               <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                 {item.dosagem && <span>{item.dosagem}</span>}
@@ -89,21 +95,38 @@ export function CompromissoCard({ item }: { item: Item }) {
             )}
           </div>
 
-          {/* ✅ BOTÃO DE ALARME PARA MEDICAMENTOS */}
-          {ehMedicamento ? (
+          {/* ✅ AÇÕES: RELÓGIO (MED) OU EXPANDIR + EDITAR/EXCLUIR */}
+          <div className="flex items-center gap-1 shrink-0">
+            {ehMedicamento && (
+              <button
+                onClick={() => setAlarmeAberto(true)}
+                className="grid h-10 w-10 place-items-center rounded-full transition hover:opacity-80"
+                style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
+                aria-label="Abrir alarme"
+              >
+                <Clock className="h-5 w-5" />
+              </button>
+            )}
             <button
-              onClick={() => setAlarmeAberto(true)}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition hover:opacity-80"
-              style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
-              aria-label="Abrir alarme"
+              onClick={() => alert("Abrir modal de edição")}
+              className="p-2 text-muted-foreground hover:text-[var(--tema)]"
+              aria-label="Editar"
             >
-              <Clock className="h-5 w-5" />
+              <Pencil className="h-4 w-4" />
             </button>
-          ) : (
-            <button onClick={() => setExpandido((v) => !v)} className="shrink-0">
-              <ChevronDown className={`h-5 w-5 transition-transform ${expandido ? "rotate-180" : ""}`} />
+            <button
+              onClick={() => alert("Confirmar exclusão")}
+              className="p-2 text-muted-foreground hover:text-red-500"
+              aria-label="Excluir"
+            >
+              <Trash2 className="h-4 w-4" />
             </button>
-          )}
+            {!ehMedicamento && (
+              <button onClick={() => setExpandido((v) => !v)} className="p-2">
+                <ChevronDown className={`h-5 w-5 transition-transform ${expandido ? "rotate-180" : ""}`} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* DETALHES EXPANDIDOS */}
@@ -139,9 +162,31 @@ export function CompromissoCard({ item }: { item: Item }) {
               <>
                 <textarea aria-label="Anotações" className="field min-h-20 mt-2" placeholder="Anotações" value={nota} onChange={(e) => setNota(e.target.value)} disabled={salvando} />
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <Botao onClick={() => registrar("feito")} disabled={salvando} className="flex items-center justify-center gap-1 px-3 py-2 text-sm"><Check className="h-4 w-4" />Compareceu</Botao>
-                  <Botao variant="outline" onClick={() => registrar("faltou")} disabled={salvando} className="flex items-center justify-center gap-1 px-3 py-2 text-sm"><X className="h-4 w-4" />Faltou</Botao>
-                  <Botao variant="ghost" onClick={() => registrar("cancelado")} disabled={salvando} className="px-3 py-2 text-sm">Cancelou</Botao>
+                  <Botao
+                    onClick={() => registrar("feito")}
+                    disabled={salvando}
+                    className="flex items-center justify-center gap-1 px-3 py-2 text-sm rounded-full"
+                    style={{ backgroundColor: "var(--tema)", color: "white" }}
+                  >
+                    <Check className="h-4 w-4" /> Compareceu
+                  </Botao>
+                  <Botao
+                    variant="outline"
+                    onClick={() => registrar("faltou")}
+                    disabled={salvando}
+                    className="flex items-center justify-center gap-1 px-3 py-2 text-sm rounded-full"
+                    style={{ borderColor: "var(--tema)", color: "var(--tema-escuro)" }}
+                  >
+                    <X className="h-4 w-4" /> Faltou
+                  </Botao>
+                  <Botao
+                    variant="ghost"
+                    onClick={() => registrar("cancelado")}
+                    disabled={salvando}
+                    className="px-3 py-2 text-sm text-muted-foreground rounded-full"
+                  >
+                    Cancelou
+                  </Botao>
                 </div>
               </>
             )}
