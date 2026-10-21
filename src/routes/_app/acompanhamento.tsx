@@ -90,7 +90,7 @@ function ProximoRemedioCard() {
 }
 
 function Acompanhamento() {
-  const { itens, logs, ativa, carregando, salvarRegistros } = useApp();
+  const { itens, logs, carregando, salvarRegistros } = useApp();
   const [view, setView] = useState<View>("menu");
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [drill, setDrill] = useState<Drill>(null);
@@ -226,24 +226,29 @@ function Acompanhamento() {
           <ChevronLeft className="h-4 w-4" /> Voltar ao menu
         </Botao>
 
-        <header>
-          <h1 className="text-2xl font-semibold">Compromissos</h1>
+        {/* ✅ NOVO HEADER COM TEXTO EXPLICATIVO */}
+        <header className="mb-4">
+          <h1 className="font-display text-2xl font-semibold italic text-foreground">Compromissos</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Panorama dos cuidados médicos. Toque em um dos blocos (Compareceu, Faltou, etc.) para ver os detalhes abaixo.
+          </p>
         </header>
+
         <SeletorTesouro />
 
-        {/* ✅ TEXTO INTRODUTÓRIO */}
-        <p className="text-sm text-muted-foreground mb-4">
-          Panorama dos cuidados médicos. Toque em um dos blocos (Compareceu, Faltou, etc.) para ver os detalhes abaixo.
-        </p>
-
-        <div className="flex gap-2">
+        {/* ✅ FILTROS DE PERÍODO */}
+        <div className="flex gap-2 mb-4">
           <Pill ativo={periodo === "mes"} onClick={() => setPeriodo("mes")}>Este mês</Pill>
           <Pill ativo={periodo === "ano"} onClick={() => setPeriodo("ano")}>Este ano</Pill>
           <Pill ativo={periodo === "tudo"} onClick={() => setPeriodo("tudo")}>Tudo</Pill>
         </div>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold">Cuidados médicos</h2>
+          {/* ✅ TÍTULO COM ÍCONE */}
+          <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2 mb-3">
+            <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />
+            Panorama dos cuidados médicos
+          </h2>
           <div className="grid gap-3">
             {(["Consulta", "Terapia", "Exame"] as Cuidado[]).map((c) => {
               const doTipo = filtrados.filter((i) => i.cuidado === c);
@@ -300,7 +305,6 @@ function Acompanhamento() {
             <h2 className="text-xl font-semibold">Todos os próximos compromissos</h2>
           </div>
 
-          {/* ✅ TEXTO EXPLICATIVO */}
           <p className="text-xs text-muted-foreground mb-2">
             Toque no card para abrir e dar baixa (Compareceu/Faltou).
           </p>
@@ -342,7 +346,7 @@ function Acompanhamento() {
       </header>
       <SeletorTesouro />
 
-      {/* ✅ LEMBRETES DE HOJE */}
+      {/* ✅ LEMBRETES DE HOJE COM AURA */}
       <section
         className="notebook p-5 space-y-4"
         style={{ boxShadow: "0 8px 25px -5px var(--tema-claro)", border: "1px solid var(--tema-claro)" }}
@@ -390,14 +394,14 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* ✅ HISTÓRICO */}
+      {/* ✅ HISTÓRICO COM AURA */}
       <section
         className="notebook p-5 space-y-4"
         style={{ boxShadow: "0 8px 25px -5px var(--tema-claro)", border: "1px solid var(--tema-claro)" }}
       >
         <div className="flex items-center gap-2 mb-2">
           <History className="h-5 w-5" style={{ color: "var(--tema)" }} />
-          <h2 className="font-display text-xl font-bold italic text-foreground">Histórico</h2>
+          <h2 className="font-display text-lg font-semibold italic">Histórico das doses tomadas</h2>
         </div>
 
         <div className="grid grid-cols-2 gap-2 mb-3">
@@ -423,28 +427,29 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* ✅ MEUS REMÉDIOS (enxuto) */}
-      <section
-        className="notebook p-5 space-y-4"
-        style={{ boxShadow: "0 8px 25px -5px var(--tema-claro)", border: "1px solid var(--tema-claro)" }}
-      >
-        <h2 className="font-display text-xl font-bold italic text-foreground flex items-center gap-2">
+      {/* ✅ MEUS REMÉDIOS ENXUTO (chips em vez de cards gigantes) */}
+      <section className="space-y-3 mt-6">
+        <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2">
           <PillIcon className="h-5 w-5" style={{ color: "var(--tema)" }} /> Meus Remédios
         </h2>
 
-        <div className="flex gap-3 mb-4 text-sm flex-wrap">
-          <div className="bg-muted/30 px-3 py-2 rounded-xl border border-border">
-            <span className="text-muted-foreground">Em uso: </span>
-            <strong className="text-[var(--tema)] text-lg">{emUso.length}</strong>
-          </div>
-          <div className="bg-muted/30 px-3 py-2 rounded-xl border border-border">
-            <span className="text-muted-foreground">Encerrados: </span>
-            <strong className="text-[var(--tema-escuro)] text-lg">{encerradas.length}</strong>
-          </div>
+        <div className="flex gap-2">
+          <Pill ativo={true} onClick={() => {}}>Em uso ({emUso.length})</Pill>
+          <Pill ativo={false} onClick={() => {}}>Encerrados ({encerradas.length})</Pill>
         </div>
 
-        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-          {emUso.map((m) => <CompromissoCard key={m.id} item={m} />)}
+        <div className="space-y-2 mt-4">
+          {emUso.map(m => <CompromissoCard key={m.id} item={m} />)}
+        </div>
+      </section>
+
+      {/* ✅ NOVA SEÇÃO: TODOS OS PRÓXIMOS AGENDAMENTOS */}
+      <section className="space-y-3 mt-8 pb-24">
+        <h2 className="font-display text-xl font-semibold italic text-foreground">
+          Todos os próximos agendamentos
+        </h2>
+        <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
+          {proximos.map(i => <CompromissoCard key={i.id} item={i} />)}
         </div>
       </section>
 
