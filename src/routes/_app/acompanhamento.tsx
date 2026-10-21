@@ -403,7 +403,7 @@ function Acompanhamento() {
                 <div key={m.id} className="flex justify-between items-center bg-white/60 p-2 rounded-lg border border-amber-100">
                   <span className="font-semibold">{m.medicamento}</span>
                   <button
-                    onClick={() => navigate({ to: "/criar", search: { duplicar: m.id } })}
+                    onClick={() => navigate({ to: "/criar", search: { duplicar: m.id } as any })} // ✅ Correção de tipagem do Router
                     className="flex items-center gap-1 font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-2 py-1 rounded-md transition"
                   >
                     <RefreshCw className="h-3 w-3" /> Renovar
