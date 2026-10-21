@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { Check, ChevronDown, X, Clock, Pencil, Trash2, Stethoscope, Leaf, FileText, Pill } from "lucide-react";
+import { Check, ChevronDown, X, Clock, Pencil, Trash2, Stethoscope, Leaf, FileText, Pill, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Botao, Selo } from "@/components/ui-kit";
 import { useApp } from "@/lib/app-store";
@@ -14,6 +14,10 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
   const [alarmeAberto, setAlarmeAberto] = useState(false);
   const detalhesId = useId();
 
+  // ✅ Estados para edição no próprio card
+  const [editando, setEditando] = useState(false);
+  const [formEdicao, setFormEdicao] = useState<any>({});
+
   const pendente = (item.situacao ?? "proximo") === "proximo";
   const ehMedicamento = item.cuidado === "Medicação";
   const mostraEstoque = item.dosagemUnidade !== "ml" && item.estoqueAtual !== undefined;
@@ -25,6 +29,34 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
   const quando = ehMedicamento
     ? [item.inicio && `desde ${formatData(item.inicio)}`, item.fim ? `até ${formatData(item.fim)}` : "uso contínuo"].filter(Boolean).join(" · ")
     : [formatData(item.data), item.hora].filter(Boolean).join(" · ");
+
+  const iniciarEdicao = () => {
+    setFormEdicao({ ...item });
+    setEditando(true);
+    setExpandido(true);
+  };
+
+  const salvarEdicao = async () => {
+    if (salvando) return;
+    setSalvando(true);
+    try {
+      const { id, pessoaId, criadoEm, cuidado, evento, parentId, ...alteracoes } = formEdicao;
+      
+      const ok = await salvarRegistros([{
+        id: uid(), pessoaId, criadoEm: nowLocalISO(), titulo: `Editado`,
+        cuidado, evento: true, parentId: id, acao: "editar", alteracoes
+      }], cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos");
+
+      if (ok) {
+        toast.success("Editado com sucesso!");
+        setEditando(false);
+      }
+    } catch {
+      toast.error("Erro ao editar.");
+    } finally {
+      setSalvando(false);
+    }
+  };
 
   const registrar = async (situacao: Situacao) => {
     if (salvando) return;
@@ -66,7 +98,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
 
   return (
     <>
-      <article className="overflow-hidden rounded-2xl border border-gold/30 bg-card shadow-soft transition-all">
+      <article className={`overflow-hidden rounded-2xl border transition-all ${editando ? "border-[var(--tema)] shadow-md bg-white" : "border-gold/30 bg-card shadow-soft"}`}>
         <div className="flex w-full items-center gap-3 p-3 text-left text-foreground">
           
           <button onClick={() => setExpandido((v) => !v)} className="shrink-0">
@@ -91,7 +123,6 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
               </div>
             ) : (
               <>
-                {/* ✅ Data sempre visível */}
                 <div className={`flex items-center gap-2 ${compacto ? "text-[11px]" : "text-xs"} text-muted-foreground mt-1`}>
                   {item.data && <span className="font-semibold text-accent">{formatData(item.data)}</span>}
                   <span className="font-semibold text-accent">{item.hora}</span>
@@ -101,20 +132,25 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
             )}
           </div>
 
-          {/* ✅ Botões de Ação, Editar e Excluir */}
           <div className="flex flex-col items-end gap-1 shrink-0">
             <div className="flex items-center gap-1">
-              {/* Editar e Excluir (Sempre visíveis) */}
-              <button onClick={() => alert("Editar em breve")} className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Pencil className="h-4 w-4" /></button>
-              <button onClick={excluir} className="p-1 text-muted-foreground hover:text-red-500 transition"><Trash2 className="h-4 w-4" /></button>
-              
-              {ehMedicamento && (
-                <button onClick={() => setAlarmeAberto(true)} className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Clock className="h-4 w-4" /></button>
+              {editando ? (
+                <>
+                  <button onClick={salvarEdicao} disabled={salvando} className="p-1 text-green-600 hover:text-green-700 transition"><Save className="h-5 w-5" /></button>
+                  <button onClick={() => setEditando(false)} disabled={salvando} className="p-1 text-red-500 hover:text-red-600 transition"><X className="h-5 w-5" /></button>
+                </>
+              ) : (
+                <>
+                  <button onClick={iniciarEdicao} className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={excluir} className="p-1 text-muted-foreground hover:text-red-500 transition"><Trash2 className="h-4 w-4" /></button>
+                  {ehMedicamento && (
+                    <button onClick={() => setAlarmeAberto(true)} className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Clock className="h-4 w-4" /></button>
+                  )}
+                </>
               )}
             </div>
 
-            {/* Se for compacto e pendente, mostra os botões de status embaixo dos ícones */}
-            {compacto && pendente && !ehMedicamento && (
+            {compacto && pendente && !ehMedicamento && !editando && (
               <div className="flex gap-1">
                 <button onClick={() => registrar("feito")} className="text-[10px] font-bold text-white px-2 py-0.5 rounded bg-[var(--tema)]">Compareceu</button>
                 <button onClick={() => registrar("faltou")} className="text-[10px] font-bold border border-[var(--tema)] text-[var(--tema-escuro)] px-2 py-0.5 rounded">Faltou</button>
@@ -123,17 +159,41 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
           </div>
         </div>
 
+        {/* DETALHES EXPANDIDOS OU MODO EDIÇÃO */}
         {expandido && (
           <div id={detalhesId} className="space-y-3 border-t border-border p-4 bg-muted/10">
-            <dl className="space-y-2 text-sm">
-              {linhas.filter(([, valor]) => valor).map(([nome, valor]) => (
-                <div key={nome} className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-2">
-                  <dt className="text-muted-foreground">{nome}</dt>
-                  <dd className="min-w-0 whitespace-pre-wrap break-words font-medium">{valor}</dd>
+            {editando ? (
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Editando</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {!ehMedicamento && (
+                    <>
+                      <input type="date" className="field text-sm" value={formEdicao.data || ""} onChange={e => setFormEdicao({ ...formEdicao, data: e.target.value })} />
+                      <input type="time" className="field text-sm" value={formEdicao.hora || ""} onChange={e => setFormEdicao({ ...formEdicao, hora: e.target.value })} />
+                    </>
+                  )}
+                  {ehMedicamento && (
+                    <>
+                      <input type="text" className="field text-sm col-span-2" placeholder="Nome do remédio" value={formEdicao.medicamento || ""} onChange={e => setFormEdicao({ ...formEdicao, medicamento: e.target.value })} />
+                      <input type="text" className="field text-sm col-span-2" placeholder="Dosagem" value={formEdicao.dosagem || ""} onChange={e => setFormEdicao({ ...formEdicao, dosagem: e.target.value })} />
+                    </>
+                  )}
+                  <input type="text" className="field text-sm col-span-2" placeholder="Local" value={formEdicao.local || ""} onChange={e => setFormEdicao({ ...formEdicao, local: e.target.value })} />
+                  <input type="text" className="field text-sm col-span-2" placeholder="Profissional" value={formEdicao.profissional || ""} onChange={e => setFormEdicao({ ...formEdicao, profissional: e.target.value })} />
                 </div>
-              ))}
-            </dl>
-            {pendente && !ehMedicamento && !compacto && (
+              </div>
+            ) : (
+              <dl className="space-y-2 text-sm">
+                {linhas.filter(([, valor]) => valor).map(([nome, valor]) => (
+                  <div key={nome} className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-2">
+                    <dt className="text-muted-foreground">{nome}</dt>
+                    <dd className="min-w-0 whitespace-pre-wrap break-words font-medium">{valor}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+
+            {!editando && pendente && !ehMedicamento && !compacto && (
               <>
                 <textarea aria-label="Anotações" className="field min-h-20 mt-2" placeholder="Anotações" value={nota} onChange={(e) => setNota(e.target.value)} disabled={salvando} />
                 <div className="flex flex-wrap gap-2 mt-2">
