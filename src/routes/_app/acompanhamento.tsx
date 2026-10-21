@@ -221,64 +221,67 @@ function Acompanhamento() {
   // --- TELA DE COMPROMISSOS ---
   if (view === "compromissos") {
     return (
-      <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
-        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold">
+      <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+
+        {/* ✅ 1. VOLTAR AO MENU (Mais para cima) */}
+        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground">
           <ChevronLeft className="h-4 w-4" /> Voltar ao menu
         </Botao>
 
-        {/* ✅ NOVO HEADER COM TEXTO EXPLICATIVO */}
-        <header className="mb-4">
-          <h1 className="font-display text-2xl font-semibold italic text-foreground">Compromissos</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Panorama dos cuidados médicos. Toque em um dos blocos (Compareceu, Faltou, etc.) para ver os detalhes abaixo.
-          </p>
+        {/* ✅ 2. CABEÇALHO E SELETOR */}
+        <header>
+          <h1 className="font-display text-3xl font-semibold italic text-foreground">Compromissos</h1>
         </header>
-
         <SeletorTesouro />
 
-        {/* ✅ FILTROS DE PERÍODO */}
-        <div className="flex gap-2 mb-4">
+        {/* ✅ 3. TÍTULO E EXPLICAÇÃO */}
+        <div className="mt-6">
+          <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2">
+            <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />
+            Panorama dos cuidados médicos
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Toque em um dos blocos (Compareceu, Faltou, etc.) para ver os detalhes abaixo.
+          </p>
+        </div>
+
+        {/* ✅ 4. BOTÕES DE FILTRO */}
+        <div className="flex gap-2 pt-2">
           <Pill ativo={periodo === "mes"} onClick={() => setPeriodo("mes")}>Este mês</Pill>
           <Pill ativo={periodo === "ano"} onClick={() => setPeriodo("ano")}>Este ano</Pill>
           <Pill ativo={periodo === "tudo"} onClick={() => setPeriodo("tudo")}>Tudo</Pill>
         </div>
 
-        <section className="space-y-3">
-          {/* ✅ TÍTULO COM ÍCONE */}
-          <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2 mb-3">
-            <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />
-            Panorama dos cuidados médicos
-          </h2>
-          <div className="grid gap-3">
-            {(["Consulta", "Terapia", "Exame"] as Cuidado[]).map((c) => {
-              const doTipo = filtrados.filter((i) => i.cuidado === c);
-              return (
-                <div key={c} className="notebook p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-display text-lg font-semibold italic" style={{ color: "var(--tema-escuro)" }}>
-                      {c === "Consulta" && <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />}
-                      {c === "Terapia" && <Leaf className="h-5 w-5" style={{ color: "var(--tema)" }} />}
-                      {c === "Exame" && <FileText className="h-5 w-5" style={{ color: "var(--tema)" }} />}
-                      <span>{c}</span>
-                    </div>
-                    <span className="font-display text-2xl font-bold" style={{ color: "var(--tema)" }}>{doTipo.length}</span>
+        {/* CARDS DE CONSULTA / TERAPIA / EXAME */}
+        <div className="grid gap-3 pt-2">
+          {(["Consulta", "Terapia", "Exame"] as Cuidado[]).map((c) => {
+            const doTipo = filtrados.filter((i) => i.cuidado === c);
+            return (
+              <div key={c} className="notebook p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-display text-lg font-semibold italic" style={{ color: "var(--tema-escuro)" }}>
+                    {c === "Consulta" && <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />}
+                    {c === "Terapia" && <Leaf className="h-5 w-5" style={{ color: "var(--tema)" }} />}
+                    {c === "Exame" && <FileText className="h-5 w-5" style={{ color: "var(--tema)" }} />}
+                    <span>{c}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {LINHAS.map(({ s, label }) => {
-                      const n = doTipo.filter((i) => (i.situacao ?? "proximo") === s).length;
-                      const ativo = drill && drill.cuidado === c && drill.situacao === s;
-                      return (
-                        <Botao variant="ghost" key={s} onClick={() => setDrill({ cuidado: c, situacao: s })} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${ativo ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                          <span>{label}</span><strong>{n}</strong>
-                        </Botao>
-                      );
-                    })}
-                  </div>
+                  <span className="font-display text-2xl font-bold" style={{ color: "var(--tema)" }}>{doTipo.length}</span>
                 </div>
-              );
-            })}
-          </div>
-        </section>
+                <div className="grid grid-cols-2 gap-2">
+                  {LINHAS.map(({ s, label }) => {
+                    const n = doTipo.filter((i) => (i.situacao ?? "proximo") === s).length;
+                    const ativo = drill && drill.cuidado === c && drill.situacao === s;
+                    return (
+                      <Botao variant="ghost" key={s} onClick={() => setDrill({ cuidado: c, situacao: s })} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${ativo ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                        <span>{label}</span><strong>{n}</strong>
+                      </Botao>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
         {drill && (
           <section className="notebook space-y-3 p-4">
@@ -346,10 +349,13 @@ function Acompanhamento() {
       </header>
       <SeletorTesouro />
 
-      {/* ✅ LEMBRETES DE HOJE COM AURA */}
+      {/* ✅ LEMBRETES DE HOJE COM AURA FORÇADA */}
       <section
-        className="notebook p-5 space-y-4"
-        style={{ boxShadow: "0 8px 25px -5px var(--tema-claro)", border: "1px solid var(--tema-claro)" }}
+        className="notebook p-5 space-y-4 relative"
+        style={{
+          boxShadow: "0 0 20px 2px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)",
+          border: "1px solid var(--tema)",
+        }}
       >
         <div className="flex items-center gap-2 mb-2">
           <Clock className="h-5 w-5" style={{ color: "var(--tema)" }} />
@@ -394,14 +400,17 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* ✅ HISTÓRICO COM AURA */}
+      {/* ✅ HISTÓRICO COM AURA FORÇADA */}
       <section
-        className="notebook p-5 space-y-4"
-        style={{ boxShadow: "0 8px 25px -5px var(--tema-claro)", border: "1px solid var(--tema-claro)" }}
+        className="notebook p-5 space-y-4 relative"
+        style={{
+          boxShadow: "0 0 20px 2px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)",
+          border: "1px solid var(--tema)",
+        }}
       >
         <div className="flex items-center gap-2 mb-2">
-          <History className="h-5 w-5" style={{ color: "var(--tema)" }} />
-          <h2 className="font-display text-lg font-semibold italic">Histórico das doses tomadas</h2>
+          <History className="h-4 w-4" style={{ color: "var(--tema)" }} />
+          <h2 className="font-sans text-base font-semibold text-foreground">Histórico das doses tomadas</h2>
         </div>
 
         <div className="grid grid-cols-2 gap-2 mb-3">
@@ -417,9 +426,9 @@ function Acompanhamento() {
         ) : (
           <ul className="space-y-2">
             {logsFiltrados.map((l: any) => (
-              <li key={l.id} className="flex items-center gap-2 rounded-lg bg-muted/50 p-2 text-sm">
+              <li key={l.id} className="flex items-center gap-2 rounded-lg bg-muted/20 p-2 font-sans text-sm">
                 <span className="text-green-600">✓</span>
-                <span className="flex-1">{l.titulo}</span>
+                <span className="flex-1 text-foreground">{l.titulo}</span>
                 <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
               </li>
             ))}
@@ -427,23 +436,35 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* ✅ MEUS REMÉDIOS ENXUTO (chips em vez de cards gigantes) */}
-      <section className="space-y-3 mt-6">
-        <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2">
-          <PillIcon className="h-5 w-5" style={{ color: "var(--tema)" }} /> Meus Remédios
+      {/* ✅ MEUS REMÉDIOS ENXUTO */}
+      <section
+        className="notebook p-5 space-y-4 relative"
+        style={{
+          boxShadow: "0 0 20px 2px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)",
+          border: "1px solid var(--tema)",
+        }}
+      >
+        <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
+          <PillIcon className="h-4 w-4" style={{ color: "var(--tema)" }} /> Meus Remédios
         </h2>
 
-        <div className="flex gap-2">
-          <Pill ativo={true} onClick={() => {}}>Em uso ({emUso.length})</Pill>
-          <Pill ativo={false} onClick={() => {}}>Encerrados ({encerradas.length})</Pill>
+        <div className="flex gap-3 text-sm">
+          <div className="rounded-xl border border-border bg-muted/30 px-3 py-1.5 flex items-center gap-1">
+            <span className="text-muted-foreground">Em uso:</span>
+            <span className="font-bold" style={{ color: "var(--tema)" }}>{emUso.length}</span>
+          </div>
+          <div className="rounded-xl border border-border bg-muted/30 px-3 py-1.5 flex items-center gap-1">
+            <span className="text-muted-foreground">Encerrados:</span>
+            <span className="font-bold text-muted-foreground">{encerradas.length}</span>
+          </div>
         </div>
 
-        <div className="space-y-2 mt-4">
+        <div className="space-y-2 mt-2">
           {emUso.map(m => <CompromissoCard key={m.id} item={m} />)}
         </div>
       </section>
 
-      {/* ✅ NOVA SEÇÃO: TODOS OS PRÓXIMOS AGENDAMENTOS */}
+      {/* ✅ TODOS OS PRÓXIMOS AGENDAMENTOS */}
       <section className="space-y-3 mt-8 pb-24">
         <h2 className="font-display text-xl font-semibold italic text-foreground">
           Todos os próximos agendamentos
