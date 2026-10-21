@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { X, ChevronLeft, Check, Clock, History, Search } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { X, ChevronLeft, Check, Clock, History, Stethoscope, Pill as PillIcon } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   EMOJI, doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -32,6 +32,65 @@ const LINHAS: { s: Situacao; label: string }[] = [
   { s: "proximo", label: "Próximos" },
 ];
 
+// ✅ CARD "PRÓXIMO REMÉDIO" (destaque no menu)
+function ProximoRemedioCard() {
+  const { itens } = useApp();
+  const [proximo, setProximo] = useState<{ item: any; horario: string } | null>(null);
+
+  useEffect(() => {
+    const agora = new Date();
+    const horaAtual = agora.getHours() * 60 + agora.getMinutes();
+    let menorDiferenca = Infinity;
+    let achou: { item: any; horario: string } | null = null;
+
+    itens
+      .filter((i) => i.cuidado === "Medicação")
+      .forEach((med) => {
+        const diaSemana = agora.getDay();
+        // Ignora se não for o dia da semana (se a pessoa configurou)
+        if (med.diasSemana && med.diasSemana.length > 0 && !med.diasSemana.includes(diaSemana)) return;
+
+        const horarios = med.horarios || [];
+        horarios.forEach((h: string) => {
+          const [hh, mm] = h.split(":").map(Number);
+          const minutosHorario = hh * 60 + mm;
+          const diferenca = minutosHorario - horaAtual;
+
+          if (diferenca >= 0 && diferenca < menorDiferenca) {
+            menorDiferenca = diferenca;
+            achou = { item: med, horario: h };
+          }
+        });
+      });
+
+    setProximo(achou);
+  }, [itens]);
+
+  if (!proximo) return null;
+
+  return (
+    <div
+      className="mx-4 mt-4 overflow-hidden rounded-3xl p-5 shadow-lg"
+      style={{
+        background: "linear-gradient(135deg, var(--tema), var(--tema-escuro))",
+        color: "white",
+      }}
+    >
+      <p className="text-xs font-bold uppercase tracking-wider opacity-80">Próximo Remédio</p>
+      <div className="mt-1 flex items-center justify-between">
+        <div>
+          <h3 className="font-display text-2xl font-bold italic">{proximo.item.medicamento}</h3>
+          <p className="text-sm opacity-90">{proximo.item.dosagem || "Dose padrão"}</p>
+        </div>
+        <div className="text-right">
+          <p className="font-display text-3xl font-bold">{proximo.horario}</p>
+          <p className="text-xs opacity-80">Hoje</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Acompanhamento() {
   const { itens, logs, ativa, carregando, salvarRegistros } = useApp();
   const [view, setView] = useState<View>("menu");
@@ -39,7 +98,7 @@ function Acompanhamento() {
   const [drill, setDrill] = useState<Drill>(null);
   const [buscaProximos, setBuscaProximos] = useState("");
 
-  const [atrasoModal, setAtrasoModal] = useState<{ item: any, horario: string } | null>(null);
+  const [atrasoModal, setAtrasoModal] = useState<{ item: any; horario: string } | null>(null);
   const [filtroMed, setFiltroMed] = useState("");
   const [dataHistorico, setDataHistorico] = useState(hojeYMD());
 
@@ -116,24 +175,47 @@ function Acompanhamento() {
     return (
       <div className="mx-auto max-w-lg space-y-5 py-6">
         <header className="text-center">
-          {/* TÍTULO FIXO ACOMPANHAMENTO */}
-          <h1 className="text-3xl font-semibold">Acompanhamento</h1>
+          <h1 className="font-display text-3xl font-semibold italic">Acompanhamento</h1>
           <p className="text-sm text-muted-foreground">O que você quer ver hoje?</p>
         </header>
 
-        <div className="px-4"><SeletorTesouro /></div>
+        <div className="px-4">
+          <SeletorTesouro />
+        </div>
 
-        <div className="grid gap-4 px-4 mt-8">
-          <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center p-8 transition hover:bg-sky/30 border-gold/40 shadow-soft">
-            <span className="text-4xl mb-3">🩺</span>
-            <span className="font-display text-2xl font-bold italic">Compromissos</span>
-            <span className="text-sm text-muted-foreground mt-1">Consultas, Terapias e Exames</span>
+        {/* ✅ CARD DE PRÓXIMO REMÉDIO */}
+        <ProximoRemedioCard />
+
+        {/* ✅ 2 CARDS COMPACTOS COM ÍCONES */}
+        <div className="grid grid-cols-2 gap-3 px-4 mt-6">
+          <button
+            onClick={() => setView("compromissos")}
+            className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10"
+          >
+            <div
+              className="grid h-12 w-12 place-items-center rounded-full"
+              style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
+            >
+              <Stethoscope className="h-6 w-6" />
+            </div>
+            <span className="font-display text-base font-semibold italic text-foreground text-center">
+              Compromissos
+            </span>
           </button>
 
-          <button onClick={() => setView("medicacoes")} className="notebook flex flex-col items-center justify-center p-8 transition hover:bg-rose/20 border-gold/40 shadow-soft">
-            <span className="text-4xl mb-3">💊</span>
-            <span className="font-display text-2xl font-bold italic">Medicações</span>
-            <span className="text-sm text-muted-foreground mt-1">Horários, remédios e histórico</span>
+          <button
+            onClick={() => setView("medicacoes")}
+            className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10"
+          >
+            <div
+              className="grid h-12 w-12 place-items-center rounded-full"
+              style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
+            >
+              <PillIcon className="h-6 w-6" />
+            </div>
+            <span className="font-display text-base font-semibold italic text-foreground text-center">
+              Medicações
+            </span>
           </button>
         </div>
       </div>
@@ -315,17 +397,17 @@ function Acompanhamento() {
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">💊 Remédios Cadastrados</h2>
         <div className="grid grid-cols-2 gap-3">
-           <div className="notebook p-4 text-left">
-              <p className="text-sm text-muted-foreground">Em uso</p>
-              <p className="font-display text-3xl font-bold text-accent">{emUso.length}</p>
-           </div>
-           <div className="notebook p-4 text-left">
-              <p className="text-sm text-muted-foreground">Encerrados</p>
-              <p className="font-display text-3xl font-bold text-gold">{encerradas.length}</p>
-           </div>
+          <div className="notebook p-4 text-left">
+            <p className="text-sm text-muted-foreground">Em uso</p>
+            <p className="font-display text-3xl font-bold text-accent">{emUso.length}</p>
+          </div>
+          <div className="notebook p-4 text-left">
+            <p className="text-sm text-muted-foreground">Encerrados</p>
+            <p className="font-display text-3xl font-bold text-gold">{encerradas.length}</p>
+          </div>
         </div>
         <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-          {emUso.map(m => <CompromissoCard key={m.id} item={m} />)}
+          {emUso.map((m) => <CompromissoCard key={m.id} item={m} />)}
         </div>
       </section>
 
