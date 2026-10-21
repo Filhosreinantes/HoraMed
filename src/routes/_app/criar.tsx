@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
+import { Camera, Loader2, X, Clock, CalendarDays } from "lucide-react";
 import { useApp } from "@/lib/app-store";
+import { supabase } from "@/lib/supabase";
 import { DIAS_SEMANA, EMOJI, gerarSessoes, nowLocalISO, uid, type Cuidado, type Dados, type Programacao } from "@/lib/cuidados";
 import { Botao, Campo, Divisor, SeletorTesouro } from "@/components/ui-kit";
 
@@ -27,7 +29,16 @@ function Criar() {
   const navigate = useNavigate();
   const [tipo, setTipo] = useState<Cuidado | null>(null);
   const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1" });
-  const [horarios, setHorarios] = useState<string[]>(["08:00"]);
+  
+  // Estados de Medicação
+  const [fotoUrl, setFotoUrl] = useState("");
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [vezesAoDia, setVezesAoDia] = useState(1);
+  const [horaInicial, setHoraInicial] = useState("08:00");
+  const [diasSemana, setDiasSemana] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+
   const [salvando, setSalvando] = useState(false);
   const set = (k: K) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
@@ -35,18 +46,80 @@ function Criar() {
     <input className="field" type={type} required={req} value={f[k] ?? ""} onChange={set(k)} />
   );
 
+  // ✅ Lógica para calcular horários automaticamente
+  const calcularHorarios = () => {
+    if (!horaInicial) return [];
+    const [h, m] = horaInicial.split(":").map(Number);
+    const intervalHours = 24 / vezesAoDia;
+    const horarios = [];
+
+    for (let i = 0; i < vezesAoDia; i++) {
+      let novaHora = (h + i * intervalHours) % 24;
+      let horaFormatada = Math.floor(novaHora).toString().padStart(2, "0");
+      let minutoFormatado = m.toString().padStart(2, "0");
+      horarios.push(`${horaFormatada}:${minutoFormatado}`);
+    }
+    return horarios;
+  };
+
+  const toggleDia = (diaIndex: number) => {
+    setDiasSemana((prev) =>
+      prev.includes(diaIndex)
+        ? prev.filter((d) => d !== diaIndex)
+        : [...prev, diaIndex]
+    );
+  };
+
+  const fazerUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setEnviandoFoto(true);
+    const extensao = file.name.split(".").pop();
+    const nomeArquivo = `${Date.now()}-${Math.random().toString(36).substring(7)}.${extensao}`;
+
+    const { data, error } = await supabase.storage.from("medicamentos").upload(nomeArquivo, file);
+    
+    if (error) {
+      console.error(error);
+      toast.error("Erro ao enviar a foto. Tente novamente.");
+      setEnviandoFoto(false);
+      return;
+    }
+    
+    const { data: publicUrl } = supabase.storage.from("medicamentos").getPublicUrl(data.path);
+    setFotoUrl(publicUrl.publicUrl);
+    setEnviandoFoto(false);
+    toast.success("Foto anexada!");
+  };
+
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ativa || !tipo) return;
     const base = { pessoaId: ativa.id, criadoEm: nowLocalISO(), cuidado: tipo, situacao: "proximo" as const };
     let lista: Dados[] = [];
+    
     if (tipo === "Consulta") {
       lista = [{ ...base, id: uid(), titulo: `Consulta${f.especialidade ? ` · ${f.especialidade}` : ""}`, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, especialidade: f.especialidade }];
     } else if (tipo === "Exame") {
       lista = [{ ...base, id: uid(), titulo: `Exame · ${f.tipoExame}`, tipoExame: f.tipoExame, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, recomendacoes: f.recomendacoes }];
     } else if (tipo === "Medicação") {
-      const limpos = horarios.filter(Boolean).sort();
-      lista = [{ ...base, id: uid(), titulo: `Medicação · ${f.medicamento}`, medicamento: f.medicamento, dosagem: f.dosagem, horarios: limpos, frequencia: limpos.join(", "), profissional: f.profissional, especialidade: f.especialidade, inicio: f.inicio, fim: f.fim || undefined }];
+      const horariosCalculados = calcularHorarios();
+      lista = [{ 
+        ...base, 
+        id: uid(), 
+        titulo: `Medicação · ${f.medicamento}`, 
+        medicamento: f.medicamento, 
+        dosagem: f.dosagem, 
+        horarios: horariosCalculados, 
+        frequencia: `${vezesAoDia}x ao dia`, 
+        profissional: f.profissional, 
+        especialidade: f.especialidade, 
+        inicio: f.inicio, 
+        fim: f.fim || undefined,
+        fotoUrl: fotoUrl, // ✅ Salva a foto
+        diasSemana: diasSemana, // ✅ Salva os dias
+      }];
     } else {
       const prog = f.programacao as Programacao;
       const meses = Number(f.meses);
@@ -61,6 +134,7 @@ function Criar() {
         ...(programaId ? { programa: true, programaId, duracaoMeses: meses, frequencia: prog, diaSemana: prog === "semanal" ? DIAS_SEMANA[dia] : undefined } : {}),
       }));
     }
+    
     setSalvando(true);
     const ok = await salvarRegistros(lista);
     setSalvando(false);
@@ -74,6 +148,7 @@ function Criar() {
     <div className="space-y-5">
       <h1 className="text-3xl font-semibold">Novo compromisso</h1>
       <SeletorTesouro prefixo="Para" />
+      
       <div className="grid grid-cols-2 gap-3">
         {(["Consulta", "Terapia", "Exame", "Medicação"] as Cuidado[]).map((c) => (
           <button
@@ -90,6 +165,7 @@ function Criar() {
       {tipo && (
         <form onSubmit={guardar} className="notebook space-y-4 p-5">
           <h2 className="text-xl font-semibold">{EMOJI[tipo]} {tipo}</h2>
+          
           {tipo === "Consulta" && (
             <>
               <div className="grid grid-cols-2 gap-3">
@@ -101,6 +177,7 @@ function Criar() {
               <Campo label="Especialidade">{inp("especialidade")}</Campo>
             </>
           )}
+          
           {tipo === "Terapia" && (
             <>
               <Campo label="Tipo">{inp("tipoTerapia", "text", true)}</Campo>
@@ -136,6 +213,7 @@ function Criar() {
               )}
             </>
           )}
+          
           {tipo === "Exame" && (
             <>
               <Campo label="Tipo de exame">{inp("tipoExame", "text", true)}</Campo>
@@ -150,44 +228,75 @@ function Criar() {
               </Campo>
             </>
           )}
+          
           {tipo === "Medicação" && (
             <>
               <Campo label="Nome">{inp("medicamento", "text", true)}</Campo>
               <Campo label="Dosagem">{inp("dosagem")}</Campo>
-              <div className="space-y-1.5">
-                <span className="text-sm font-semibold">Horários</span>
-                <div className="space-y-2">
-                  {horarios.map((h, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <input
-                        className="field flex-1"
-                        type="time"
-                        required
-                        value={h}
-                        onChange={(e) => setHorarios((p) => p.map((v, i) => (i === idx ? e.target.value : v)))}
-                      />
-                      {horarios.length > 1 && (
-                        <button
-                          type="button"
-                          aria-label="Remover horário"
-                          onClick={() => setHorarios((p) => p.filter((_, i) => i !== idx))}
-                          className="rounded-xl bg-muted px-3 py-2 text-sm font-semibold"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setHorarios((p) => [...p, ""])}
-                    className="rounded-xl border border-gold/50 bg-card px-4 py-2 text-sm font-semibold"
-                  >
-                    + Adicionar horário
+
+              {/* ✅ NOVO: FOTO DO REMÉDIO */}
+              <div>
+                <span className="text-sm font-semibold block mb-1">Foto do Remédio (Opcional)</span>
+                {fotoUrl ? (
+                  <div className="relative w-24 h-24 overflow-hidden rounded-xl border border-gold/40">
+                    <img src={fotoUrl} alt="Remédio" className="h-full w-full object-cover" />
+                    <button type="button" onClick={() => setFotoUrl("")} className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="flex h-24 w-24 items-center justify-center rounded-xl border-2 border-dashed border-gold/40 bg-muted/30">
+                    {enviandoFoto ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <Camera className="h-6 w-6 text-muted-foreground" />}
                   </button>
-                </div>
-                <p className="text-xs text-muted-foreground">Ex: 08:00, 14:00, 20:00 — usaremos para os lembretes.</p>
+                )}
+                <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={fazerUploadFoto} className="hidden" />
               </div>
+
+              {/* ✅ NOVO: HORÁRIOS INTELIGENTES */}
+              <div className="space-y-3">
+                <span className="text-sm font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Horários</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <Campo label="Começa às:">
+                    <input type="time" className="field" value={horaInicial} onChange={(e) => setHoraInicial(e.target.value)} />
+                  </Campo>
+                  <Campo label="Tomadas ao dia:">
+                    <select className="field" value={vezesAoDia} onChange={(e) => setVezesAoDia(Number(e.target.value))}>
+                      <option value={1}>1x ao dia (24h)</option>
+                      <option value={2}>2x ao dia (12h)</option>
+                      <option value={3}>3x ao dia (8h)</option>
+                      <option value={4}>4x ao dia (6h)</option>
+                    </select>
+                  </Campo>
+                </div>
+                <div className="rounded-xl bg-sky/30 p-3 text-sm text-primary">
+                  <strong>Horários gerados: </strong> 
+                  {calcularHorarios().join(" • ")}
+                </div>
+              </div>
+
+              {/* ✅ NOVO: DIAS DA SEMANA */}
+              <div className="space-y-3">
+                <span className="text-sm font-semibold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Dias da Semana</span>
+                <p className="text-xs text-muted-foreground">Desmarque os dias em que NÃO vai tomar o remédio.</p>
+                <div className="flex flex-wrap gap-2">
+                  {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((dia, index) => {
+                    const ativo = diasSemana.includes(index);
+                    return (
+                      <button
+                        key={dia}
+                        type="button"
+                        onClick={() => toggleDia(index)}
+                        className={`grid h-10 w-10 place-items-center rounded-full text-xs font-bold transition ${
+                          ativo ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {dia}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <Campo label="Profissional que prescreveu">{inp("profissional")}</Campo>
               <Campo label="Especialidade">{inp("especialidade")}</Campo>
               <div className="grid grid-cols-2 gap-3">
@@ -197,8 +306,11 @@ function Criar() {
               <p className="text-xs text-muted-foreground">Deixe o fim em branco para uso contínuo.</p>
             </>
           )}
+          
           <Divisor />
-          <Botao type="submit" disabled={salvando} className="w-full">Guardar agendamento</Botao>
+          <Botao type="submit" disabled={salvando} className="w-full">
+            {salvando ? "Salvando..." : "Guardar agendamento"}
+          </Botao>
         </form>
       )}
     </div>
