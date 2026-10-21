@@ -8,7 +8,8 @@ import { DIAS_SEMANA, gerarSessoes, nowLocalISO, uid, hojeYMD, type Cuidado, typ
 import { Botao, Campo, Divisor, SeletorTesouro } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/_app/criar")({
-  validateSearch: (search: Record<string, unknown>) => {
+  // ✅ Tipagem correta para o TanStack Router
+  validateSearch: (search: Record<string, unknown>): { duplicar?: string } => {
     return {
       duplicar: (search.duplicar as string) || undefined,
     };
@@ -31,7 +32,7 @@ type F = Partial<Record<K, string>>;
 
 function Criar() {
   const { duplicar } = Route.useSearch();
-  const { ativa, salvarRegistros, itens } = useApp(); // ✅ Adicionado 'itens'
+  const { ativa, salvarRegistros, itens } = useApp(); 
   const navigate = useNavigate();
   const [tipo, setTipo] = useState<Cuidado | null>(null);
   const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1" });
@@ -50,7 +51,7 @@ function Criar() {
 
   const [salvando, setSalvando] = useState(false);
 
-  // ✅ LÓGICA DE PREENCHIMENTO AUTOMÁTICO
+  // Preenchimento automático
   useEffect(() => {
     if (duplicar && itens.length > 0) {
       const med = itens.find(i => i.id === duplicar);
@@ -61,7 +62,7 @@ function Criar() {
           medicamento: med.medicamento || "",
           profissional: med.profissional || "",
           especialidade: med.especialidade || "",
-          inicio: hojeYMD(), // Começa a nova programação hoje
+          inicio: hojeYMD(),
         }));
         if (med.dosagemValor) setDosagemValor(String(med.dosagemValor));
         if (med.dosagemUnidade) setDosagemUnidade(med.dosagemUnidade);
@@ -195,7 +196,6 @@ function Criar() {
       </header>
       <SeletorTesouro prefixo="Para" />
 
-      {/* CARDS DE CATEGORIA */}
       <div className="grid grid-cols-2 gap-3">
         {[
           { tipo: "Consulta", icone: Stethoscope },
