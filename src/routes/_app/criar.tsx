@@ -38,7 +38,6 @@ function Criar() {
   const [horaInicial, setHoraInicial] = useState("08:00");
   const [diasSemana, setDiasSemana] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
 
-  // ✅ NOVOS ESTADOS: dosagem separada + estoque
   const [dosagemValor, setDosagemValor] = useState("");
   const [dosagemUnidade, setDosagemUnidade] = useState("Comprimido(s)");
   const [estoqueAtual, setEstoqueAtual] = useState("");
@@ -91,7 +90,7 @@ function Criar() {
       return;
     }
 
-    const { data: publicUrl } = supabase.storage.from("medicamentos").getPublicUrl(data.path);
+    const { data: publicUrl } = await supabase.storage.from("medicamentos").getPublicUrl(data.path);
     setFotoUrl(publicUrl.publicUrl);
 
     setEnviandoFoto(null);
@@ -115,9 +114,7 @@ function Criar() {
         id: uid(),
         titulo: `Medicação · ${f.medicamento}`,
         medicamento: f.medicamento,
-        // ✅ String exibida no card (mantida)
         dosagem: `${dosagemValor} ${dosagemUnidade}`.trim(),
-        // ✅ Novos campos
         dosagemValor: dosagemValor || undefined,
         dosagemUnidade: dosagemUnidade || undefined,
         estoqueAtual: estoqueAtual ? Number(estoqueAtual) : undefined,
@@ -161,7 +158,7 @@ function Criar() {
       </h1>
       <SeletorTesouro prefixo="Para" />
 
-      {/* CARDS */}
+      {/* CARDS DE CATEGORIA */}
       <div className="grid grid-cols-2 gap-3">
         {[
           { tipo: "Consulta", icone: Stethoscope },
@@ -175,19 +172,22 @@ function Criar() {
               key={c}
               onClick={() => setTipo(selecionado ? null : (c as Cuidado))}
               className={`notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10 ${
-                selecionado ? "border-[var(--tema)] ring-2 ring-[var(--tema-claro)]" : ""
+                selecionado ? "border-[var(--tema)]" : ""
               }`}
               style={{
+                borderWidth: selecionado ? "3px" : "2px", // ✅ Contorno do card mais grosso
+                borderColor: selecionado ? "var(--tema)" : "",
                 boxShadow: selecionado
-                  ? "0 10px 25px -5px var(--tema)"
+                  ? "0 0 25px 8px var(--tema-claro), 0 8px 20px -5px var(--tema)" // ✅ Aura mais intensa
                   : "0 4px 12px -4px rgba(0,0,0,0.05)",
               }}
             >
               <div
                 className="grid h-12 w-12 place-items-center rounded-full transition-colors"
                 style={{
-                  backgroundColor: selecionado ? "var(--tema-claro)" : "#F5F5F5",
-                  color: selecionado ? "var(--tema-escuro)" : "#888",
+                  // ✅ Círculos sempre na cor da criança
+                  backgroundColor: "var(--tema-claro)",
+                  color: "var(--tema-escuro)",
                 }}
               >
                 <Icone className="h-6 w-6" />
@@ -313,7 +313,6 @@ function Criar() {
               <>
                 <Campo label="Nome">{inp("medicamento", "text", true)}</Campo>
 
-                {/* ✅ DOSAGEM SEPARADA: Quantidade + Unidade */}
                 <div className="grid grid-cols-[1fr_2fr] gap-3">
                   <Campo label="Qtd.">
                     <input
@@ -335,7 +334,6 @@ function Criar() {
                   </Campo>
                 </div>
 
-                {/* ✅ CONTROLE DE ESTOQUE */}
                 <Campo label="Controle de Estoque (Opcional)">
                   <input
                     className="field"
@@ -346,7 +344,6 @@ function Criar() {
                   />
                 </Campo>
 
-                {/* FOTO DA CAIXA */}
                 <div>
                   <span className="text-xs font-semibold block mb-1">Foto da Caixa</span>
                   {fotoUrl ? (
