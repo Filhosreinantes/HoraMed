@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, RefreshCw } from "lucide-react";
@@ -58,7 +59,6 @@ function Acompanhamento() {
   const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
 
   const continuos = useMemo(() => {
-    // ✅ Tipagem correta no Map para o Vercel não reclamar
     const mapa = new Map<string, any>();
     emUso.filter(m => !m.fim).forEach(m => {
       const nome = m.medicamento || "";
@@ -192,7 +192,6 @@ function Acompanhamento() {
     if (!viagemInicio || !viagemFim) return 0;
     const d1 = parseYMD(viagemInicio); 
     const d2 = parseYMD(viagemFim);
-    // ✅ Correção na comparação de datas para o TypeScript
     if (d2.getTime() < d1.getTime()) return 0;
     return Math.ceil(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   };
@@ -449,7 +448,6 @@ function Acompanhamento() {
             <p className="text-sm text-muted-foreground italic">Nenhuma dose pendente.</p>
           ) : (
             proximosAgendamentos.map((a, idx) => {
-              // ✅ Correção de tipagem aqui para o Vercel não reclamar
               const itemFormatado = { ...a.med, data: a.data, hora: a.horario, situacao: "proximo", cuidado: "Medicação" as Cuidado } as unknown as Item;
               const isHoje = a.data === hoje;
               const [ano, mes, dia] = a.data.split("-");
@@ -537,7 +535,7 @@ function Acompanhamento() {
           <div className="w-full max-w-sm space-y-4 rounded-3xl bg-card p-5 shadow-xl">
             <h3 className="font-display text-lg font-bold text-foreground">Atrasou a medicação</h3>
             <p className="text-sm text-muted-foreground">Qual o novo horário que você deu a dose do {atrasoModal.item.medicamento}?</p>
-            <input type="time" className="w-full rounded-xl border p-2" defaultValue={new Date().toTimeString().slice(0, 5)} onChange={(e) => setAtrasoModal({ ...atrasoModal, novoHorario: e.target.value })} />
+            <input type="time" className="w-full rounded-xl border p-2" defaultValue={new Date().toTimeString().slice(0, 5)} onChange={(e) => setAtrasoModal(prev => prev ? { ...prev, novoHorario: e.target.value } : null)} />
             <div className="flex gap-2">
               <button onClick={() => setAtrasoModal(null)} className="flex-1 rounded-full border py-2 text-sm font-bold text-muted-foreground">Cancelar</button>
               <button onClick={() => {
