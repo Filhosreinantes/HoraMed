@@ -176,26 +176,25 @@ function Criar() {
             <button
               key={c}
               onClick={() => setTipo(selecionado ? null : (c as Cuidado))}
-              className={`notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10 ${
-                selecionado ? "border-[var(--tema)]" : ""
+              className={`notebook flex flex-col items-center justify-center p-4 transition hover:bg-muted/10 ${
+                selecionado ? "border-[var(--tema)]" : "border-[#B8933F]/60"
               }`}
               style={{
-                borderWidth: selecionado ? "3px" : "2px", // ✅ Contorno do card mais grosso
+                borderWidth: selecionado ? "3px" : "2px",
                 borderColor: selecionado ? "var(--tema)" : "",
                 boxShadow: selecionado
-                  ? "0 0 25px 8px var(--tema-claro), 0 8px 20px -5px var(--tema)" // ✅ Aura mais intensa
+                  ? "0 0 25px 8px var(--tema-claro), 0 8px 20px -5px var(--tema)"
                   : "0 4px 12px -4px rgba(0,0,0,0.05)",
               }}
             >
               <div
-                className="grid h-12 w-12 place-items-center rounded-full transition-colors"
+                className="grid h-10 w-10 place-items-center rounded-full transition-colors mb-2"
                 style={{
-                  // ✅ Círculos sempre na cor da criança
                   backgroundColor: "var(--tema-claro)",
                   color: "var(--tema-escuro)",
                 }}
               >
-                <Icone className="h-6 w-6" />
+                <Icone className="h-5 w-5" />
               </div>
               <span
                 className="font-display text-sm font-bold italic transition-colors"
