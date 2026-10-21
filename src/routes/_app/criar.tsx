@@ -177,15 +177,17 @@ function Criar() {
                   : "0 4px 12px -4px rgba(0,0,0,0.05)",
               }}
             >
-              <div
-                className="grid h-12 w-12 place-items-center rounded-full transition-colors"
-                style={{
-                  backgroundColor: selecionado ? "var(--tema-claro)" : "#F5F5F5",
-                  color: selecionado ? "var(--tema-escuro)" : "#888",
-                }}
-              >
-                <Icone className="h-6 w-6" />
-              </div>
+              <div 
+  className="grid h-12 w-12 place-items-center rounded-full transition-colors"
+  style={{ 
+    // ✅ AQUI: Fundo sempre na cor clara da criança
+    backgroundColor: "var(--tema-claro)", 
+    // ✅ AQUI: O ícone sempre na cor escura da criança
+    color: "var(--tema-escuro)" 
+  }}
+>
+  <Icone className="h-6 w-6" />
+</div>
               <span
                 className="font-display text-sm font-bold italic transition-colors"
                 style={{ color: selecionado ? "var(--tema-escuro)" : "#4A4A4A" }}
