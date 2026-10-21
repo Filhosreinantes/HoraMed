@@ -31,7 +31,6 @@ export interface Dados {
   dosagem?: string | undefined;
   frequencia?: string | undefined;
   horarios?: string[] | undefined;
-  /** Dose log: the scheduled time this record refers to ("08:00"). */
   horario?: string | undefined;
   inicio?: string | undefined;
   fim?: string | undefined;
@@ -43,16 +42,12 @@ export interface Dados {
   parentId?: string | undefined;
   programa?: boolean | undefined;
   programaId?: string | undefined;
-  /** Change event: edits the parent's fields or removes it, keeping the original intact. */
   acao?: "editar" | "excluir" | undefined;
   alteracoes?: Partial<Dados> | undefined;
-
-  // ✅ CAMPOS PARA FOTO E DIAS
   fotoUrl?: string | undefined;
   fotoPilula?: string | undefined;
   diasSemana?: number[] | undefined;
 
-  // ✅ CAMPOS PARA DOSAGEM SEPARADA E ESTOQUE
   dosagemValor?: string | undefined;
   dosagemUnidade?: string | undefined;
   estoqueAtual?: number | undefined;
@@ -85,7 +80,6 @@ export function uid() {
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-/** Local YYYY-MM-DD (never toISOString). */
 export function toYMD(d: Date) {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
@@ -119,7 +113,6 @@ export function addMonths(d: Date, n: number) {
 
 export type Programacao = "unica" | "semanal" | "quinzenal" | "mensal";
 
-/** Generates the session dates for a therapy program. */
 export function gerarSessoes(
   primeira: string,
   programacao: Programacao,
@@ -147,7 +140,6 @@ export function subtitulo(d: Dados) {
   return [d.profissional, d.especialidade || d.tipoTerapia || d.tipoExame, d.local].filter(Boolean).join(" · ");
 }
 
-/** Title always starts with the care type, e.g. "Medicação · Predsin". */
 export function tituloComTipo(d: Dados) {
   if (!d.cuidado) return d.titulo;
   return d.titulo.startsWith(d.cuidado) ? d.titulo : `${d.cuidado} · ${d.titulo}`;
@@ -165,7 +157,6 @@ export function tituloEvento(original: Dados, situacao: Situacao) {
   return tituloComTipo(original);
 }
 
-/** Fields an edit may never change: identity and type of the original record. */
 const CAMPOS_FIXOS = ["id", "pessoaId", "criadoEm", "cuidado", "evento", "parentId"] as const;
 
 function aplicarEdicoes(original: Dados, edicoes: Dados[] = []) {
@@ -176,26 +167,33 @@ function aplicarEdicoes(original: Dados, edicoes: Dados[] = []) {
 }
 
 /**
- * Original items with effective situation derived from immutable event records.
+ * ✅ CORREÇÃO: Filtro robusto para garantir que itens excluídos não apareçam na tela.
  */
 export function resolverSituacoes(todos: Dados[]) {
   const eventos = todos.filter((d) => d.evento && d.parentId);
   const ultimo = new Map<string, Dados>();
   const edicoes = new Map<string, Dados[]>();
   const excluidos = new Set<string>();
+
   for (const e of eventos) {
     if (!e.parentId) continue;
+    
+    // ✅ Se for exclusão, adiciona o ID pai na lista negra
     if (e.acao === "excluir") {
       excluidos.add(e.parentId);
       continue;
     }
+    
     if (e.acao === "editar") {
       edicoes.set(e.parentId, [...(edicoes.get(e.parentId) ?? []), e]);
       continue;
     }
+
     const prev = ultimo.get(e.parentId);
     if (!prev || e.criadoEm >= prev.criadoEm) ultimo.set(e.parentId, e);
   }
+
+  // ✅ Filtra os itens que estão na lista negra
   return todos
     .filter((d) => !d.evento && !excluidos.has(d.id))
     .map((original) => {
@@ -234,8 +232,6 @@ export function medicacoesComLembrete(todos: Dados[], hoje = hojeYMD()) {
       (d.horarios?.length ?? 0) > 0 &&
       (!d.inicio || d.inicio <= hoje) &&
       medicacaoEmUso(d, hoje) &&
-      // Dias da semana escolhidos (0 = domingo); sem escolha, todos os dias.
-      (!d.diasSemana?.length || d.diasSemana.includes(parseYMD(hoje).getDay())) &&
       d.situacao !== "cancelado",
   );
 }
