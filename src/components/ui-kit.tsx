@@ -37,7 +37,6 @@ export function SeletorTesouro({
         type="button"
         onClick={() => interativo && setAberto((v) => !v)}
         disabled={!interativo}
-        // ✅ Borda dourada + fundo branco (estilo "Meu Pedacinho Azul")
         className="flex w-full items-center justify-between rounded-2xl border-2 border-gold/60 bg-white p-3 text-left shadow-sm transition disabled:cursor-default"
       >
         <div className="flex min-w-0 flex-col">
@@ -45,7 +44,6 @@ export function SeletorTesouro({
             {prefixo}
           </span>
           <span className="truncate font-display text-lg font-bold text-foreground">
-            {/* ✅ Nome curto (2 primeiras palavras) */}
             {ativa.emoji} {nomeCurto(ativa.nome)}
           </span>
         </div>
@@ -83,7 +81,6 @@ export function SeletorTesouro({
                       selecionado && "bg-muted",
                     )}
                   >
-                    {/* ✅ Nome curto também no dropdown */}
                     {p.emoji} {nomeCurto(p.nome)}
                   </button>
                 </li>
