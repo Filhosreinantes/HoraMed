@@ -40,7 +40,25 @@ export function AlarmeModal({ item, fechar }: { item: Item, fechar: () => void }
       horario,
     };
 
-    const ok = await salvarRegistros([dados], "medicacao_logs");
+    let ok = await salvarRegistros([dados], "medicacao_logs");
+
+    // Desconto de estoque (se existir e não for ml): vai em "acontecimentos",
+    // porque o app-store só aplica edições vindas dessa tabela.
+    if (ok && item.estoqueAtual !== undefined && item.dosagemUnidade !== "ml") {
+      const qtdTomada = Number(item.dosagemValor || 1);
+      const novoEstoque = Math.max(0, item.estoqueAtual - qtdTomada);
+      ok = await salvarRegistros([{
+        id: uid(),
+        pessoaId: item.pessoaId,
+        criadoEm: nowLocalISO(),
+        titulo: "Atualização de estoque",
+        cuidado: item.cuidado,
+        evento: true,
+        parentId: item.id,
+        acao: "editar",
+        alteracoes: { estoqueAtual: novoEstoque },
+      }], "acontecimentos");
+    }
     setSalvando(false);
 
     if (ok) {
