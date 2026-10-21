@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon } from "lucide-react";
+import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
-  nowLocalISO, uid, type Cuidado, type Situacao, type Dados
+  nowLocalISO, uid, type Cuidado, type Situacao, type Dados, parseYMD
 } from "@/lib/cuidados";
 import { Botao, Divisor, Pill, SeletorTesouro } from "@/components/ui-kit";
 import { CompromissoCard } from "@/components/compromisso-card";
@@ -12,9 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/acompanhamento")({
-  head: () => ({
-    meta: [{ title: "Acompanhamento · Rotina Azul" }],
-  }),
+  head: () => ({ meta: [{ title: "Acompanhamento · Rotina Azul" }] }),
   component: Acompanhamento,
 });
 
@@ -40,6 +38,10 @@ function Acompanhamento() {
   const [atrasoModal, setAtrasoModal] = useState<{ item: any; horario: string } | null>(null);
   const [filtroMed, setFiltroMed] = useState("");
   const [dataHistorico, setDataHistorico] = useState(hojeYMD());
+
+  // ✅ Estados do Planejador de Viagens
+  const [viagemInicio, setViagemInicio] = useState(hojeYMD());
+  const [viagemFim, setViagemFim] = useState(hojeYMD());
 
   const hoje = hojeYMD();
 
@@ -93,38 +95,60 @@ function Acompanhamento() {
     }
   };
 
-  if (carregando) {
-    return <div className="space-y-3 p-4"><Skeleton className="h-40 rounded-3xl bg-muted" /><Skeleton className="h-40 rounded-3xl bg-muted" /></div>;
-  }
+  // ✅ Cálculo automático da viagem
+  const duracaoViagem = () => {
+    if (!viagemInicio || !viagemFim) return 0;
+    const d1 = parseYMD(viagemInicio); 
+    const d2 = parseYMD(viagemFim);
+    if (d2 < d1) return 0; // Proteção caso a data fim seja menor que a inicial
+    return Math.ceil(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  };
+
+  const calcularViagem = () => {
+    const dias = duracaoViagem();
+    if (dias === 0) return [];
+
+    return emUso.map(med => {
+      // Considera que se tem 3 horários, são 3 tomadas por dia
+      const vezesAoDia = med.horarios?.length || 1;
+      const dosagem = Number(med.dosagemValor || 1);
+      
+      // Quantidade total: Dias * Vezes ao dia * Dosagem por vez
+      const total = dias * vezesAoDia * dosagem;
+      const unidade = med.dosagemUnidade || "un";
+      return { med, total, unidade };
+    });
+  };
+
+  if (carregando) return <div className="space-y-3 p-4"><Skeleton className="h-40 rounded-3xl bg-muted" /><Skeleton className="h-40 rounded-3xl bg-muted" /></div>;
 
   // --- MENU INICIAL (DASHBOARD) ---
   if (view === "menu") {
     return (
-      <div className="mx-auto max-w-lg space-y-6 py-6 pb-24">
-        <header className="text-center">
+      <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
+        <header className="text-center px-4 mb-2">
           <h1 className="font-display text-3xl font-semibold italic">Acompanhamento</h1>
         </header>
 
         <div className="px-4"><SeletorTesouro /></div>
 
-        {/* BLOCO 1: LEMBRETES DE HOJE (Título voltou) */}
-        <section className="px-4 mt-6">
-          <div className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 30px 5px var(--tema-claro)", border: "1px solid var(--tema)" }}>
-            <div className="flex items-center gap-2 border-b border-border/50 pb-2 mb-3">
-              <Clock className="h-4 w-4" style={{ color: "var(--tema)" }} />
-              <h2 className="font-display text-lg font-bold italic" style={{ color: "var(--tema-escuro)" }}>Lembretes de Hoje</h2>
-            </div>
+        <div className="px-4 mt-6">
+          <h2 className="font-display text-xl font-bold italic mb-3 flex items-center gap-2">
+            <Clock className="h-5 w-5" style={{ color: "var(--tema)" }} /> Lembretes de Hoje
+          </h2>
 
+          {/* CARD 1: MEDICAÇÕES */}
+          <div className="notebook p-4 space-y-3 mb-4" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
+            <p className="font-display text-base font-bold text-muted-foreground border-b border-border/50 pb-2">Medicações</p>
             {agendaHoje.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhum remédio para hoje.</p>
             ) : (
               agendaHoje.map((a, idx) => (
-                <div key={idx} className="flex items-center justify-between border-b border-border/50 pb-3 last:border-0 last:pb-0">
+                <div key={idx} className="flex items-center justify-between border-b border-border/50 pb-2 last:border-0 last:pb-0">
                   <div>
                     <p className="font-bold text-sm">{a.med.medicamento}</p>
                     <p className="text-xs text-muted-foreground">
                       {a.med.dosagem}
-                      {/* ✅ Só mostra estoque se não for ml */}
                       {a.med.dosagemUnidade !== "ml" && a.med.estoqueAtual !== undefined && ` · Restam ${a.med.estoqueAtual} un.`}
                     </p>
                   </div>
@@ -143,16 +167,10 @@ function Acompanhamento() {
               ))
             )}
           </div>
-        </section>
 
-        {/* BLOCO 2: COMPROMISSOS DE HOJE (Título diminuído) */}
-        <section className="px-4 mt-6">
-          <div className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 30px 5px var(--tema-claro)", border: "1px solid var(--tema)" }}>
-            <div className="flex items-center gap-2 border-b border-border/50 pb-2 mb-3">
-              <Stethoscope className="h-4 w-4" style={{ color: "var(--tema)" }} />
-              <h2 className="font-display text-lg font-bold italic" style={{ color: "var(--tema-escuro)" }}>Compromissos</h2>
-            </div>
-
+          {/* CARD 2: COMPROMISSOS */}
+          <div className="notebook p-4 space-y-3" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
+            <p className="font-display text-base font-bold text-muted-foreground border-b border-border/50 pb-2">Compromissos</p>
             <div className="space-y-3">
               {proximos.filter(i => i.data === hoje).length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhum compromisso para hoje.</p>
@@ -163,22 +181,17 @@ function Acompanhamento() {
               )}
             </div>
           </div>
-        </section>
+        </div>
 
         {/* BOTÕES DE NAVEGAÇÃO INFERIORES */}
-        <div className="grid grid-cols-2 gap-4 px-4 mt-8">
-          <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-5 transition hover:bg-muted/10">
-            <div className="grid h-12 w-12 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
-              <Stethoscope className="h-6 w-6" />
-            </div>
-            <span className="font-display text-base font-semibold italic text-foreground text-center">Compromissos</span>
+        <div className="grid grid-cols-2 gap-4 px-4 mt-6">
+          <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Compromissos</span>
           </button>
-
-          <button onClick={() => setView("medicacoes")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-5 transition hover:bg-muted/10">
-            <div className="grid h-12 w-12 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
-              <PillIcon className="h-6 w-6" />
-            </div>
-            <span className="font-display text-base font-semibold italic text-foreground text-center">Medicação</span>
+          <button onClick={() => setView("medicacoes")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><PillIcon className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Medicação</span>
           </button>
         </div>
       </div>
@@ -189,9 +202,7 @@ function Acompanhamento() {
   if (view === "compromissos") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
-        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground">
-          <ChevronLeft className="h-4 w-4" /> Voltar ao menu
-        </Botao>
+        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
         <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Compromissos</h1></header>
         <SeletorTesouro />
         
@@ -199,7 +210,7 @@ function Acompanhamento() {
           <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2 mb-1">
             <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} /> Panorama dos cuidados
           </h2>
-          <p className="text-sm text-muted-foreground mb-4">Toque em um dos blocos para ver os detalhes abaixo.</p>
+          <p className="text-sm text-muted-foreground mb-4">Toque em um dos blocos para ver os detalhes.</p>
           
           <div className="flex gap-2 mb-4">
             <Pill ativo={periodo === "mes"} onClick={() => setPeriodo("mes")}>Este mês</Pill>
@@ -247,7 +258,6 @@ function Acompanhamento() {
             {filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao).length === 0 ? (
               <p className="text-sm text-muted-foreground">Nada por aqui.</p>
             ) : (
-              /* ✅ Compacto para ficar igual medicações */
               ordenarPorDataHora(filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)).map((i) => <CompromissoCard key={i.id} item={i} compacto />)
             )}
           </section>
@@ -256,8 +266,7 @@ function Acompanhamento() {
         <Divisor />
         
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold">Todos os próximos compromissos</h2>
-          <p className="text-xs text-muted-foreground mb-2">Toque no card para abrir e dar baixa.</p>
+          <h2 className="text-xl font-semibold">Todos os próximos</h2>
           <select className="field text-sm p-2 w-full border-gold/30 bg-card mb-2" value={buscaProximos} onChange={(e) => setBuscaProximos(e.target.value)}>
             <option value="">Todos os tipos</option>
             <option value="Consulta">Consulta</option>
@@ -268,7 +277,6 @@ function Acompanhamento() {
             <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso agendado.</p>
           ) : (
             <div className="max-h-[400px] space-y-2 overflow-y-auto pr-1">
-              {/* ✅ Compacto para ficar igual medicações */}
               {proximos.map((i) => <CompromissoCard key={i.id} item={i} compacto />)}
             </div>
           )}
@@ -280,10 +288,7 @@ function Acompanhamento() {
   // --- TELA DE MEDICAÇÕES ---
   return (
     <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
-      <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold">
-        <ChevronLeft className="h-4 w-4" /> Voltar ao menu
-      </Botao>
-
+      <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
       <header><h1 className="text-2xl font-semibold">Medicações</h1></header>
       <SeletorTesouro />
 
@@ -332,8 +337,8 @@ function Acompanhamento() {
         </div>
       </section>
 
-      {/* ✅ BLOCO QUE TINHA SUMIDO: TODOS OS PRÓXIMOS AGENDAMENTOS */}
-      <section className="space-y-3 mt-4 pb-24">
+      {/* TODOS OS PRÓXIMOS AGENDAMENTOS */}
+      <section className="space-y-3 mt-4">
         <h2 className="font-sans text-base font-semibold text-foreground">
           Todos os próximos agendamentos
         </h2>
@@ -356,6 +361,54 @@ function Acompanhamento() {
               </div>
             ))
           )}
+        </div>
+      </section>
+
+      {/* ✅ PLANEJADOR DE VIAGENS */}
+      <section className="notebook p-5 space-y-4 relative mt-6" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
+        <div className="flex items-center gap-2 border-b border-border/50 pb-2 mb-2">
+          <Plane className="h-5 w-5" style={{ color: "var(--tema)" }} />
+          <h2 className="font-display text-lg font-bold italic" style={{ color: "var(--tema-escuro)" }}>Planejador de Viagens</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">Insira os detalhes da viagem e calcularemos a quantidade exata de medicamentos.</p>
+        
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-muted-foreground">Data de início</span>
+            <input type="date" className="field text-sm" value={viagemInicio} onChange={e => setViagemInicio(e.target.value)} />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-muted-foreground">Data de término</span>
+            <input type="date" className="field text-sm" value={viagemFim} onChange={e => setViagemFim(e.target.value)} />
+          </label>
+        </div>
+        
+        <div className="flex justify-between items-center text-sm font-semibold text-foreground py-2 border-y border-border/50 mt-2">
+          <span>Duração da viagem</span>
+          <span className="text-[var(--tema)]">{duracaoViagem()} dias</span>
+        </div>
+
+        <div className="mt-3">
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Suas necessidades de medicação</p>
+          <div className="space-y-2">
+            {calcularViagem().length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">Defina as datas para calcular.</p>
+            ) : (
+              calcularViagem().map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center bg-white p-3 rounded-xl border border-border/50 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="grid h-8 w-8 place-items-center rounded-full bg-muted text-muted-foreground">
+                      <PillIcon className="h-4 w-4" />
+                    </div>
+                    <span className="font-semibold text-sm">{item.med.medicamento}</span>
+                  </div>
+                  <span className="font-bold text-sm" style={{ color: "var(--tema)" }}>
+                    {item.total} {item.unidade.toLowerCase()}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </section>
 
