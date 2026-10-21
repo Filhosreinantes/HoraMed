@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, Infinity as InfinityIcon } from "lucide-react";
+import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, Infinity as InfinityIcon, Info, RefreshCw } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -29,6 +29,7 @@ const LINHAS: { s: Situacao; label: string }[] = [
 
 function Acompanhamento() {
   const { itens, logs, carregando, salvarRegistros } = useApp();
+  const navigate = useNavigate(); // ✅ Adicionado
   const [view, setView] = useState<View>("menu");
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [drill, setDrill] = useState<Drill>(null);
@@ -55,6 +56,7 @@ function Acompanhamento() {
   const meds = itens.filter((i) => i.cuidado === "Medicação");
   const emUso = ordenarPorDataHora(meds.filter((m) => medicacaoEmUso(m)));
   const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
+  const continuos = emUso.filter(m => !m.fim); // ✅ Remédios de uso contínuo
 
   const proximos = useMemo(() => {
     let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação"));
@@ -62,10 +64,9 @@ function Acompanhamento() {
     return lista;
   }, [itens, buscaProximos]);
 
-  // ✅ 1. Lista "Para Hoje" (usada no Menu Inicial)
+  // ✅ 1. Lista "Para Hoje"
   const agendaHoje = useMemo(() => {
     const arr: any[] = [];
-    
     emUso.forEach((m) => {
       const dataInicio = m.inicio;
       const dataFim = m.fim;
@@ -77,7 +78,6 @@ function Acompanhamento() {
       if (!diasDaSemana.includes(hojeIndex)) return;
 
       const horarios = m.horarios || [];
-      
       let horariosValidos = horarios;
       if (m.inicio === hoje && horarios.length > 0) {
         const horaInicio = horarios[0];
@@ -92,24 +92,19 @@ function Acompanhamento() {
         arr.push({ med: m, data: hoje, horario: hora, log: null });
       });
     });
-
     return arr.sort((a, b) => a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
-  // ✅ 2. Lista "Todos os próximos agendamentos" (mostra até 15 dias para contínuos)
+  // ✅ 2. Lista "Todos os próximos agendamentos" (limite de 15 dias para contínuos)
   const proximosAgendamentos = useMemo(() => {
     const arr: any[] = [];
-    
-    // Limite de 15 dias para remédios contínuos (evita carregar infinitos cards)
     const dataLimite = new Date();
     dataLimite.setDate(dataLimite.getDate() + 15);
     const limiteYMD = `${dataLimite.getFullYear()}-${String(dataLimite.getMonth() + 1).padStart(2, "0")}-${String(dataLimite.getDate()).padStart(2, "0")}`;
 
     emUso.forEach((m) => {
       const dataInicio = m.inicio || hoje;
-      // Se o remédio não tiver data de fim, usa o limite de 15 dias
       const dataFim = m.fim || limiteYMD;
-      
       if (dataFim < hoje) return;
 
       const diasDaSemana = m.diasSemana || [0, 1, 2, 3, 4, 5, 6];
@@ -124,30 +119,22 @@ function Acompanhamento() {
         
         if (diasDaSemana.includes(diaSemana)) {
           let horariosValidos = horarios;
-          
           if (dataIteracao === dataInicio) {
             const horaInicio = horarios[0];
             horariosValidos = horarios.filter((h: string) => h >= horaInicio);
           }
-
           const dosesPendentes = horariosValidos.filter((h: string) => {
             return !doseRegistrada(logs, m.id, dataIteracao, h.trim());
           });
-
           dosesPendentes.forEach((hora: string) => {
             arr.push({ med: m, data: dataIteracao, horario: hora });
           });
         }
-
         d.setDate(d.getDate() + 1);
         dataIteracao = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       }
     });
-
-    return arr.sort((a, b) => {
-      if (a.data !== b.data) return a.data.localeCompare(b.data);
-      return a.horario.localeCompare(b.horario);
-    });
+    return arr.sort((a, b) => a.data.localeCompare(b.data) || a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
   const logsFiltrados = useMemo(() => {
@@ -167,36 +154,19 @@ function Acompanhamento() {
       const qtdTomada = Number(item.dosagemValor || 1);
       const novoEstoque = Math.max(0, item.estoqueAtual - qtdTomada);
       ok = await salvarRegistros([{
-        id: uid(),
-        pessoaId: item.pessoaId,
-        criadoEm: nowLocalISO(),
-        titulo: "Atualização de estoque",
-        cuidado: item.cuidado,
-        evento: true,
-        parentId: item.id,
-        acao: "editar",
-        alteracoes: { estoqueAtual: novoEstoque }
+        id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo: "Atualização de estoque", cuidado: item.cuidado, evento: true, parentId: item.id, acao: "editar", alteracoes: { estoqueAtual: novoEstoque }
       }], "acontecimentos");
     }
 
     if (ok) {
-      toast.success(novoHorario ? "Atraso registrado!" : "Medicação registrada e estoque atualizado!");
+      toast.success(novoHorario ? "Atraso registrado!" : "Medicação registrada!");
       setAtrasoModal(null);
     }
   };
 
   const excluirLog = async (log: any) => {
     if (!confirm("Excluir este registro de dose?")) return;
-    const ok = await salvarRegistros([{
-      id: uid(),
-      pessoaId: log.pessoaId,
-      criadoEm: nowLocalISO(),
-      titulo: "Excluído",
-      cuidado: "Medicação_Log" as any,
-      evento: true,
-      parentId: log.id,
-      acao: "excluir",
-    }], "medicacao_logs");
+    const ok = await salvarRegistros([{ id: uid(), pessoaId: log.pessoaId, criadoEm: nowLocalISO(), titulo: "Excluído", cuidado: "Medicação_Log" as any, evento: true, parentId: log.id, acao: "excluir" }], "medicacao_logs");
     if (ok) toast.success("Registro excluído!");
   };
 
@@ -214,9 +184,7 @@ function Acompanhamento() {
     return emUso.map(med => {
       const vezesAoDia = med.horarios?.length || 1;
       const dosagem = Number(med.dosagemValor || 1);
-      const total = dias * vezesAoDia * dosagem;
-      const unidade = med.dosagemUnidade || "un";
-      return { med, total, unidade };
+      return { med, total: dias * vezesAoDia * dosagem, unidade: med.dosagemUnidade || "un" };
     });
   };
 
@@ -422,14 +390,36 @@ function Acompanhamento() {
       </section>
 
       <section className="space-y-3 mt-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-sans text-base font-semibold text-foreground">Todos os próximos agendamentos</h2>
-          {emUso.some(m => !m.fim) && (
-            <span className="text-[10px] font-bold text-muted-foreground uppercase bg-muted px-2 py-0.5 rounded-full">Inclui contínuos</span>
-          )}
-        </div>
-        <p className="text-[11px] text-muted-foreground -mt-1 mb-2">Exibindo os próximos 15 dias para remédios de uso contínuo.</p>
-        
+        <h2 className="font-sans text-base font-semibold text-foreground">
+          Todos os próximos agendamentos
+        </h2>
+
+        {/* ✅ Aviso de 15 dias com botão de renovar */}
+        {continuos.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-2xl text-xs space-y-2 mb-3 shadow-sm">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 shrink-0 mt-0.5" />
+              <p>
+                Para manter o app rápido, a lista abaixo exibe apenas os próximos 15 dias.
+                Se precisar ver mais adiante, renove a programação:
+              </p>
+            </div>
+            <div className="space-y-1 mt-2">
+              {continuos.map(m => (
+                <div key={m.id} className="flex justify-between items-center bg-white/60 p-2 rounded-lg border border-amber-100">
+                  <span className="font-semibold">{m.medicamento}</span>
+                  <button
+                    onClick={() => navigate({ to: "/criar", search: { duplicar: m.id } })}
+                    className="flex items-center gap-1 font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-2 py-1 rounded-md transition"
+                  >
+                    <RefreshCw className="h-3 w-3" /> Renovar
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="max-h-[400px] overflow-y-auto pr-1 space-y-3">
           {proximosAgendamentos.length === 0 ? (
             <p className="text-sm text-muted-foreground italic">Nenhuma dose pendente.</p>
