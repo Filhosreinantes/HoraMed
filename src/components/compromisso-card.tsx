@@ -36,7 +36,12 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
     if (salvando) return;
     setSalvando(true);
     try {
-      const { id, pessoaId, criadoEm, cuidado, evento, parentId, ...alteracoes } = formEdicao;
+      const { id, pessoaId, criadoEm, cuidado, evento, parentId, _evento, ...alteracoes } = formEdicao;
+      if (alteracoes.estoqueAtual !== undefined && alteracoes.estoqueAtual !== "") {
+        alteracoes.estoqueAtual = Number(alteracoes.estoqueAtual);
+      } else {
+        delete alteracoes.estoqueAtual;
+      }
       
       const ok = await salvarRegistros([{
         id: uid(), pessoaId, criadoEm: nowLocalISO(), titulo: isRemarcar ? `Remarcado` : `Editado`,
@@ -65,20 +70,18 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
         situacao, observacaoAcompanhamento: nota, evento: true, parentId: item.id,
       };
 
-      const itensParaSalvar: Dados[] = [dadosLog];
+      const tabela = item.cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos";
+      let ok = await salvarRegistros([dadosLog], tabela);
 
-      // Desconto de estoque
-      if (ehMedicamento && situacao === "feito" && mostraEstoque) {
+      // Desconto de estoque: vai em "acontecimentos", que é o que o app-store lê para aplicar edições.
+      if (ok && ehMedicamento && situacao === "feito" && mostraEstoque) {
         const qtdTomada = Number(item.dosagemValor || 1);
         const novoEstoque = Math.max(0, (item.estoqueAtual || 0) - qtdTomada);
-        itensParaSalvar.push({
+        ok = await salvarRegistros([{
           id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo: "Atualização de estoque",
           cuidado: item.cuidado, evento: true, parentId: item.id, acao: "editar", alteracoes: { estoqueAtual: novoEstoque }
-        });
+        }], "acontecimentos");
       }
-
-      const tabela = item.cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos";
-      const ok = await salvarRegistros(itensParaSalvar, tabela);
 
       if (ok) {
         toast.success("Acompanhamento registrado!");
