@@ -159,11 +159,20 @@ function Acompanhamento() {
 
     let ok = await salvarRegistros([dados], "medicacao_logs");
 
-    if (ok && item.estoqueAtual !== undefined && item.dosagemUnidade !== "ml") {
+    // Desconto de estoque (agora funciona para ml, gotas e unidades)
+    if (ok && item.estoqueAtual !== undefined) {
       const qtdTomada = Number(item.dosagemValor || 1);
       const novoEstoque = Math.max(0, item.estoqueAtual - qtdTomada);
       ok = await salvarRegistros([{
-        id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo: "Atualização de estoque", cuidado: item.cuidado, evento: true, parentId: item.id, acao: "editar", alteracoes: { estoqueAtual: novoEstoque }
+        id: uid(),
+        pessoaId: item.pessoaId,
+        criadoEm: nowLocalISO(),
+        titulo: "Atualização de estoque",
+        cuidado: item.cuidado,
+        evento: true,
+        parentId: item.id,
+        acao: "editar",
+        alteracoes: { estoqueAtual: novoEstoque }
       }], "acontecimentos");
     }
 
@@ -232,7 +241,7 @@ function Acompanhamento() {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {a.med.dosagem}
-                      {a.med.dosagemUnidade !== "ml" && a.med.estoqueAtual !== undefined && ` · Restam ${a.med.estoqueAtual} un.`}
+                      {a.med.estoqueAtual !== undefined && ` · Restam ${a.med.estoqueAtual} ${a.med.dosagemUnidade || "un"}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
