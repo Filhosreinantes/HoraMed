@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, Infinity as InfinityIcon, Info, RefreshCw } from "lucide-react";
+import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, Infinity as InfinityIcon, Info, RefreshCw } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -29,7 +29,7 @@ const LINHAS: { s: Situacao; label: string }[] = [
 
 function Acompanhamento() {
   const { itens, logs, carregando, salvarRegistros } = useApp();
-  const navigate = useNavigate(); // ✅ Adicionado
+  const navigate = useNavigate();
   const [view, setView] = useState<View>("menu");
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [drill, setDrill] = useState<Drill>(null);
@@ -56,7 +56,7 @@ function Acompanhamento() {
   const meds = itens.filter((i) => i.cuidado === "Medicação");
   const emUso = ordenarPorDataHora(meds.filter((m) => medicacaoEmUso(m)));
   const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
-  const continuos = emUso.filter(m => !m.fim); // ✅ Remédios de uso contínuo
+  const continuos = emUso.filter(m => !m.fim); 
 
   const proximos = useMemo(() => {
     let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação"));
@@ -64,7 +64,6 @@ function Acompanhamento() {
     return lista;
   }, [itens, buscaProximos]);
 
-  // ✅ 1. Lista "Para Hoje"
   const agendaHoje = useMemo(() => {
     const arr: any[] = [];
     emUso.forEach((m) => {
@@ -95,7 +94,6 @@ function Acompanhamento() {
     return arr.sort((a, b) => a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
-  // ✅ 2. Lista "Todos os próximos agendamentos" (limite de 15 dias para contínuos)
   const proximosAgendamentos = useMemo(() => {
     const arr: any[] = [];
     const dataLimite = new Date();
@@ -190,7 +188,6 @@ function Acompanhamento() {
 
   if (carregando) return <div className="space-y-3 p-4"><Skeleton className="h-40 rounded-3xl bg-muted" /><Skeleton className="h-40 rounded-3xl bg-muted" /></div>;
 
-  // --- MENU INICIAL ---
   if (view === "menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
@@ -267,7 +264,6 @@ function Acompanhamento() {
     );
   }
 
-  // --- TELA DE COMPROMISSOS ---
   if (view === "compromissos") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -354,7 +350,6 @@ function Acompanhamento() {
     );
   }
 
-  // --- TELA DE MEDICAÇÕES ---
   return (
     <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
       <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
@@ -394,7 +389,6 @@ function Acompanhamento() {
           Todos os próximos agendamentos
         </h2>
 
-        {/* ✅ Aviso de 15 dias com botão de renovar */}
         {continuos.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-2xl text-xs space-y-2 mb-3 shadow-sm">
             <div className="flex items-start gap-2">
