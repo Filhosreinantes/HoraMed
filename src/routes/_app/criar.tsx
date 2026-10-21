@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { DIAS_SEMANA, gerarSessoes, nowLocalISO, uid, hojeYMD, type Cuidado, type Dados, type Programacao } from "@/lib/cuidados";
 import { Botao, Campo, Divisor, SeletorTesouro } from "@/components/ui-kit";
 
+
 export const Route = createFileRoute("/_app/criar")({
   validateSearch: (search: Record<string, unknown>): { duplicar?: string | undefined } => ({
     duplicar: (search["duplicar"] as string) || undefined,
