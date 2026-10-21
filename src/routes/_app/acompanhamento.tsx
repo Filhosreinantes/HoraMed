@@ -95,6 +95,7 @@ function Acompanhamento() {
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [drill, setDrill] = useState<Drill>(null);
   const [buscaProximos, setBuscaProximos] = useState("");
+  const [filtroRemedios, setFiltroRemedios] = useState<"uso" | "encerrados">("uso");
 
   const [atrasoModal, setAtrasoModal] = useState<{ item: any; horario: string } | null>(null);
   const [filtroMed, setFiltroMed] = useState("");
@@ -134,6 +135,9 @@ function Acompanhamento() {
     });
     return arr.sort((a, b) => a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
+
+  // ✅ Lista de doses futuras de hoje (para o bloco "Todos os próximos agendamentos")
+  const proximasDoses = agendaHoje.filter((a) => !a.log);
 
   const logsFiltrados = useMemo(() => {
     return logs
@@ -222,19 +226,15 @@ function Acompanhamento() {
   if (view === "compromissos") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
-
-        {/* ✅ 1. VOLTAR AO MENU (Mais para cima) */}
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground">
           <ChevronLeft className="h-4 w-4" /> Voltar ao menu
         </Botao>
 
-        {/* ✅ 2. CABEÇALHO E SELETOR */}
         <header>
           <h1 className="font-display text-3xl font-semibold italic text-foreground">Compromissos</h1>
         </header>
         <SeletorTesouro />
 
-        {/* ✅ 3. TÍTULO E EXPLICAÇÃO */}
         <div className="mt-6">
           <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2">
             <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />
@@ -245,14 +245,12 @@ function Acompanhamento() {
           </p>
         </div>
 
-        {/* ✅ 4. BOTÕES DE FILTRO */}
         <div className="flex gap-2 pt-2">
           <Pill ativo={periodo === "mes"} onClick={() => setPeriodo("mes")}>Este mês</Pill>
           <Pill ativo={periodo === "ano"} onClick={() => setPeriodo("ano")}>Este ano</Pill>
           <Pill ativo={periodo === "tudo"} onClick={() => setPeriodo("tudo")}>Tudo</Pill>
         </div>
 
-        {/* CARDS DE CONSULTA / TERAPIA / EXAME */}
         <div className="grid gap-3 pt-2">
           {(["Consulta", "Terapia", "Exame"] as Cuidado[]).map((c) => {
             const doTipo = filtrados.filter((i) => i.cuidado === c);
@@ -349,12 +347,12 @@ function Acompanhamento() {
       </header>
       <SeletorTesouro />
 
-      {/* ✅ LEMBRETES DE HOJE COM AURA FORÇADA */}
+      {/* ✅ LEMBRETES DE HOJE — AURA 3x MAIS FORTE */}
       <section
         className="notebook p-5 space-y-4 relative"
         style={{
-          boxShadow: "0 0 20px 2px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)",
-          border: "1px solid var(--tema)",
+          boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)",
+          border: "2px solid var(--tema)",
         }}
       >
         <div className="flex items-center gap-2 mb-2">
@@ -400,12 +398,12 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* ✅ HISTÓRICO COM AURA FORÇADA */}
+      {/* ✅ HISTÓRICO */}
       <section
         className="notebook p-5 space-y-4 relative"
         style={{
-          boxShadow: "0 0 20px 2px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)",
-          border: "1px solid var(--tema)",
+          boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)",
+          border: "2px solid var(--tema)",
         }}
       >
         <div className="flex items-center gap-2 mb-2">
@@ -436,41 +434,69 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* ✅ MEUS REMÉDIOS ENXUTO */}
+      {/* ✅ MEUS REMÉDIOS COM FILTROS FUNCIONAIS */}
       <section
         className="notebook p-5 space-y-4 relative"
         style={{
-          boxShadow: "0 0 20px 2px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)",
-          border: "1px solid var(--tema)",
+          boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)",
+          border: "2px solid var(--tema)",
         }}
       >
         <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
           <PillIcon className="h-4 w-4" style={{ color: "var(--tema)" }} /> Meus Remédios
         </h2>
 
-        <div className="flex gap-3 text-sm">
-          <div className="rounded-xl border border-border bg-muted/30 px-3 py-1.5 flex items-center gap-1">
-            <span className="text-muted-foreground">Em uso:</span>
-            <span className="font-bold" style={{ color: "var(--tema)" }}>{emUso.length}</span>
-          </div>
-          <div className="rounded-xl border border-border bg-muted/30 px-3 py-1.5 flex items-center gap-1">
-            <span className="text-muted-foreground">Encerrados:</span>
-            <span className="font-bold text-muted-foreground">{encerradas.length}</span>
-          </div>
+        <div className="flex gap-2">
+          <Pill ativo={filtroRemedios === "uso"} onClick={() => setFiltroRemedios("uso")}>
+            Em uso ({emUso.length})
+          </Pill>
+          <Pill ativo={filtroRemedios === "encerrados"} onClick={() => setFiltroRemedios("encerrados")}>
+            Encerrados ({encerradas.length})
+          </Pill>
         </div>
 
         <div className="space-y-2 mt-2">
-          {emUso.map(m => <CompromissoCard key={m.id} item={m} />)}
+          {filtroRemedios === "uso"
+            ? emUso.map(m => <CompromissoCard key={m.id} item={m} compacto />)
+            : encerradas.map(m => <CompromissoCard key={m.id} item={m} compacto />)
+          }
         </div>
       </section>
 
-      {/* ✅ TODOS OS PRÓXIMOS AGENDAMENTOS */}
+      {/* ✅ TODOS OS PRÓXIMOS AGENDAMENTOS (doses futuras de hoje) */}
       <section className="space-y-3 mt-8 pb-24">
-        <h2 className="font-display text-xl font-semibold italic text-foreground">
+        <h2 className="font-sans text-base font-semibold text-foreground">
           Todos os próximos agendamentos
         </h2>
-        <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
-          {proximos.map(i => <CompromissoCard key={i.id} item={i} />)}
+
+        <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+          {proximasDoses.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic">Nenhuma dose pendente para hoje.</p>
+          ) : (
+            proximasDoses.map((a, idx) => (
+              <div
+                key={idx}
+                className="notebook flex items-center justify-between p-3"
+                style={{ borderColor: "var(--tema-claro)" }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="grid h-8 w-8 place-items-center rounded-full"
+                    style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
+                  >
+                    <PillIcon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">{a.med.medicamento}</p>
+                    <p className="text-xs text-muted-foreground">{a.med.dosagem}</p>
+                  </div>
+                </div>
+                <span className="font-display font-bold text-lg" style={{ color: "var(--tema)" }}>
+                  {a.horario}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
