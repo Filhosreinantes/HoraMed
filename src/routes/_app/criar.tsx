@@ -154,67 +154,94 @@ function Criar() {
       </h1>
       <SeletorTesouro prefixo="Para" />
       
+      {/* ✅ PARTE 1: EFEITO AURA NOS 4 CARDS */}
       <div className="grid grid-cols-2 gap-3">
         {[
           { tipo: "Consulta", icone: Stethoscope },
           { tipo: "Terapia", icone: Leaf },
           { tipo: "Exame", icone: FileText },
           { tipo: "Medicação", icone: Pill },
-        ].map(({ tipo: c, icone: Icone }) => (
-          <button
-            key={c}
-            onClick={() => setTipo(tipo === c ? null : (c as Cuidado))}
-            className={`notebook flex flex-col items-center justify-center gap-2 p-4 transition hover:bg-muted/10 ${
-              tipo === c ? "border-[var(--tema)] ring-2 ring-[var(--tema-claro)]" : "border-gold/60"
-            }`}
-          >
-            <div 
-              className="grid h-12 w-12 place-items-center rounded-full"
-              style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
+        ].map(({ tipo: c, icone: Icone }) => {
+          const selecionado = tipo === c;
+          return (
+            <button
+              key={c}
+              onClick={() => setTipo(selecionado ? null : (c as Cuidado))}
+              className={`relative flex flex-col items-center justify-center gap-2 rounded-[2rem] border-2 bg-white p-4 transition-all duration-300 ${
+                selecionado ? "scale-[1.02]" : "hover:scale-[1.01]"
+              }`}
+              style={{
+                borderColor: selecionado ? "var(--tema)" : "transparent",
+                boxShadow: selecionado 
+                  ? "0 8px 24px -6px var(--tema-claro)" 
+                  : "0 4px 12px -4px rgba(0,0,0,0.05)",
+              }}
             >
-              <Icone className="h-6 w-6" />
-            </div>
-            <span className="font-display text-base font-semibold italic text-foreground">
-              {c}
-            </span>
-          </button>
-        ))}
+              <div 
+                className="grid h-12 w-12 place-items-center rounded-full transition-colors"
+                style={{ 
+                  backgroundColor: selecionado ? "var(--tema-claro)" : "#F5F5F5", 
+                  color: selecionado ? "var(--tema-escuro)" : "#888" 
+                }}
+              >
+                <Icone className="h-6 w-6" />
+              </div>
+              <span 
+                className="font-display text-sm font-bold italic transition-colors"
+                style={{ color: selecionado ? "var(--tema-escuro)" : "#4A4A4A" }}
+              >
+                {c}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
+      {/* ✅ PARTE 2: FORMULÁRIO ELEGANTE (ACORDEÃO) */}
       {tipo && (
-        <div className="relative">
-          {/* Fundo invisível para fechar ao clicar fora */}
+        <div className="relative mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="fixed inset-0 z-0" onClick={() => setTipo(null)} />
           
           <form 
             onSubmit={guardar} 
-            className="notebook relative z-10 space-y-4 p-5" 
-            style={{ borderColor: "var(--tema)" }}
+            className="relative z-10 space-y-5 rounded-[2rem] bg-white p-6 shadow-xl"
+            style={{ border: "1px solid var(--tema-claro)", borderTop: "4px solid var(--tema)" }}
           >
-            <style>{`
-              form input.field, form select.field, form textarea.field {
-                border-color: var(--tema-claro);
-                background-color: white;
-              }
-              form input.field:focus, form select.field:focus, form textarea.field:focus {
-                border-color: var(--tema);
-                box-shadow: 0 0 0 3px var(--tema-claro);
-              }
-            `}</style>
-
-            {/* Botão Fechar alinhado à direita */}
-            <div className="flex justify-end -mb-2">
+            {/* ✅ CABEÇALHO DO FORMULÁRIO */}
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>
+                {tipo === "Medicação" ? "Nova Medicação" : `Novo(a) ${tipo}`}
+              </h2>
               <button 
                 type="button" 
                 onClick={() => setTipo(null)} 
-                className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground hover:bg-muted/80"
+                className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-200"
               >
                 <X className="h-3 w-3" /> Fechar
               </button>
             </div>
 
-            <h2 className="text-xl font-semibold">{tipo}</h2>
-            
+            {/* ✅ ESTILO APLICADO AOS INPUTS */}
+            <style>{`
+              form input.field, form select.field, form textarea.field {
+                border-radius: 1rem;
+                border-color: var(--tema-claro);
+                background-color: #FAFAFA;
+                font-family: var(--font-sans);
+              }
+              form input.field:focus, form select.field:focus, form textarea.field:focus {
+                border-color: var(--tema);
+                background-color: white;
+                box-shadow: 0 0 0 3px var(--tema-claro);
+              }
+              form label > span {
+                font-family: var(--font-display);
+                font-style: italic;
+                color: #555;
+              }
+            `}</style>
+
+            {/* CAMPOS: CONSULTA */}
             {tipo === "Consulta" && (
               <>
                 <div className="grid grid-cols-2 gap-3">
@@ -227,6 +254,7 @@ function Criar() {
               </>
             )}
             
+            {/* CAMPOS: TERAPIA */}
             {tipo === "Terapia" && (
               <>
                 <Campo label="Tipo">{inp("tipoTerapia", "text", true)}</Campo>
@@ -263,6 +291,7 @@ function Criar() {
               </>
             )}
             
+            {/* CAMPOS: EXAME */}
             {tipo === "Exame" && (
               <>
                 <Campo label="Tipo de exame">{inp("tipoExame", "text", true)}</Campo>
@@ -278,6 +307,7 @@ function Criar() {
               </>
             )}
             
+            {/* CAMPOS: MEDICAÇÃO */}
             {tipo === "Medicação" && (
               <>
                 <Campo label="Nome">{inp("medicamento", "text", true)}</Campo>
@@ -372,9 +402,18 @@ function Criar() {
             )}
             
             <Divisor />
-            <Botao type="submit" disabled={salvando} className="w-full">
-              {salvando ? "Salvando..." : "Guardar agendamento"}
-            </Botao>
+            
+            {/* ✅ BOTÃO DE SALVAR ELEGANTE */}
+            <div className="pt-2">
+              <Botao 
+                type="submit" 
+                disabled={salvando} 
+                className="w-full rounded-full py-3 text-base font-bold shadow-lg transition-transform hover:scale-[1.01]"
+                style={{ backgroundColor: "var(--tema)", color: "white" }}
+              >
+                {salvando ? "Salvando..." : "Guardar agendamento"}
+              </Botao>
+            </div>
           </form>
         </div>
       )}
