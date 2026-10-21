@@ -2,10 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { App as AppNativo } from "@capacitor/app";
 import { toast } from "sonner";
 import {
-  corrigirAlarmeExato,
   corrigirBateria,
   corrigirNotificacoes,
-  testarAlarme,
+  corrigirTelaCheia,
   verificarConfiabilidade,
   type Confiabilidade,
 } from "@/lib/alarmes";
@@ -23,10 +22,10 @@ const ITENS: {
     corrigir: corrigirNotificacoes,
   },
   {
-    chave: "alarmeExato",
-    titulo: "⏰ Alarme exato",
-    texto: "Faz o lembrete tocar exatamente no horário do remédio.",
-    corrigir: corrigirAlarmeExato,
+    chave: "telaCheia",
+    titulo: "📺 Aparecer sobre a tela bloqueada",
+    texto: "Mostra a tela do alarme, com os botões, mesmo com o celular bloqueado.",
+    corrigir: corrigirTelaCheia,
   },
   {
     chave: "bateria",
@@ -101,22 +100,12 @@ function Lista({ estado, verificar }: { estado: Confiabilidade; verificar: () =>
   );
 }
 
-const tudoCerto = (e: Confiabilidade) => e.notificacoes && e.alarmeExato && e.bateria;
+const tudoCerto = (e: Confiabilidade) => e.notificacoes && e.telaCheia && e.bateria;
 
-/** Cartão do perfil no app Android: permissões dos alarmes e teste. */
+/** Cartão do perfil no app Android: permissões dos alarmes. */
 export function ConfiabilidadeCartao() {
   const { estado, verificar } = useConfiabilidade();
   if (!estado) return null;
-
-  const testar = async () => {
-    try {
-      await testarAlarme();
-      toast.success("O alarme de teste toca em 5 segundos.");
-    } catch (e) {
-      console.error("Erro no teste:", e);
-      toast.error("Não foi possível agendar o teste.");
-    }
-  };
 
   return (
     <div className="notebook space-y-3 p-4">
@@ -126,17 +115,10 @@ export function ConfiabilidadeCartao() {
           : "⚠️ Ajuste os lembretes deste celular"}
       </p>
       <p className="text-xs text-muted-foreground">
-        Os lembretes tocam como alarme no horário de cada remédio, mesmo sem internet, e de novo 15
-        minutos depois se a dose não for registrada.
+        O alarme toca no horário de cada remédio, mesmo sem internet, e continua tocando até você
+        tocar em "Já tomei" ou "Adiar". Se a dose não for registrada, toca de novo 15 minutos depois.
       </p>
       <Lista estado={estado} verificar={verificar} />
-      <button
-        onClick={testar}
-        disabled={!estado.notificacoes}
-        className="w-full rounded-2xl border border-gold/50 py-3 text-sm font-bold text-foreground transition disabled:opacity-60"
-      >
-        🔔 Testar alarme
-      </button>
     </div>
   );
 }

@@ -1,8 +1,7 @@
-// Lembretes no app Android: alarmes agendados no próprio celular, com as mesmas
-// regras do servidor (lembretesDoDia / avisosDeVespera). Tocam sem internet e não
-// dependem do OneSignal, que não funciona dentro do app.
+// Lembretes no app Android: o app calcula os alarmes (mesmas regras do servidor:
+// lembretesDoDia / avisosDeVespera) e entrega ao código nativo, que toca a tela de
+// alarme no horário, com som em loop, mesmo sem internet. Não depende do OneSignal.
 import { registerPlugin } from "@capacitor/core";
-import { LocalNotifications } from "@capacitor/local-notifications";
 import {
   avisosDeVespera,
   hojeYMD,
@@ -17,21 +16,55 @@ import { ehAppAndroid } from "./plataforma";
 
 export { ehAppAndroid };
 
-/** Canal criado pelo ConfiabilidadePlugin.java (som de alarme). */
-const CANAL = "lembretes";
 /** Dias à frente: os alarmes continuam tocando mesmo sem abrir o app nesse período. */
 const DIAS = 14;
-/** O Android limita os alarmes pendentes de um app (500); sobra folga. */
+/** Folga para o limite de alarmes guardados no celular. */
 const MAXIMO = 400;
 
+/** Um alarme como o código nativo guarda (AlarmeStore.java). */
+export type AlarmeNativo = {
+  id: number;
+  /** Quando toca, em milissegundos. */
+  at: number;
+  /** "dose" e "insistir" tocam a tela de alarme; "vespera" é um aviso comum; "adiado" vem do botão Adiar. */
+  kind: "dose" | "insistir" | "adiado" | "vespera";
+  title: string;
+  body: string;
+  medId?: string;
+  pessoaId?: string;
+  /** Horário e data da dose (para registrá-la como tomada). */
+  horario?: string;
+  data?: string;
+  medicamento?: string;
+  dosagem?: string;
+  pessoa?: string;
+};
+
+/** Dose marcada como tomada na tela de alarme, esperando ser gravada no servidor. */
+export type DoseTomada = {
+  chave: string;
+  medId: string;
+  pessoaId: string;
+  horario: string;
+  data: string;
+  medicamento?: string;
+};
+
 interface ConfiabilidadePlugin {
-  status(): Promise<{ bateriaLiberada: boolean }>;
+  agendar(opcoes: { alarmes: AlarmeNativo[] }): Promise<void>;
+  limpar(): Promise<void>;
+  adiar(opcoes: { alarme: AlarmeNativo; minutos: number }): Promise<void>;
+  consumirDoses(): Promise<{ doses: DoseTomada[] }>;
+  confirmarDoses(opcoes: { chaves: string[] }): Promise<void>;
+  status(): Promise<Confiabilidade>;
+  pedirNotificacoes(): Promise<void>;
+  abrirTelaCheia(): Promise<void>;
   abrirBateria(): Promise<void>;
   abrirConfiguracoes(): Promise<void>;
 }
 const Confiabilidade = registerPlugin<ConfiabilidadePlugin>("Confiabilidade");
 
-/** Id numérico estável (o Android exige int de 32 bits) a partir de uma chave. */
+/** Id numérico estável (o Android usa int de 32 bits) a partir de uma chave. */
 function idDe(chave: string) {
   let h = 5381;
   for (let i = 0; i < chave.length; i++) h = ((h << 5) + h + chave.charCodeAt(i)) | 0;
@@ -42,33 +75,44 @@ function quando(dia: string, hora: string) {
   const d = parseYMD(dia);
   const [h = 0, m = 0] = hora.split(":").map(Number);
   d.setHours(h, m, 0, 0);
-  return d;
+  return d.getTime();
 }
 
-type Alarme = { id: number; at: Date; title: string; body: string };
-
 /** Os alarmes dos próximos DIAS, com os mesmos textos das notificações do servidor. */
-export function calcularAlarmes(todos: Dados[], pessoas: Pessoa[], agora = new Date()): Alarme[] {
+export function calcularAlarmes(
+  todos: Dados[],
+  pessoas: Pessoa[],
+  agora = Date.now(),
+): AlarmeNativo[] {
   const nomes = new Map(pessoas.map((p) => [p.id, p.nome]));
-  const de = (pessoaId: string) => (nomes.get(pessoaId) ? ` de ${nomes.get(pessoaId)}` : "");
   const hoje = hojeYMD();
-  const out: Alarme[] = [];
+  const out: AlarmeNativo[] = [];
   for (let i = 0; i < DIAS; i++) {
     const dia = somarDias(hoje, i);
     for (const { med, horario, hora, tipo } of lembretesDoDia(todos, dia)) {
       const remedio = [med.medicamento || "a medicação", med.dosagem].filter(Boolean).join(" ");
+      const pessoa = nomes.get(med.pessoaId);
+      const de = pessoa ? ` de ${pessoa}` : "";
       const [title, body] =
         tipo === "insistir"
           ? [
               `⏰ Dose das ${horario} ainda não registrada`,
-              `${remedio}${de(med.pessoaId)}. Toque para registrar.`,
+              `${remedio}${de}. Toque para registrar.`,
             ]
-          : [`💊 Hora do remédio${de(med.pessoaId)}`, `${horario} · ${remedio}`];
+          : [`💊 Hora do remédio${de}`, `${horario} · ${remedio}`];
       out.push({
         id: idDe(`med-${med.id}-${dia}-${horario}-${tipo}`),
         at: quando(dia, hora),
+        kind: tipo === "insistir" ? "insistir" : "dose",
         title,
         body,
+        medId: med.id,
+        pessoaId: med.pessoaId,
+        horario,
+        data: dia,
+        ...(med.medicamento && { medicamento: med.medicamento }),
+        ...(med.dosagem && { dosagem: med.dosagem }),
+        ...(pessoa && { pessoa }),
       });
     }
     for (const { item, hora } of avisosDeVespera(todos, dia)) {
@@ -79,6 +123,7 @@ export function calcularAlarmes(todos: Dados[], pessoas: Pessoa[], agora = new D
       out.push({
         id: idDe(`vespera-${item.id}`),
         at: quando(dia, hora),
+        kind: "vespera",
         title: `📅 Amanhã: ${tituloEvento(item, "proximo")}`,
         body,
       });
@@ -86,7 +131,7 @@ export function calcularAlarmes(todos: Dados[], pessoas: Pessoa[], agora = new D
   }
   return out
     .filter((a) => a.at > agora)
-    .sort((a, b) => a.at.getTime() - b.at.getTime())
+    .sort((a, b) => a.at - b.at)
     .slice(0, MAXIMO);
 }
 
@@ -95,100 +140,42 @@ let fila = Promise.resolve();
 /** Substitui os alarmes agendados pelos calculados agora. Sem efeito fora do app. */
 export function agendarAlarmes(todos: Dados[], pessoas: Pessoa[]) {
   if (!ehAppAndroid()) return Promise.resolve();
-  // Uma reprogramação por vez: duas em paralelo poderiam cancelar o que a outra agendou.
+  // Uma reprogramação por vez, na ordem em que foram pedidas.
   fila = fila
-    .then(async () => {
-      const alarmes = calcularAlarmes(todos, pessoas);
-      const novos = new Set(alarmes.map((a) => a.id));
-      const { notifications: pendentes } = await LocalNotifications.getPending();
-      const velhos = pendentes.filter((p) => !novos.has(p.id));
-      if (velhos.length)
-        await LocalNotifications.cancel({ notifications: velhos.map((p) => ({ id: p.id })) });
-      if (!alarmes.length) return;
-      // Sem a permissão, o plugin abriria a tela de configurações a cada reagendamento.
-      const exato =
-        (await LocalNotifications.checkExactNotificationSetting()).exact_alarm === "granted";
-      await LocalNotifications.schedule({
-        notifications: alarmes.map((a) => ({
-          ...a,
-          channelId: CANAL,
-          smallIcon: "ic_stat_lembrete",
-          schedule: { at: a.at, allowWhileIdle: true },
-          isExactNotification: exato,
-        })),
-      });
-    })
+    .then(() => Confiabilidade.agendar({ alarmes: calcularAlarmes(todos, pessoas) }))
     .catch((e) => console.error("Erro ao agendar alarmes:", e));
   return fila;
 }
 
 /** Cancela tudo (ao sair da conta). */
 export async function limparAlarmes() {
-  if (!ehAppAndroid()) return;
-  const { notifications } = await LocalNotifications.getPending();
-  if (notifications.length)
-    await LocalNotifications.cancel({ notifications: notifications.map((p) => ({ id: p.id })) });
+  if (ehAppAndroid()) await Confiabilidade.limpar();
 }
+
+/** "Adiar" dentro do app: o alarme toca de novo; a dose continua pendente. */
+export function adiarAlarme(alarme: Omit<AlarmeNativo, "id" | "at" | "kind">, minutos: number) {
+  return Confiabilidade.adiar({
+    alarme: { ...alarme, id: 0, at: 0, kind: "adiado" },
+    minutos,
+  });
+}
+
+/** Doses que o usuário marcou como tomadas na tela de alarme e o app ainda não gravou. */
+export async function dosesTomadasNoAlarme() {
+  if (!ehAppAndroid()) return [];
+  return (await Confiabilidade.consumirDoses()).doses;
+}
+
+export const confirmarDosesGravadas = (chaves: string[]) =>
+  Confiabilidade.confirmarDoses({ chaves });
 
 export type Confiabilidade = {
   notificacoes: boolean;
-  alarmeExato: boolean;
+  telaCheia: boolean;
   bateria: boolean;
 };
 
-export async function verificarConfiabilidade(): Promise<Confiabilidade> {
-  const [notif, exato, { bateriaLiberada }] = await Promise.all([
-    LocalNotifications.checkPermissions(),
-    LocalNotifications.checkExactNotificationSetting(),
-    Confiabilidade.status(),
-  ]);
-  return {
-    notificacoes: notif.display === "granted",
-    alarmeExato: exato.exact_alarm === "granted",
-    bateria: bateriaLiberada,
-  };
-}
-
-/** Pede a permissão; se já foi negada de vez, o Android só deixa mudar nas configurações. */
-export async function corrigirNotificacoes() {
-  const { display } = await LocalNotifications.requestPermissions();
-  if (display !== "granted") await Confiabilidade.abrirConfiguracoes();
-}
-
-export const corrigirAlarmeExato = () => LocalNotifications.changeExactNotificationSetting();
+export const verificarConfiabilidade = () => Confiabilidade.status();
+export const corrigirNotificacoes = () => Confiabilidade.pedirNotificacoes();
+export const corrigirTelaCheia = () => Confiabilidade.abrirTelaCheia();
 export const corrigirBateria = () => Confiabilidade.abrirBateria();
-
-/** Toca de novo daqui a `minutos` (botão "Adiar"); a dose continua pendente. */
-export async function adiarAlarme(titulo: string, texto: string, minutos: number) {
-  await LocalNotifications.schedule({
-    notifications: [
-      {
-        id: idDe(`adiado-${Date.now()}`),
-        title: titulo,
-        body: texto,
-        channelId: CANAL,
-        smallIcon: "ic_stat_lembrete",
-        schedule: { at: new Date(Date.now() + minutos * 60_000), allowWhileIdle: true },
-        isExactNotification:
-          (await LocalNotifications.checkExactNotificationSetting()).exact_alarm === "granted",
-      },
-    ],
-  });
-}
-
-/** Dispara um alarme de teste daqui a 5 segundos. */
-export async function testarAlarme() {
-  await LocalNotifications.schedule({
-    notifications: [
-      {
-        id: idDe(`teste-${Date.now()}`),
-        title: "🔔 Teste do Rotina Azul",
-        body: "Está tudo certo! Os lembretes vão tocar assim.",
-        channelId: CANAL,
-        smallIcon: "ic_stat_lembrete",
-        schedule: { at: new Date(Date.now() + 5000), allowWhileIdle: true },
-        isExactNotification: false,
-      },
-    ],
-  });
-}

@@ -22,7 +22,6 @@
     "@capacitor/android": "8",
     "@capacitor/app": "8",
     "@capacitor/core": "8",
-    "@capacitor/local-notifications": "8",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",

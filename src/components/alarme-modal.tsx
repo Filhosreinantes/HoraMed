@@ -71,8 +71,16 @@ export function AlarmeModal({ item, fechar }: { item: Item, fechar: () => void }
   const adiar = async () => {
     try {
       await adiarAlarme(
-        `💊 Hora do remédio${horario ? ` das ${horario}` : ""}`,
-        [item.medicamento, item.dosagem].filter(Boolean).join(" "),
+        {
+          title: `💊 Hora do remédio${horario ? ` das ${horario}` : ""}`,
+          body: [item.medicamento, item.dosagem].filter(Boolean).join(" "),
+          medId: item.id,
+          pessoaId: item.pessoaId,
+          data: hoje,
+          ...(horario && { horario }),
+          ...(item.medicamento && { medicamento: item.medicamento }),
+          ...(item.dosagem && { dosagem: item.dosagem }),
+        },
         ADIAR_MIN,
       );
       toast.success(`O alarme toca de novo em ${ADIAR_MIN} minutos.`);

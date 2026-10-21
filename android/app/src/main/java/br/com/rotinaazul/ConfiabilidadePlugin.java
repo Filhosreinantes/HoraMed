@@ -1,72 +1,135 @@
 package br.com.rotinaazul;
 
-import android.app.NotificationChannel;
+import android.Manifest;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
-import android.media.AudioAttributes;
-import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
 import android.provider.Settings;
+import androidx.core.app.NotificationManagerCompat;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 
 /**
- * O que o plugin de notificações locais não cobre: o canal com som de alarme
- * e a liberação da economia de bateria.
+ * Ponte entre o app web e o alarme nativo: agenda os alarmes, informa e pede as
+ * permissões, e entrega ao app as doses marcadas como tomadas na tela de alarme.
  */
-@CapacitorPlugin(name = "Confiabilidade")
+@CapacitorPlugin(
+    name = "Confiabilidade",
+    permissions = { @Permission(strings = { Manifest.permission.POST_NOTIFICATIONS }, alias = "notificacoes") }
+)
 public class ConfiabilidadePlugin extends Plugin {
-
-    /** Mesmo id usado em src/lib/alarmes.ts. */
-    static final String CANAL = "lembretes";
 
     @Override
     public void load() {
-        criarCanal();
+        Canais.garantir(getContext());
+        AlarmeStore.agendarProximo(getContext());
     }
 
-    /**
-     * Toca pelo volume de alarme: soa com o celular no silencioso/vibrar e, na
-     * maioria dos aparelhos, também no Não Perturbe (alarmes são liberados por padrão).
-     * Um canal não pode ser alterado depois de criado; para mudar, troque o id.
-     */
-    private void criarCanal() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
-        NotificationManager nm = getContext().getSystemService(NotificationManager.class);
-        if (nm.getNotificationChannel(CANAL) != null) return;
-        NotificationChannel canal = new NotificationChannel(
-            CANAL,
-            "Lembretes de remédios e consultas",
-            NotificationManager.IMPORTANCE_HIGH
-        );
-        canal.setDescription("Avisos na hora de cada dose e na véspera das consultas.");
-        Uri som = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-        if (som == null) som = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-        canal.setSound(
-            som,
-            new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-        );
-        canal.enableVibration(true);
-        canal.setVibrationPattern(new long[] { 0, 600, 300, 600, 300, 600 });
-        canal.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
-        nm.createNotificationChannel(canal);
+    // ── Alarmes ─────────────────────────────────────────────────────────────
+
+    /** Troca a programação inteira pelos alarmes calculados pelo app. */
+    @PluginMethod
+    public void agendar(PluginCall call) {
+        JSArray alarmes = call.getArray("alarmes");
+        AlarmeStore.substituir(getContext(), alarmes == null ? new JSArray() : alarmes);
+        call.resolve();
+    }
+
+    /** Cancela tudo (ao sair da conta). */
+    @PluginMethod
+    public void limpar(PluginCall call) {
+        AlarmeStore.limpar(getContext());
+        call.resolve();
+    }
+
+    /** "Adiar" dentro do app: toca de novo daqui a `minutos`. */
+    @PluginMethod
+    public void adiar(PluginCall call) {
+        JSObject alarme = call.getObject("alarme");
+        if (alarme == null) {
+            call.reject("alarme ausente");
+            return;
+        }
+        AlarmeService.adiar(getContext(), alarme, call.getInt("minutos", AlarmeService.ADIAR_MIN));
+        call.resolve();
+    }
+
+    /** Doses tomadas na tela de alarme que o app ainda precisa gravar no servidor. */
+    @PluginMethod
+    public void consumirDoses(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("doses", AlarmeStore.pendentes(getContext()));
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void confirmarDoses(PluginCall call) {
+        JSArray chaves = call.getArray("chaves");
+        if (chaves != null) AlarmeStore.confirmarPendentes(getContext(), chaves);
+        call.resolve();
+    }
+
+    // ── Permissões ──────────────────────────────────────────────────────────
+
+    private boolean notificacoesLiberadas() {
+        return NotificationManagerCompat.from(getContext()).areNotificationsEnabled();
+    }
+
+    /** Em Android 14+ a tela cheia sobre o bloqueio pode vir desligada. */
+    private boolean telaCheiaLiberada() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return true;
+        return getContext().getSystemService(NotificationManager.class).canUseFullScreenIntent();
     }
 
     @PluginMethod
     public void status(PluginCall call) {
         PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
         JSObject ret = new JSObject();
-        ret.put("bateriaLiberada", pm.isIgnoringBatteryOptimizations(getContext().getPackageName()));
+        ret.put("notificacoes", notificacoesLiberadas());
+        ret.put("telaCheia", telaCheiaLiberada());
+        ret.put("bateria", pm.isIgnoringBatteryOptimizations(getContext().getPackageName()));
         call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void pedirNotificacoes(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificacoesLiberadas()) {
+            requestPermissionForAlias("notificacoes", call, "aoPedirNotificacoes");
+            return;
+        }
+        if (!notificacoesLiberadas()) abrir(configuracoesDeNotificacao());
+        call.resolve();
+    }
+
+    @PermissionCallback
+    private void aoPedirNotificacoes(PluginCall call) {
+        // Se o Android não perguntou mais (negado antes), só resta a tela de configurações.
+        if (!notificacoesLiberadas()) abrir(configuracoesDeNotificacao());
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void abrirTelaCheia(PluginCall call) {
+        try {
+            abrir(
+                new Intent(
+                    Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                    Uri.fromParts("package", getContext().getPackageName(), null)
+                )
+            );
+        } catch (Exception e) {
+            abrir(detalhesDoApp());
+        }
+        call.resolve();
     }
 
     /**
@@ -83,11 +146,15 @@ public class ConfiabilidadePlugin extends Plugin {
         call.resolve();
     }
 
-    /** Tela do app nas configurações (notificações, bateria, permissões). */
     @PluginMethod
     public void abrirConfiguracoes(PluginCall call) {
         abrir(detalhesDoApp());
         call.resolve();
+    }
+
+    private Intent configuracoesDeNotificacao() {
+        return new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName());
     }
 
     private Intent detalhesDoApp() {

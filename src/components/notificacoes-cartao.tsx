@@ -3,9 +3,7 @@ import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
 import {
   ativarNotificacoes,
-  conectarUsuaria,
   desativarNotificacoes,
-  enviarNotificacaoTeste,
   estadoNotificacoes,
   MENSAGEM,
   type EstadoNotificacoes,
@@ -20,7 +18,7 @@ const TITULO: Record<EstadoNotificacoes, string> = {
   "sem-suporte": "⚠️ Este navegador não recebe notificações",
 };
 
-/** Estado e controles dos lembretes deste aparelho: ativar, reativar, desativar e testar. */
+/** Estado e controles dos lembretes deste aparelho: ativar, reativar e desativar. */
 export function NotificacoesCartao() {
   const { user } = useApp();
   const [estado, setEstado] = useState<EstadoNotificacoes | null>(null);
@@ -58,19 +56,6 @@ export function NotificacoesCartao() {
       toast.success("Lembretes desligados neste aparelho.");
     });
 
-  const testar = () =>
-    executar(async () => {
-      // Garante que este aparelho está ligado à conta antes de o servidor procurar por ele.
-      await conectarUsuaria(user.id);
-      const { enviado, motivo } = await enviarNotificacaoTeste();
-      if (enviado) toast.success("Teste enviado! Deve chegar em alguns segundos.");
-      else if (motivo === "sem-aparelho")
-        toast.error(
-          "Não encontramos este aparelho na sua conta. Desative e ative os lembretes de novo.",
-        );
-      else toast.error("Não foi possível enviar o teste agora. Tente de novo em instantes.");
-    });
-
   if (!estado) return null;
 
   const botao = "w-full rounded-2xl py-3 text-sm font-bold transition disabled:opacity-60";
@@ -85,13 +70,6 @@ export function NotificacoesCartao() {
             Você recebe um aviso no horário de cada remédio e outro 15 minutos depois, se a dose
             ainda não tiver sido registrada.
           </p>
-          <button
-            onClick={testar}
-            disabled={ocupado}
-            className={`${botao} bg-primary text-primary-foreground shadow-soft`}
-          >
-            🔔 Enviar notificação de teste
-          </button>
           <button
             onClick={desativar}
             disabled={ocupado}

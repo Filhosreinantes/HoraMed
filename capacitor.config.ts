@@ -6,12 +6,6 @@ const config: CapacitorConfig = {
   appName: "Rotina Azul",
   // Gerado por `bun run build:android` (site estático, sem servidor).
   webDir: "dist/client",
-  plugins: {
-    LocalNotifications: {
-      smallIcon: "ic_stat_lembrete",
-      iconColor: "#2C4A6B",
-    },
-  },
 };
 
 export default config;

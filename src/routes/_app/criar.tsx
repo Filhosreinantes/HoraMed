@@ -153,9 +153,14 @@ function Criar() {
 
   return (
     <div className="space-y-5">
-      <h1 className="font-display text-2xl font-semibold italic text-foreground text-center">
-        Novo compromisso
-      </h1>
+      <header className="text-center px-4 mb-2 flex flex-col items-center">
+        <h1 className="font-display text-4xl font-bold italic text-[var(--tema-escuro)] flex items-center justify-center gap-2">
+          Rotina Azul <span className="text-3xl not-italic">💙</span>
+        </h1>
+        <p className="text-sm font-semibold tracking-widest uppercase mt-1" style={{ color: "var(--tema)" }}>
+          Novo compromisso
+        </p>
+      </header>
       <SeletorTesouro prefixo="Para" />
 
       {/* CARDS DE CATEGORIA */}

@@ -1,11 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { App as AppNativo } from "@capacitor/app";
-import { agendarAlarmes, ehAppAndroid } from "./alarmes";
+import { agendarAlarmes, confirmarDosesGravadas, dosesTomadasNoAlarme, ehAppAndroid } from "./alarmes";
 import { conectarUsuaria } from "./notificacoes";
 import { supabase } from "./supabase";
-import { nowLocalISO, resolverSituacoes, type Dados, type Item, type Pessoa } from "./cuidados";
+import { doseRegistrada, nowLocalISO, resolverSituacoes, uid, type Dados, type Item, type Pessoa } from "./cuidados";
 
 interface Ctx {
   user: User;
@@ -156,6 +156,77 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     // Os lembretes de medicação são enviados pelo servidor (rotina-azul-lembretes).
     return true;
   };
+
+  // Doses marcadas como "Já tomei" na tela de alarme (feita pelo código nativo, que não
+  // acessa o servidor): grava como o botão "Tomei" do app, com o desconto de estoque.
+  const salvarRef = useRef(salvarRegistros);
+  salvarRef.current = salvarRegistros;
+  const sincronizandoDoses = useRef(false);
+  useEffect(() => {
+    if (carregando || !ehAppAndroid() || sincronizandoDoses.current) return;
+    sincronizandoDoses.current = true;
+    (async () => {
+      const doses = await dosesTomadasNoAlarme();
+      if (!doses.length) return;
+      const meds = resolverSituacoes(
+        registros.filter((d) => d.cuidado && d.tipo !== "medicacao_logs"),
+      );
+      const logsAtuais = registros.filter((d) => d.tipo === "medicacao_logs");
+      const estoque = new Map<string, number>();
+      const gravadas: string[] = [];
+      for (const dose of doses) {
+        if (doseRegistrada(logsAtuais, dose.medId, dose.data, dose.horario)) {
+          gravadas.push(dose.chave);
+          continue;
+        }
+        const med = meds.find((m) => m.id === dose.medId);
+        const nome = dose.medicamento || med?.medicamento || "";
+        let ok = await salvarRef.current(
+          [
+            {
+              id: uid(),
+              pessoaId: dose.pessoaId,
+              criadoEm: nowLocalISO(),
+              titulo: `Tomou: ${nome} (${dose.horario})`,
+              cuidado: "Medicação_Log" as unknown as Dados["cuidado"],
+              evento: true,
+              parentId: dose.medId,
+              data: dose.data,
+              horario: dose.horario,
+            },
+          ],
+          "medicacao_logs",
+        );
+        if (ok && med && med.estoqueAtual !== undefined && med.dosagemUnidade !== "ml") {
+          const atual = estoque.get(med.id) ?? med.estoqueAtual;
+          const novo = Math.max(0, atual - Number(med.dosagemValor || 1));
+          estoque.set(med.id, novo);
+          ok = await salvarRef.current(
+            [
+              {
+                id: uid(),
+                pessoaId: med.pessoaId,
+                criadoEm: nowLocalISO(),
+                titulo: "Atualização de estoque",
+                cuidado: med.cuidado,
+                evento: true,
+                parentId: med.id,
+                acao: "editar",
+                alteracoes: { estoqueAtual: novo },
+              },
+            ],
+            "acontecimentos",
+          );
+        }
+        if (ok) gravadas.push(dose.chave);
+      }
+      if (gravadas.length) await confirmarDosesGravadas(gravadas);
+    })()
+      .catch((e) => console.error("Erro ao gravar doses do alarme:", e))
+      .finally(() => {
+        sincronizandoDoses.current = false;
+      });
+  }, [carregando, registros]);
 
   const ativa = pessoas.find((p) => p.id === ativaId) ?? null;
   
