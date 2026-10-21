@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, Infinity as InfinityIcon, Info, RefreshCw } from "lucide-react";
+import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, Info, RefreshCw } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -217,7 +217,7 @@ function Acompanhamento() {
                   <div>
                     <p className="font-bold text-sm flex items-center gap-1">
                       {a.med.medicamento}
-                      {!a.med.fim && <InfinityIcon className="h-3 w-3 text-muted-foreground" title="Uso contínuo" />}
+                      {!a.med.fim && <span title="Uso contínuo" className="text-muted-foreground ml-1 text-xs">♾️</span>}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {a.med.dosagem}
@@ -429,7 +429,7 @@ function Acompanhamento() {
                   <CompromissoCard item={itemFormatado} compacto />
                   <p className="text-[11px] font-semibold text-muted-foreground pl-2 uppercase tracking-wide flex items-center gap-1">
                     {isHoje ? "Hoje" : dataFormatada}, às {a.horario}
-                    {!a.med.fim && <InfinityIcon className="h-3 w-3 text-muted-foreground/70" />}
+                    {!a.med.fim && <span title="Uso contínuo" className="text-muted-foreground/70 ml-1 text-xs">♾️</span>}
                   </p>
                 </div>
               );
