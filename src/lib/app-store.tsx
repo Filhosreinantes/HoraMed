@@ -164,10 +164,12 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     [registros, ativaId],
   );
 
-  const logs = useMemo(
-    () => registros.filter((d) => d.pessoaId === ativaId && d.tipo === "medicacao_logs"),
-    [registros, ativaId],
-  );
+  const logs = useMemo(() => {
+    const daPessoa = registros.filter((d) => d.pessoaId === ativaId && d.tipo === "medicacao_logs");
+    // Exclusões de doses: o log some e o próprio evento de exclusão não aparece na lista.
+    const excluidos = new Set(daPessoa.filter((d) => d.acao === "excluir" && d.parentId).map((d) => d.parentId));
+    return daPessoa.filter((d) => !d.acao && !excluidos.has(d.id));
+  }, [registros, ativaId]);
 
   return (
     <AppCtx.Provider value={{ user, pessoas, ativa, setAtivaId, itens, logs, carregando, recarregar, salvarRegistros, assinaturaAtiva, checarAssinatura }}>
