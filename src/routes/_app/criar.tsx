@@ -30,7 +30,6 @@ function Criar() {
   const [tipo, setTipo] = useState<Cuidado | null>(null);
   const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1" });
 
-  // Estados para Medicação
   const [fotoUrl, setFotoUrl] = useState("");
   const [enviandoFoto, setEnviandoFoto] = useState<"caixa" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,7 +46,6 @@ function Criar() {
     <input className="field" type={type} required={req} value={f[k] ?? ""} onChange={set(k)} />
   );
 
-  // ✅ Calcula os horários automaticamente
   const calcularHorarios = () => {
     if (!horaInicial) return [];
     const [h, m] = horaInicial.split(":").map(Number);
@@ -71,7 +69,6 @@ function Criar() {
     );
   };
 
-  // ✅ Upload de Foto (apenas caixa)
   const fazerUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -154,7 +151,7 @@ function Criar() {
       </h1>
       <SeletorTesouro prefixo="Para" />
 
-      {/* ✅ CARDS COM EFEITO AURA */}
+      {/* ✅ CARDS COM BORDA DOURADA + AURA QUANDO SELECIONADO */}
       <div className="grid grid-cols-2 gap-3">
         {[
           { tipo: "Consulta", icone: Stethoscope },
@@ -167,27 +164,24 @@ function Criar() {
             <button
               key={c}
               onClick={() => setTipo(selecionado ? null : (c as Cuidado))}
-              className={`relative flex flex-col items-center justify-center gap-2 rounded-[2rem] border-2 bg-white p-4 transition-all duration-300 ${
-                selecionado ? "scale-[1.02]" : "hover:scale-[1.01]"
+              className={`notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10 ${
+                selecionado ? "border-[var(--tema)] ring-2 ring-[var(--tema-claro)]" : ""
               }`}
               style={{
-                borderColor: selecionado ? "var(--tema)" : "transparent",
                 boxShadow: selecionado
                   ? "0 10px 25px -5px var(--tema)"
                   : "0 4px 12px -4px rgba(0,0,0,0.05)",
               }}
             >
-              <div 
-  className="grid h-12 w-12 place-items-center rounded-full transition-colors"
-  style={{ 
-    // ✅ AQUI: Fundo sempre na cor clara da criança
-    backgroundColor: "var(--tema-claro)", 
-    // ✅ AQUI: O ícone sempre na cor escura da criança
-    color: "var(--tema-escuro)" 
-  }}
->
-  <Icone className="h-6 w-6" />
-</div>
+              <div
+                className="grid h-12 w-12 place-items-center rounded-full transition-colors"
+                style={{
+                  backgroundColor: selecionado ? "var(--tema-claro)" : "#F5F5F5",
+                  color: selecionado ? "var(--tema-escuro)" : "#888",
+                }}
+              >
+                <Icone className="h-6 w-6" />
+              </div>
               <span
                 className="font-display text-sm font-bold italic transition-colors"
                 style={{ color: selecionado ? "var(--tema-escuro)" : "#4A4A4A" }}
@@ -199,7 +193,6 @@ function Criar() {
         })}
       </div>
 
-      {/* ✅ FORMULÁRIO ELEGANTE (ACORDEÃO) */}
       {tipo && (
         <div className="relative mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="fixed inset-0 z-0" onClick={() => setTipo(null)} />
@@ -209,7 +202,6 @@ function Criar() {
             className="relative z-10 space-y-5 rounded-[2rem] bg-white p-6 shadow-xl"
             style={{ border: "1px solid var(--tema-claro)", borderTop: "4px solid var(--tema)" }}
           >
-            {/* ✅ CABEÇALHO DO FORMULÁRIO */}
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>
                 {tipo === "Medicação" ? "Nova Medicação" : `Novo(a) ${tipo}`}
@@ -223,7 +215,6 @@ function Criar() {
               </button>
             </div>
 
-            {/* ✅ ESTILO DOS CAMPOS */}
             <style>{`
               form input.field, form select.field, form textarea.field {
                 border-radius: 1rem;
@@ -245,7 +236,6 @@ function Criar() {
               }
             `}</style>
 
-            {/* CAMPOS: CONSULTA */}
             {tipo === "Consulta" && (
               <>
                 <div className="grid grid-cols-2 gap-3">
@@ -258,7 +248,6 @@ function Criar() {
               </>
             )}
 
-            {/* CAMPOS: TERAPIA */}
             {tipo === "Terapia" && (
               <>
                 <Campo label="Tipo">{inp("tipoTerapia", "text", true)}</Campo>
@@ -295,7 +284,6 @@ function Criar() {
               </>
             )}
 
-            {/* CAMPOS: EXAME */}
             {tipo === "Exame" && (
               <>
                 <Campo label="Tipo de exame">{inp("tipoExame", "text", true)}</Campo>
@@ -311,13 +299,11 @@ function Criar() {
               </>
             )}
 
-            {/* CAMPOS: MEDICAÇÃO */}
             {tipo === "Medicação" && (
               <>
                 <Campo label="Nome">{inp("medicamento", "text", true)}</Campo>
                 <Campo label="Dosagem">{inp("dosagem")}</Campo>
 
-                {/* ✅ FOTO APENAS DA CAIXA */}
                 <div>
                   <span className="text-xs font-semibold block mb-1">Foto da Caixa</span>
                   {fotoUrl ? (
@@ -350,7 +336,6 @@ function Criar() {
                   />
                 </div>
 
-                {/* ✅ HORÁRIOS INTELIGENTES */}
                 <div className="space-y-3">
                   <span className="text-sm font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Horários</span>
                   <div className="grid grid-cols-2 gap-3">
@@ -372,7 +357,6 @@ function Criar() {
                   </div>
                 </div>
 
-                {/* ✅ DIAS DA SEMANA */}
                 <div className="space-y-3">
                   <span className="text-sm font-semibold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Dias da Semana</span>
                   <p className="text-xs text-muted-foreground">Desmarque os dias em que NÃO vai tomar o remédio.</p>
@@ -407,7 +391,6 @@ function Criar() {
 
             <Divisor />
 
-            {/* ✅ BOTÃO DE SALVAR COM ESPAÇO EXTRA */}
             <div className="pt-4 pb-24">
               <Botao
                 type="submit"
