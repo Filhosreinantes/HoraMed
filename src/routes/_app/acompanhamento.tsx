@@ -4,7 +4,7 @@ import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pil
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
-  nowLocalISO, uid, type Cuidado, type Situacao, type Dados, parseYMD
+  nowLocalISO, uid, type Cuidado, type Situacao, type Dados, parseYMD, toYMD
 } from "@/lib/cuidados";
 import { Botao, Divisor, Pill, SeletorTesouro } from "@/components/ui-kit";
 import { CompromissoCard } from "@/components/compromisso-card";
@@ -39,7 +39,6 @@ function Acompanhamento() {
   const [filtroMed, setFiltroMed] = useState("");
   const [dataHistorico, setDataHistorico] = useState(hojeYMD());
 
-  // ✅ Estados do Planejador de Viagens
   const [viagemInicio, setViagemInicio] = useState(hojeYMD());
   const [viagemFim, setViagemFim] = useState(hojeYMD());
 
@@ -95,25 +94,20 @@ function Acompanhamento() {
     }
   };
 
-  // ✅ Cálculo automático da viagem
   const duracaoViagem = () => {
     if (!viagemInicio || !viagemFim) return 0;
     const d1 = parseYMD(viagemInicio); 
     const d2 = parseYMD(viagemFim);
-    if (d2 < d1) return 0; // Proteção caso a data fim seja menor que a inicial
+    if (d2 < d1) return 0;
     return Math.ceil(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   };
 
   const calcularViagem = () => {
     const dias = duracaoViagem();
     if (dias === 0) return [];
-
     return emUso.map(med => {
-      // Considera que se tem 3 horários, são 3 tomadas por dia
       const vezesAoDia = med.horarios?.length || 1;
       const dosagem = Number(med.dosagemValor || 1);
-      
-      // Quantidade total: Dias * Vezes ao dia * Dosagem por vez
       const total = dias * vezesAoDia * dosagem;
       const unidade = med.dosagemUnidade || "un";
       return { med, total, unidade };
@@ -122,7 +116,7 @@ function Acompanhamento() {
 
   if (carregando) return <div className="space-y-3 p-4"><Skeleton className="h-40 rounded-3xl bg-muted" /><Skeleton className="h-40 rounded-3xl bg-muted" /></div>;
 
-  // --- MENU INICIAL (DASHBOARD) ---
+  // --- MENU INICIAL ---
   if (view === "menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
@@ -137,7 +131,6 @@ function Acompanhamento() {
             <Clock className="h-5 w-5" style={{ color: "var(--tema)" }} /> Lembretes de Hoje
           </h2>
 
-          {/* CARD 1: MEDICAÇÕES */}
           <div className="notebook p-4 space-y-3 mb-4" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
             <p className="font-display text-base font-bold text-muted-foreground border-b border-border/50 pb-2">Medicações</p>
             {agendaHoje.length === 0 ? (
@@ -168,7 +161,6 @@ function Acompanhamento() {
             )}
           </div>
 
-          {/* CARD 2: COMPROMISSOS */}
           <div className="notebook p-4 space-y-3" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
             <p className="font-display text-base font-bold text-muted-foreground border-b border-border/50 pb-2">Compromissos</p>
             <div className="space-y-3">
@@ -183,7 +175,6 @@ function Acompanhamento() {
           </div>
         </div>
 
-        {/* BOTÕES DE NAVEGAÇÃO INFERIORES */}
         <div className="grid grid-cols-2 gap-4 px-4 mt-6">
           <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
             <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
@@ -258,7 +249,7 @@ function Acompanhamento() {
             {filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao).length === 0 ? (
               <p className="text-sm text-muted-foreground">Nada por aqui.</p>
             ) : (
-              ordenarPorDataHora(filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)).map((i) => <CompromissoCard key={i.id} item={i} compacto />)
+              ordenarPorDataHora(filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)).map((i) => <CompromissoCard key={i.id} item={i} />)
             )}
           </section>
         )}
@@ -277,7 +268,7 @@ function Acompanhamento() {
             <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso agendado.</p>
           ) : (
             <div className="max-h-[400px] space-y-2 overflow-y-auto pr-1">
-              {proximos.map((i) => <CompromissoCard key={i.id} item={i} compacto />)}
+              {proximos.map((i) => <CompromissoCard key={i.id} item={i} />)}
             </div>
           )}
         </section>
@@ -292,7 +283,6 @@ function Acompanhamento() {
       <header><h1 className="text-2xl font-semibold">Medicações</h1></header>
       <SeletorTesouro />
 
-      {/* HISTÓRICO */}
       <section className="notebook p-5 space-y-4 relative" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
         <div className="flex items-center gap-2 mb-2">
           <History className="h-4 w-4" style={{ color: "var(--tema)" }} />
@@ -320,8 +310,24 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* MEUS REMÉDIOS */}
-      <section className="notebook p-5 space-y-4 relative" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
+      {/* ✅ TODOS OS PRÓXIMOS AGENDAMENTOS (Subiu para cima de Meus Remédios) */}
+      <section className="space-y-3 mt-4">
+        <h2 className="font-sans text-base font-semibold text-foreground">
+          Todos os próximos agendamentos
+        </h2>
+        <div className="space-y-3">
+          {proximasDoses.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic">Nenhuma dose pendente para hoje.</p>
+          ) : (
+            proximasDoses.map((a, idx) => {
+              const itemFormatado = { ...a.med, data: hoje, hora: a.horario, situacao: "proximo" } as Item;
+              return <CompromissoCard key={`${a.med.id}-${a.horario}-${idx}`} item={itemFormatado} compacto />;
+            })
+          )}
+        </div>
+      </section>
+
+      <section className="notebook p-5 space-y-4 relative mt-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
         <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
           <PillIcon className="h-4 w-4" style={{ color: "var(--tema)" }} /> Meus Remédios
         </h2>
@@ -337,35 +343,7 @@ function Acompanhamento() {
         </div>
       </section>
 
-      {/* TODOS OS PRÓXIMOS AGENDAMENTOS */}
-      <section className="space-y-3 mt-4">
-        <h2 className="font-sans text-base font-semibold text-foreground">
-          Todos os próximos agendamentos
-        </h2>
-        <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
-          {proximasDoses.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">Nenhuma dose pendente para hoje.</p>
-          ) : (
-            proximasDoses.map((a, idx) => (
-              <div key={idx} className="notebook flex items-center justify-between p-3" style={{ borderColor: "var(--tema-claro)" }}>
-                <div className="flex items-center gap-3">
-                  <div className="grid h-8 w-8 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
-                    <PillIcon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">{a.med.medicamento}</p>
-                    <p className="text-xs text-muted-foreground">{a.med.dosagem}</p>
-                  </div>
-                </div>
-                <span className="font-display font-bold text-lg" style={{ color: "var(--tema)" }}>{a.horario}</span>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      {/* ✅ PLANEJADOR DE VIAGENS */}
-      <section className="notebook p-5 space-y-4 relative mt-6" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
+      <section className="notebook p-5 space-y-4 relative mt-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
         <div className="flex items-center gap-2 border-b border-border/50 pb-2 mb-2">
           <Plane className="h-5 w-5" style={{ color: "var(--tema)" }} />
           <h2 className="font-display text-lg font-bold italic" style={{ color: "var(--tema-escuro)" }}>Planejador de Viagens</h2>
@@ -412,7 +390,6 @@ function Acompanhamento() {
         </div>
       </section>
 
-      {/* MODAL ATRASO */}
       {atrasoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-sm space-y-4 rounded-3xl bg-card p-5 shadow-xl">
