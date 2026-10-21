@@ -46,11 +46,16 @@ export interface Dados {
   /** Change event: edits the parent's fields or removes it, keeping the original intact. */
   acao?: "editar" | "excluir" | undefined;
   alteracoes?: Partial<Dados> | undefined;
-  
-  // ✅ CAMPOS ADICIONADOS PARA FOTO E DIAS
+
+  // ✅ CAMPOS PARA FOTO E DIAS
   fotoUrl?: string | undefined;
   fotoPilula?: string | undefined;
   diasSemana?: number[] | undefined;
+
+  // ✅ CAMPOS PARA DOSAGEM SEPARADA E ESTOQUE
+  dosagemValor?: string | undefined;
+  dosagemUnidade?: string | undefined;
+  estoqueAtual?: number | undefined;
 }
 
 export const EMOJI: Record<Cuidado, string> = {
