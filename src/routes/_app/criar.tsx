@@ -8,7 +8,6 @@ import { DIAS_SEMANA, gerarSessoes, nowLocalISO, uid, hojeYMD, type Cuidado, typ
 import { Botao, Campo, Divisor, SeletorTesouro } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/_app/criar")({
-  // ✅ Tipagem correta para o TanStack Router
   validateSearch: (search: Record<string, unknown>): { duplicar?: string } => {
     return {
       duplicar: (search.duplicar as string) || undefined,
@@ -51,7 +50,7 @@ function Criar() {
 
   const [salvando, setSalvando] = useState(false);
 
-  // Preenchimento automático
+  // Preenchimento automático ao clicar em "Renovar"
   useEffect(() => {
     if (duplicar && itens.length > 0) {
       const med = itens.find(i => i.id === duplicar);
