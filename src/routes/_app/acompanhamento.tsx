@@ -1,4 +1,4 @@
-// @ts-nocheck
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, RefreshCw } from "lucide-react";
@@ -58,7 +58,6 @@ function Acompanhamento() {
   const emUso = ordenarPorDataHora(meds.filter((m) => medicacaoEmUso(m)));
   const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
 
-  // ✅ Lista de contínuos simplificada
   const continuos = useMemo(() => {
     const mapa: Record<string, any> = {};
     emUso.filter(m => !m.fim).forEach(m => {
