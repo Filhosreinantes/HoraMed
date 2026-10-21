@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { Check, ChevronDown, X, Clock, Pencil, Trash2, Stethoscope, Leaf, FileText, Pill, Save } from "lucide-react";
+import { Check, ChevronDown, X, Clock, Pencil, Trash2, Stethoscope, Leaf, FileText, Pill, Save, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { Botao, Selo } from "@/components/ui-kit";
 import { useApp } from "@/lib/app-store";
@@ -36,23 +36,23 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
     setExpandido(true);
   };
 
-  const salvarEdicao = async () => {
+  const salvarEdicao = async (isRemarcar: boolean = false) => {
     if (salvando) return;
     setSalvando(true);
     try {
       const { id, pessoaId, criadoEm, cuidado, evento, parentId, ...alteracoes } = formEdicao;
       
       const ok = await salvarRegistros([{
-        id: uid(), pessoaId, criadoEm: nowLocalISO(), titulo: `Editado`,
+        id: uid(), pessoaId, criadoEm: nowLocalISO(), titulo: isRemarcar ? `Remarcado` : `Editado`,
         cuidado, evento: true, parentId: id, acao: "editar", alteracoes
       }], cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos");
 
       if (ok) {
-        toast.success("Editado com sucesso!");
+        toast.success(isRemarcar ? "Sessão remarcada com sucesso!" : "Editado com sucesso!");
         setEditando(false);
       }
     } catch {
-      toast.error("Erro ao editar.");
+      toast.error("Erro ao salvar.");
     } finally {
       setSalvando(false);
     }
@@ -136,8 +136,8 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
             <div className="flex items-center gap-1">
               {editando ? (
                 <>
-                  <button onClick={salvarEdicao} disabled={salvando} className="p-1 text-green-600 hover:text-green-700 transition"><Save className="h-5 w-5" /></button>
-                  <button onClick={() => setEditando(false)} disabled={salvando} className="p-1 text-red-500 hover:text-red-600 transition"><X className="h-5 w-5" /></button>
+                  <button onClick={() => salvarEdicao(false)} disabled={salvando} className="p-1 text-green-600 hover:text-green-700 transition" title="Salvar"><Save className="h-5 w-5" /></button>
+                  <button onClick={() => setEditando(false)} disabled={salvando} className="p-1 text-red-500 hover:text-red-600 transition" title="Cancelar"><X className="h-5 w-5" /></button>
                 </>
               ) : (
                 <>
@@ -185,6 +185,17 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
                   <input type="text" className="field text-sm col-span-2" placeholder="Local" value={formEdicao.local || ""} onChange={e => setFormEdicao({ ...formEdicao, local: e.target.value })} />
                   <input type="text" className="field text-sm col-span-2" placeholder="Profissional" value={formEdicao.profissional || ""} onChange={e => setFormEdicao({ ...formEdicao, profissional: e.target.value })} />
                 </div>
+
+                {/* ✅ BOTÃO DE REMARCAR (Só aparece se não for medicação) */}
+                {!ehMedicamento && (
+                  <button 
+                    onClick={() => salvarEdicao(true)} 
+                    disabled={salvando}
+                    className="w-full mt-2 flex items-center justify-center gap-2 rounded-xl border border-[var(--tema)] bg-[var(--tema-claro)]/30 py-2 text-sm font-bold text-[var(--tema-escuro)] transition hover:bg-[var(--tema-claro)]/50"
+                  >
+                    <CalendarClock className="h-4 w-4" /> Salvar como Remarcação
+                  </button>
+                )}
               </div>
             ) : (
               <dl className="space-y-2 text-sm">
