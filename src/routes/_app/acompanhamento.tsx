@@ -57,13 +57,14 @@ function Acompanhamento() {
   const emUso = ordenarPorDataHora(meds.filter((m) => medicacaoEmUso(m)));
   const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
 
-  // ✅ Filtra os remédios contínuos para mostrar apenas o mais recente de cada nome (evita duplicar ao renovar)
   const continuos = useMemo(() => {
-    const mapa = new Map();
+    // ✅ Tipagem correta no Map para o Vercel não reclamar
+    const mapa = new Map<string, any>();
     emUso.filter(m => !m.fim).forEach(m => {
-      const existente = mapa.get(m.medicamento);
+      const nome = m.medicamento || "";
+      const existente = mapa.get(nome);
       if (!existente || (m.inicio || "") > (existente.inicio || "")) {
-        mapa.set(m.medicamento, m);
+        mapa.set(nome, m);
       }
     });
     return Array.from(mapa.values());
@@ -159,7 +160,6 @@ function Acompanhamento() {
 
     let ok = await salvarRegistros([dados], "medicacao_logs");
 
-    // Desconto de estoque (agora funciona para ml, gotas e unidades)
     if (ok && item.estoqueAtual !== undefined) {
       const qtdTomada = Number(item.dosagemValor || 1);
       const novoEstoque = Math.max(0, item.estoqueAtual - qtdTomada);
@@ -192,7 +192,8 @@ function Acompanhamento() {
     if (!viagemInicio || !viagemFim) return 0;
     const d1 = parseYMD(viagemInicio); 
     const d2 = parseYMD(viagemFim);
-    if (d2 < d1) return 0;
+    // ✅ Correção na comparação de datas para o TypeScript
+    if (d2.getTime() < d1.getTime()) return 0;
     return Math.ceil(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   };
 
@@ -409,7 +410,6 @@ function Acompanhamento() {
           Todos os próximos agendamentos
         </h2>
 
-        {/* ✅ AQUI ESTÁ A SIMPLIFICAÇÃO: Só duas linhas com data e botão */}
         {continuos.length > 0 && (
           <div className="space-y-2 mb-4">
             {continuos.map(m => {
@@ -418,7 +418,6 @@ function Acompanhamento() {
               limiteDate.setDate(limiteDate.getDate() + 15);
               const dataFormatada = `${String(limiteDate.getDate()).padStart(2, '0')}/${String(limiteDate.getMonth() + 1).padStart(2, '0')}/${limiteDate.getFullYear()}`;
               
-              // Verifica se já se passaram 10 dias do início (faltam 5 dias para acabar)
               const hojeDate = parseYMD(hoje);
               const diasPassados = Math.floor((hojeDate.getTime() - inicioDate.getTime()) / (1000 * 3600 * 24));
               const aviso = diasPassados >= 10;
@@ -450,7 +449,8 @@ function Acompanhamento() {
             <p className="text-sm text-muted-foreground italic">Nenhuma dose pendente.</p>
           ) : (
             proximosAgendamentos.map((a, idx) => {
-              const itemFormatado = { ...a.med, data: a.data, hora: a.horario, situacao: "proximo", cuidado: "Medicação" as Cuidado } as Item;
+              // ✅ Correção de tipagem aqui para o Vercel não reclamar
+              const itemFormatado = { ...a.med, data: a.data, hora: a.horario, situacao: "proximo", cuidado: "Medicação" as Cuidado } as unknown as Item;
               const isHoje = a.data === hoje;
               const [ano, mes, dia] = a.data.split("-");
               const dataFormatada = `${dia}/${mes}/${ano}`;
