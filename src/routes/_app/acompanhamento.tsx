@@ -4,7 +4,7 @@ import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pil
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
-  nowLocalISO, uid, type Cuidado, type Situacao, type Dados, parseYMD, toYMD
+  nowLocalISO, uid, type Cuidado, type Situacao, type Dados, parseYMD
 } from "@/lib/cuidados";
 import { Botao, Divisor, Pill, SeletorTesouro } from "@/components/ui-kit";
 import { CompromissoCard } from "@/components/compromisso-card";
@@ -249,13 +249,14 @@ function Acompanhamento() {
             {filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao).length === 0 ? (
               <p className="text-sm text-muted-foreground">Nada por aqui.</p>
             ) : (
-              ordenarPorDataHora(filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)).map((i) => <CompromissoCard key={i.id} item={i} />)
+              ordenarPorDataHora(filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)).map((i) => <CompromissoCard key={i.id} item={i} compacto />)
             )}
           </section>
         )}
 
         <Divisor />
         
+        {/* ✅ TODOS OS PRÓXIMOS COMPROMISSOS (Restaurado com o visual certo) */}
         <section className="space-y-3">
           <h2 className="text-xl font-semibold">Todos os próximos</h2>
           <select className="field text-sm p-2 w-full border-gold/30 bg-card mb-2" value={buscaProximos} onChange={(e) => setBuscaProximos(e.target.value)}>
@@ -268,7 +269,7 @@ function Acompanhamento() {
             <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso agendado.</p>
           ) : (
             <div className="max-h-[400px] space-y-2 overflow-y-auto pr-1">
-              {proximos.map((i) => <CompromissoCard key={i.id} item={i} />)}
+              {proximos.map((i) => <CompromissoCard key={i.id} item={i} compacto />)}
             </div>
           )}
         </section>
@@ -310,7 +311,7 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* ✅ TODOS OS PRÓXIMOS AGENDAMENTOS (Subiu para cima de Meus Remédios) */}
+      {/* ✅ TODOS OS PRÓXIMOS AGENDAMENTOS (Data Visível forçada) */}
       <section className="space-y-3 mt-4">
         <h2 className="font-sans text-base font-semibold text-foreground">
           Todos os próximos agendamentos
@@ -320,8 +321,15 @@ function Acompanhamento() {
             <p className="text-sm text-muted-foreground italic">Nenhuma dose pendente para hoje.</p>
           ) : (
             proximasDoses.map((a, idx) => {
-              const itemFormatado = { ...a.med, data: hoje, hora: a.horario, situacao: "proximo" } as Item;
-              return <CompromissoCard key={`${a.med.id}-${a.horario}-${idx}`} item={itemFormatado} compacto />;
+              const itemFormatado = { ...a.med, data: hoje, hora: a.horario, situacao: "proximo", cuidado: "Medicação" as Cuidado } as Item;
+              return (
+                <div key={`${a.med.id}-${a.horario}-${idx}`} className="space-y-2">
+                  <CompromissoCard item={itemFormatado} compacto />
+                  <p className="text-xs text-muted-foreground pl-2">
+                    Hoje, às {a.horario}
+                  </p>
+                </div>
+              );
             })
           )}
         </div>
