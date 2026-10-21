@@ -4,6 +4,9 @@ import { useApp } from "@/lib/app-store";
 import { SITUACAO_LABEL, type Situacao } from "@/lib/cuidados";
 import { cn } from "@/lib/utils";
 
+// ✅ Nome curto: só as 2 primeiras palavras
+const nomeCurto = (nome: string) => nome.trim().split(" ").slice(0, 2).join(" ");
+
 export function Divisor() {
   return (
     <div className="my-5 flex items-center gap-3 text-gold">
@@ -34,34 +37,24 @@ export function SeletorTesouro({
         type="button"
         onClick={() => interativo && setAberto((v) => !v)}
         disabled={!interativo}
-        className="flex w-full items-center justify-between rounded-2xl border p-3 text-left shadow-sm transition disabled:cursor-default"
-        style={{
-          backgroundColor: "var(--tema-claro, #E8F1F9)",
-          borderColor: "var(--tema, #5B92C7)",
-        }}
+        // ✅ Borda dourada + fundo branco (estilo "Meu Pedacinho Azul")
+        className="flex w-full items-center justify-between rounded-2xl border-2 border-gold/60 bg-white p-3 text-left shadow-sm transition disabled:cursor-default"
       >
         <div className="flex min-w-0 flex-col">
-          <span
-            className="text-[0.65rem] font-bold uppercase tracking-wider"
-            style={{ color: "var(--tema-escuro, #2C4A6B)" }}
-          >
+          <span className="text-[0.65rem] font-bold uppercase tracking-wider text-gold">
             {prefixo}
           </span>
-          <span
-            className="truncate font-display text-lg font-bold"
-            style={{ color: "var(--tema-escuro, #2C4A6B)" }}
-          >
-            {/* ✅ AQUI: O emoji foi adicionado antes do nome */}
-            {ativa.emoji} {ativa.nome}
+          <span className="truncate font-display text-lg font-bold text-foreground">
+            {/* ✅ Nome curto (2 primeiras palavras) */}
+            {ativa.emoji} {nomeCurto(ativa.nome)}
           </span>
         </div>
         {interativo && (
           <ChevronDown
             className={cn(
-              "h-5 w-5 shrink-0 transition-transform motion-reduce:transition-none",
+              "h-5 w-5 shrink-0 text-gold transition-transform motion-reduce:transition-none",
               aberto && "rotate-180",
             )}
-            style={{ color: "var(--tema-escuro, #2C4A6B)" }}
           />
         )}
       </button>
@@ -71,8 +64,7 @@ export function SeletorTesouro({
           <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} aria-hidden="true" />
           <ul
             role="listbox"
-            className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border bg-card shadow-soft"
-            style={{ borderColor: "var(--tema, #5B92C7)" }}
+            className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border-2 border-gold/60 bg-white shadow-soft"
           >
             {pessoas.map((p) => {
               const selecionado = p.id === ativa.id;
@@ -87,12 +79,12 @@ export function SeletorTesouro({
                       setAberto(false);
                     }}
                     className={cn(
-                      "block w-full px-4 py-2.5 text-left text-sm font-semibold transition hover:bg-muted",
+                      "block w-full px-4 py-2.5 text-left text-sm font-semibold text-foreground transition hover:bg-muted",
                       selecionado && "bg-muted",
                     )}
-                    style={{ color: "var(--tema-escuro, #2C4A6B)" }}
                   >
-                    {p.emoji} {p.nome}
+                    {/* ✅ Nome curto também no dropdown */}
+                    {p.emoji} {nomeCurto(p.nome)}
                   </button>
                 </li>
               );
