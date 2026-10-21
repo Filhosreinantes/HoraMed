@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
@@ -31,63 +31,6 @@ const LINHAS: { s: Situacao; label: string }[] = [
   { s: "cancelado", label: "Cancelou" },
   { s: "proximo", label: "Próximos" },
 ];
-
-function ProximoRemedioCard() {
-  const { itens } = useApp();
-  const [proximo, setProximo] = useState<{ item: any; horario: string } | null>(null);
-
-  useEffect(() => {
-    const agora = new Date();
-    const horaAtual = agora.getHours() * 60 + agora.getMinutes();
-    let menorDiferenca = Infinity;
-    let achou: { item: any; horario: string } | null = null;
-
-    itens
-      .filter((i) => i.cuidado === "Medicação")
-      .forEach((med) => {
-        const diaSemana = agora.getDay();
-        if (med.diasSemana && med.diasSemana.length > 0 && !med.diasSemana.includes(diaSemana)) return;
-
-        const horarios = med.horarios || [];
-        horarios.forEach((h: string) => {
-          const [hh, mm] = h.split(":").map(Number);
-          const minutosHorario = hh * 60 + mm;
-          const diferenca = minutosHorario - horaAtual;
-
-          if (diferenca >= 0 && diferenca < menorDiferenca) {
-            menorDiferenca = diferenca;
-            achou = { item: med, horario: h };
-          }
-        });
-      });
-
-    setProximo(achou);
-  }, [itens]);
-
-  if (!proximo) return null;
-
-  return (
-    <div
-      className="mx-4 mt-4 overflow-hidden rounded-3xl p-5 shadow-lg"
-      style={{
-        background: "linear-gradient(135deg, var(--tema), var(--tema-escuro))",
-        color: "white",
-      }}
-    >
-      <p className="text-xs font-bold uppercase tracking-wider opacity-80">Próximo Remédio</p>
-      <div className="mt-1 flex items-center justify-between">
-        <div>
-          <h3 className="font-display text-2xl font-bold italic">{proximo.item.medicamento}</h3>
-          <p className="text-sm opacity-90">{proximo.item.dosagem || "Dose padrão"}</p>
-        </div>
-        <div className="text-right">
-          <p className="font-display text-3xl font-bold">{proximo.horario}</p>
-          <p className="text-xs opacity-80">Hoje</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function Acompanhamento() {
   const { itens, logs, carregando, salvarRegistros } = useApp();
@@ -136,7 +79,6 @@ function Acompanhamento() {
     return arr.sort((a, b) => a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
-  // ✅ Lista de doses futuras de hoje (para o bloco "Todos os próximos agendamentos")
   const proximasDoses = agendaHoje.filter((a) => !a.log);
 
   const logsFiltrados = useMemo(() => {
@@ -145,6 +87,17 @@ function Acompanhamento() {
       .filter((i: any) => i.data === dataHistorico)
       .sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
   }, [logs, filtroMed, dataHistorico]);
+
+  // ✅ Calcula em que dia o remédio acaba (estoque / consumo diário)
+  const calcularFimEstoque = (med: any) => {
+    if (!med.estoqueAtual || !med.horarios || med.horarios.length === 0) return null;
+    const consumoDiario = Number(med.dosagemValor || 1) * med.horarios.length;
+    const diasRestantes = Math.floor(med.estoqueAtual / consumoDiario);
+    if (diasRestantes <= 0) return "Hoje";
+    const dataFim = new Date();
+    dataFim.setDate(dataFim.getDate() + diasRestantes);
+    return dataFim.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  };
 
   const registrarMedicacao = async (item: any, horario: string, novoHorario?: string) => {
     const titulo = novoHorario
@@ -172,12 +125,12 @@ function Acompanhamento() {
     );
   }
 
-  // --- MENU INICIAL ---
+  // --- MENU INICIAL (DASHBOARD) ---
   if (view === "menu") {
     return (
       <div className="mx-auto max-w-lg space-y-5 py-6">
-        <header className="text-center">
-          <h1 className="font-display text-3xl font-semibold italic">Acompanhamento</h1>
+        <header className="text-center mb-6">
+          <h1 className="text-3xl font-semibold">Acompanhamento</h1>
           <p className="text-sm text-muted-foreground">O que você quer ver hoje?</p>
         </header>
 
@@ -185,39 +138,75 @@ function Acompanhamento() {
           <SeletorTesouro />
         </div>
 
-        <ProximoRemedioCard />
-
-        <div className="grid grid-cols-2 gap-3 px-4 mt-6">
-          <button
-            onClick={() => setView("compromissos")}
-            className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10"
+        {/* ✅ BLOCO 1: REMÉDIOS DE HOJE */}
+        <section className="px-4 mt-6">
+          <h2 className="font-display text-xl font-bold italic mb-3" style={{ color: "var(--tema-escuro)" }}>
+            Lembretes de Hoje
+          </h2>
+          <div
+            className="notebook p-4 space-y-3"
+            style={{ boxShadow: "0 0 30px 5px var(--tema-claro)", border: "1px solid var(--tema)" }}
           >
-            <div
-              className="grid h-12 w-12 place-items-center rounded-full"
-              style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
-            >
-              <Stethoscope className="h-6 w-6" />
-            </div>
-            <span className="font-display text-base font-semibold italic text-foreground text-center">
-              Compromissos
-            </span>
-          </button>
+            {agendaHoje.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum remédio para hoje.</p>
+            ) : (
+              agendaHoje.map((a, idx) => (
+                <div key={idx} className="flex items-center justify-between border-b border-border/50 pb-2 last:border-0 last:pb-0">
+                  <div>
+                    <p className="font-bold text-sm">{a.med.medicamento}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {a.horario}
+                      {a.med.estoqueAtual !== undefined && ` · Restam ${a.med.estoqueAtual} ${a.med.dosagemUnidade?.toLowerCase() ?? ""}`}
+                    </p>
+                  </div>
+                  {a.log ? (
+                    <span className="text-xs font-bold text-green-600 flex items-center gap-1">
+                      <Check className="h-3 w-3" /> Tomou
+                    </span>
+                  ) : (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => registrarMedicacao(a.med, a.horario)}
+                        className="rounded-full bg-[var(--tema)] px-2 py-1 text-[10px] font-bold text-white shadow-sm"
+                      >
+                        Tomei
+                      </button>
+                      <button
+                        onClick={() => setAtrasoModal({ item: a.med, horario: a.horario })}
+                        className="rounded-full border border-[var(--tema)] px-2 py-1 text-[10px] font-bold text-[var(--tema-escuro)]"
+                      >
+                        Atrasei
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </section>
 
-          <button
-            onClick={() => setView("medicacoes")}
-            className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10"
-          >
-            <div
-              className="grid h-12 w-12 place-items-center rounded-full"
-              style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
+        {/* ✅ BLOCO 2: PRÓXIMOS COMPROMISSOS */}
+        <section className="px-4 mt-6">
+          <h2 className="font-display text-xl font-bold italic mb-3" style={{ color: "var(--tema-escuro)" }}>
+            Próximos Compromissos
+          </h2>
+          <div className="space-y-2">
+            {proximos.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum compromisso agendado.</p>
+            ) : (
+              proximos.slice(0, 3).map((i) => (
+                <CompromissoCard key={i.id} item={i} compacto />
+              ))
+            )}
+            <button
+              onClick={() => setView("compromissos")}
+              className="w-full text-center text-sm font-semibold py-2"
+              style={{ color: "var(--tema)" }}
             >
-              <PillIcon className="h-6 w-6" />
-            </div>
-            <span className="font-display text-base font-semibold italic text-foreground text-center">
-              Medicações
-            </span>
-          </button>
-        </div>
+              Ver todos os compromissos →
+            </button>
+          </div>
+        </section>
       </div>
     );
   }
@@ -347,7 +336,7 @@ function Acompanhamento() {
       </header>
       <SeletorTesouro />
 
-      {/* ✅ LEMBRETES DE HOJE — AURA 3x MAIS FORTE */}
+      {/* ✅ LEMBRETES DE HOJE — com estoque */}
       <section
         className="notebook p-5 space-y-4 relative"
         style={{
@@ -369,7 +358,10 @@ function Acompanhamento() {
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-semibold text-sm">{a.med.medicamento}{a.med.dosagem && <span className="text-xs text-muted-foreground font-normal"> ({a.med.dosagem})</span>}</p>
-                    <p className="text-xs text-muted-foreground">Horário: {a.horario}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Horário: {a.horario}
+                      {a.med.estoqueAtual !== undefined && ` · Restam ${a.med.estoqueAtual} ${a.med.dosagemUnidade?.toLowerCase() ?? ""}`}
+                    </p>
                   </div>
                   {a.log ? (
                     <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-bold text-green-700">
@@ -398,7 +390,7 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* ✅ HISTÓRICO */}
+      {/* HISTÓRICO */}
       <section
         className="notebook p-5 space-y-4 relative"
         style={{
@@ -434,7 +426,7 @@ function Acompanhamento() {
         )}
       </section>
 
-      {/* ✅ MEUS REMÉDIOS COM FILTROS FUNCIONAIS */}
+      {/* MEUS REMÉDIOS + previsão de término */}
       <section
         className="notebook p-5 space-y-4 relative"
         style={{
@@ -457,13 +449,25 @@ function Acompanhamento() {
 
         <div className="space-y-2 mt-2">
           {filtroRemedios === "uso"
-            ? emUso.map(m => <CompromissoCard key={m.id} item={m} compacto />)
+            ? emUso.map((m) => {
+                const previsao = calcularFimEstoque(m);
+                return (
+                  <div key={m.id} className="space-y-1">
+                    <CompromissoCard item={m} compacto />
+                    {previsao && (
+                      <p className="text-xs text-muted-foreground pl-2">
+                        Dia {previsao} acaba seu remédio.
+                      </p>
+                    )}
+                  </div>
+                );
+              })
             : encerradas.map(m => <CompromissoCard key={m.id} item={m} compacto />)
           }
         </div>
       </section>
 
-      {/* ✅ TODOS OS PRÓXIMOS AGENDAMENTOS (doses futuras de hoje) */}
+      {/* TODOS OS PRÓXIMOS AGENDAMENTOS (doses futuras de hoje) */}
       <section className="space-y-3 mt-8 pb-24">
         <h2 className="font-sans text-base font-semibold text-foreground">
           Todos os próximos agendamentos
