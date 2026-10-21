@@ -32,10 +32,8 @@ function Criar() {
   
   // Estados para Medicação
   const [fotoUrl, setFotoUrl] = useState("");
-  const [fotoPilula, setFotoPilula] = useState("");
-  const [enviandoFoto, setEnviandoFoto] = useState<"caixa" | "pilula" | null>(null);
+  const [enviandoFoto, setEnviandoFoto] = useState<"caixa" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const filePilulaRef = useRef<HTMLInputElement>(null);
   
   const [vezesAoDia, setVezesAoDia] = useState(1);
   const [horaInicial, setHoraInicial] = useState("08:00");
@@ -73,12 +71,12 @@ function Criar() {
     );
   };
 
-  // ✅ Upload de Fotos
-  const fazerUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>, tipoFoto: "caixa" | "pilula") => {
+  // ✅ Upload de Foto (apenas caixa)
+  const fazerUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    setEnviandoFoto(tipoFoto);
+    setEnviandoFoto("caixa");
     const extensao = file.name.split(".").pop();
     const nomeArquivo = `${Date.now()}-${Math.random().toString(36).substring(7)}.${extensao}`;
 
@@ -92,8 +90,7 @@ function Criar() {
     }
     
     const { data: publicUrl } = supabase.storage.from("medicamentos").getPublicUrl(data.path);
-    if (tipoFoto === "caixa") setFotoUrl(publicUrl.publicUrl);
-    else setFotoPilula(publicUrl.publicUrl);
+    setFotoUrl(publicUrl.publicUrl);
     
     setEnviandoFoto(null);
     toast.success("Foto anexada!");
@@ -124,7 +121,6 @@ function Criar() {
         inicio: f.inicio, 
         fim: f.fim || undefined,
         fotoUrl: fotoUrl,
-        fotoPilula: fotoPilula,
         diasSemana: diasSemana,
       }];
     } else {
@@ -153,7 +149,7 @@ function Criar() {
 
   return (
     <div className="space-y-5">
-      <h1 className="font-display text-3xl font-semibold italic text-foreground text-center">
+      <h1 className="font-display text-2xl font-semibold italic text-foreground text-center">
         Novo compromisso
       </h1>
       <SeletorTesouro prefixo="Para" />
@@ -167,7 +163,7 @@ function Criar() {
         ].map(({ tipo: c, icone: Icone }) => (
           <button
             key={c}
-            onClick={() => setTipo(c as Cuidado)}
+            onClick={() => setTipo(tipo === c ? null : (c as Cuidado))}
             className={`notebook flex flex-col items-center justify-center gap-2 p-4 transition hover:bg-muted/10 ${
               tipo === c ? "border-[var(--tema)] ring-2 ring-[var(--tema-claro)]" : "border-gold/60"
             }`}
@@ -186,174 +182,201 @@ function Criar() {
       </div>
 
       {tipo && (
-        <form onSubmit={guardar} className="notebook space-y-4 p-5">
-          <h2 className="text-xl font-semibold">{tipo}</h2>
+        <div className="relative">
+          {/* Fundo invisível para fechar ao clicar fora */}
+          <div className="fixed inset-0 z-0" onClick={() => setTipo(null)} />
           
-          {tipo === "Consulta" && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <Campo label="Data">{inp("data", "date", true)}</Campo>
-                <Campo label="Hora">{inp("hora", "time")}</Campo>
-              </div>
-              <Campo label="Local">{inp("local")}</Campo>
-              <Campo label="Profissional">{inp("profissional")}</Campo>
-              <Campo label="Especialidade">{inp("especialidade")}</Campo>
-            </>
-          )}
-          
-          {tipo === "Terapia" && (
-            <>
-              <Campo label="Tipo">{inp("tipoTerapia", "text", true)}</Campo>
-              <Campo label="Profissional">{inp("profissional")}</Campo>
-              <Campo label="Local">{inp("local")}</Campo>
-              <Campo label="Programação">
-                <select className="field" value={f.programacao} onChange={set("programacao")}>
-                  <option value="unica">Sessão única</option>
-                  <option value="semanal">Toda semana</option>
-                  <option value="quinzenal">A cada 15 dias</option>
-                  <option value="mensal">Uma vez por mês</option>
-                </select>
-              </Campo>
-              {f.programacao === "semanal" && (
-                <Campo label="Dia da semana">
-                  <select className="field" value={f.diaSemana} onChange={set("diaSemana")}>
-                    {DIAS_SEMANA.map((d, i) => <option key={d} value={i}>{d}</option>)}
-                  </select>
-                </Campo>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <Campo label="Primeira sessão">{inp("data", "date", true)}</Campo>
-                <Campo label="Hora">{inp("hora", "time")}</Campo>
-              </div>
-              {f.programacao !== "unica" && (
-                <Campo label="Por quanto tempo">
-                  <select className="field" value={f.meses} onChange={set("meses")}>
-                    <option value="3">3 meses</option>
-                    <option value="6">6 meses</option>
-                    <option value="12">12 meses</option>
-                  </select>
-                </Campo>
-              )}
-            </>
-          )}
-          
-          {tipo === "Exame" && (
-            <>
-              <Campo label="Tipo de exame">{inp("tipoExame", "text", true)}</Campo>
-              <div className="grid grid-cols-2 gap-3">
-                <Campo label="Data">{inp("data", "date", true)}</Campo>
-                <Campo label="Hora">{inp("hora", "time")}</Campo>
-              </div>
-              <Campo label="Local">{inp("local")}</Campo>
-              <Campo label="Profissional / solicitante">{inp("profissional")}</Campo>
-              <Campo label="Recomendações">
-                <textarea className="field min-h-24" value={f.recomendacoes ?? ""} onChange={set("recomendacoes")} />
-              </Campo>
-            </>
-          )}
-          
-          {tipo === "Medicação" && (
-            <>
-              <Campo label="Nome">{inp("medicamento", "text", true)}</Campo>
-              <Campo label="Dosagem">{inp("dosagem")}</Campo>
+          <form 
+            onSubmit={guardar} 
+            className="notebook relative z-10 space-y-4 p-5" 
+            style={{ borderColor: "var(--tema)" }}
+          >
+            <style>{`
+              form input.field, form select.field, form textarea.field {
+                border-color: var(--tema-claro);
+                background-color: white;
+              }
+              form input.field:focus, form select.field:focus, form textarea.field:focus {
+                border-color: var(--tema);
+                box-shadow: 0 0 0 3px var(--tema-claro);
+              }
+            `}</style>
 
-              {/* ✅ FOTOS */}
-              <div className="flex gap-4">
+            {/* Botão Fechar alinhado à direita */}
+            <div className="flex justify-end -mb-2">
+              <button 
+                type="button" 
+                onClick={() => setTipo(null)} 
+                className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground hover:bg-muted/80"
+              >
+                <X className="h-3 w-3" /> Fechar
+              </button>
+            </div>
+
+            <h2 className="text-xl font-semibold">{tipo}</h2>
+            
+            {tipo === "Consulta" && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Campo label="Data">{inp("data", "date", true)}</Campo>
+                  <Campo label="Hora">{inp("hora", "time")}</Campo>
+                </div>
+                <Campo label="Local">{inp("local")}</Campo>
+                <Campo label="Profissional">{inp("profissional")}</Campo>
+                <Campo label="Especialidade">{inp("especialidade")}</Campo>
+              </>
+            )}
+            
+            {tipo === "Terapia" && (
+              <>
+                <Campo label="Tipo">{inp("tipoTerapia", "text", true)}</Campo>
+                <Campo label="Profissional">{inp("profissional")}</Campo>
+                <Campo label="Local">{inp("local")}</Campo>
+                <Campo label="Programação">
+                  <select className="field" value={f.programacao} onChange={set("programacao")}>
+                    <option value="unica">Sessão única</option>
+                    <option value="semanal">Toda semana</option>
+                    <option value="quinzenal">A cada 15 dias</option>
+                    <option value="mensal">Uma vez por mês</option>
+                  </select>
+                </Campo>
+                {f.programacao === "semanal" && (
+                  <Campo label="Dia da semana">
+                    <select className="field" value={f.diaSemana} onChange={set("diaSemana")}>
+                      {DIAS_SEMANA.map((d, i) => <option key={d} value={i}>{d}</option>)}
+                    </select>
+                  </Campo>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <Campo label="Primeira sessão">{inp("data", "date", true)}</Campo>
+                  <Campo label="Hora">{inp("hora", "time")}</Campo>
+                </div>
+                {f.programacao !== "unica" && (
+                  <Campo label="Por quanto tempo">
+                    <select className="field" value={f.meses} onChange={set("meses")}>
+                      <option value="3">3 meses</option>
+                      <option value="6">6 meses</option>
+                      <option value="12">12 meses</option>
+                    </select>
+                  </Campo>
+                )}
+              </>
+            )}
+            
+            {tipo === "Exame" && (
+              <>
+                <Campo label="Tipo de exame">{inp("tipoExame", "text", true)}</Campo>
+                <div className="grid grid-cols-2 gap-3">
+                  <Campo label="Data">{inp("data", "date", true)}</Campo>
+                  <Campo label="Hora">{inp("hora", "time")}</Campo>
+                </div>
+                <Campo label="Local">{inp("local")}</Campo>
+                <Campo label="Profissional / solicitante">{inp("profissional")}</Campo>
+                <Campo label="Recomendações">
+                  <textarea className="field min-h-24" value={f.recomendacoes ?? ""} onChange={set("recomendacoes")} />
+                </Campo>
+              </>
+            )}
+            
+            {tipo === "Medicação" && (
+              <>
+                <Campo label="Nome">{inp("medicamento", "text", true)}</Campo>
+                <Campo label="Dosagem">{inp("dosagem")}</Campo>
+
+                {/* ✅ FOTO APENAS DA CAIXA */}
                 <div>
                   <span className="text-xs font-semibold block mb-1">Foto da Caixa</span>
                   {fotoUrl ? (
                     <div className="relative w-20 h-20 overflow-hidden rounded-xl border border-gold/40">
                       <img src={fotoUrl} alt="Caixa" className="h-full w-full object-cover" />
-                      <button type="button" onClick={() => setFotoUrl("")} className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white">
+                      <button 
+                        type="button" 
+                        onClick={() => setFotoUrl("")} 
+                        className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white"
+                      >
                         <X className="h-3 w-3" />
                       </button>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="flex h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed border-gold/40 bg-muted/30">
+                    <button 
+                      type="button" 
+                      onClick={() => fileInputRef.current?.click()} 
+                      className="flex h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed border-gold/40 bg-muted/30"
+                    >
                       {enviandoFoto === "caixa" ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Camera className="h-5 w-5 text-muted-foreground" />}
                     </button>
                   )}
-                  <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={(e) => fazerUploadFoto(e, "caixa")} className="hidden" />
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    capture="environment" 
+                    ref={fileInputRef} 
+                    onChange={fazerUploadFoto} 
+                    className="hidden" 
+                  />
                 </div>
 
-                <div>
-                  <span className="text-xs font-semibold block mb-1">Foto da Pílula</span>
-                  {fotoPilula ? (
-                    <div className="relative w-20 h-20 overflow-hidden rounded-xl border border-gold/40">
-                      <img src={fotoPilula} alt="Pílula" className="h-full w-full object-cover" />
-                      <button type="button" onClick={() => setFotoPilula("")} className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={() => filePilulaRef.current?.click()} className="flex h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed border-gold/40 bg-muted/30">
-                      {enviandoFoto === "pilula" ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Camera className="h-5 w-5 text-muted-foreground" />}
-                    </button>
-                  )}
-                  <input type="file" accept="image/*" capture="environment" ref={filePilulaRef} onChange={(e) => fazerUploadFoto(e, "pilula")} className="hidden" />
+                {/* ✅ HORÁRIOS INTELIGENTES */}
+                <div className="space-y-3">
+                  <span className="text-sm font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Horários</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Campo label="Começa às:">
+                      <input type="time" className="field" value={horaInicial} onChange={(e) => setHoraInicial(e.target.value)} />
+                    </Campo>
+                    <Campo label="Tomadas ao dia:">
+                      <select className="field" value={vezesAoDia} onChange={(e) => setVezesAoDia(Number(e.target.value))}>
+                        <option value={1}>1x ao dia (24h)</option>
+                        <option value={2}>2x ao dia (12h)</option>
+                        <option value={3}>3x ao dia (8h)</option>
+                        <option value={4}>4x ao dia (6h)</option>
+                      </select>
+                    </Campo>
+                  </div>
+                  <div className="rounded-xl bg-sky/30 p-3 text-sm text-primary">
+                    <strong>Horários gerados: </strong> 
+                    {calcularHorarios().join(" • ")}
+                  </div>
                 </div>
-              </div>
 
-              {/* ✅ HORÁRIOS INTELIGENTES */}
-              <div className="space-y-3">
-                <span className="text-sm font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Horários</span>
+                {/* ✅ DIAS DA SEMANA */}
+                <div className="space-y-3">
+                  <span className="text-sm font-semibold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Dias da Semana</span>
+                  <p className="text-xs text-muted-foreground">Desmarque os dias em que NÃO vai tomar o remédio.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((dia, index) => {
+                      const ativo = diasSemana.includes(index);
+                      return (
+                        <button
+                          key={dia}
+                          type="button"
+                          onClick={() => toggleDia(index)}
+                          className={`grid h-10 w-10 place-items-center rounded-full text-xs font-bold transition ${
+                            ativo ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {dia}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <Campo label="Profissional que prescreveu">{inp("profissional")}</Campo>
+                <Campo label="Especialidade">{inp("especialidade")}</Campo>
                 <div className="grid grid-cols-2 gap-3">
-                  <Campo label="Começa às:">
-                    <input type="time" className="field" value={horaInicial} onChange={(e) => setHoraInicial(e.target.value)} />
-                  </Campo>
-                  <Campo label="Tomadas ao dia:">
-                    <select className="field" value={vezesAoDia} onChange={(e) => setVezesAoDia(Number(e.target.value))}>
-                      <option value={1}>1x ao dia (24h)</option>
-                      <option value={2}>2x ao dia (12h)</option>
-                      <option value={3}>3x ao dia (8h)</option>
-                      <option value={4}>4x ao dia (6h)</option>
-                    </select>
-                  </Campo>
+                  <Campo label="Início">{inp("inicio", "date")}</Campo>
+                  <Campo label="Fim">{inp("fim", "date")}</Campo>
                 </div>
-                <div className="rounded-xl bg-sky/30 p-3 text-sm text-primary">
-                  <strong>Horários gerados: </strong> 
-                  {calcularHorarios().join(" • ")}
-                </div>
-              </div>
-
-              {/* ✅ DIAS DA SEMANA */}
-              <div className="space-y-3">
-                <span className="text-sm font-semibold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Dias da Semana</span>
-                <p className="text-xs text-muted-foreground">Desmarque os dias em que NÃO vai tomar o remédio.</p>
-                <div className="flex flex-wrap gap-2">
-                  {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((dia, index) => {
-                    const ativo = diasSemana.includes(index);
-                    return (
-                      <button
-                        key={dia}
-                        type="button"
-                        onClick={() => toggleDia(index)}
-                        className={`grid h-10 w-10 place-items-center rounded-full text-xs font-bold transition ${
-                          ativo ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {dia}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <Campo label="Profissional que prescreveu">{inp("profissional")}</Campo>
-              <Campo label="Especialidade">{inp("especialidade")}</Campo>
-              <div className="grid grid-cols-2 gap-3">
-                <Campo label="Início">{inp("inicio", "date")}</Campo>
-                <Campo label="Fim">{inp("fim", "date")}</Campo>
-              </div>
-              <p className="text-xs text-muted-foreground">Deixe o fim em branco para uso contínuo.</p>
-            </>
-          )}
-          
-          <Divisor />
-          <Botao type="submit" disabled={salvando} className="w-full">
-            {salvando ? "Salvando..." : "Guardar agendamento"}
-          </Botao>
-        </form>
+                <p className="text-xs text-muted-foreground">Deixe o fim em branco para uso contínuo.</p>
+              </>
+            )}
+            
+            <Divisor />
+            <Botao type="submit" disabled={salvando} className="w-full">
+              {salvando ? "Salvando..." : "Guardar agendamento"}
+            </Botao>
+          </form>
+        </div>
       )}
     </div>
   );
