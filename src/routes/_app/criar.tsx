@@ -26,7 +26,6 @@ export const Route = createFileRoute("/_app/criar")({
   component: Criar,
 });
 
-// ✅ Adicionado "prazoDias" na tipagem
 type K = "data"|"hora"|"local"|"profissional"|"especialidade"|"tipoTerapia"|"tipoExame"|"recomendacoes"|"medicamento"|"frequencia"|"inicio"|"fim"|"programacao"|"meses"|"diaSemana"|"prazoDias";
 type F = Partial<Record<K, string>>;
 
@@ -46,7 +45,6 @@ function Criar() {
   const [diasSemana, setDiasSemana] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
 
   const [dosagemValor, setDosagemValor] = useState("");
-  // ✅ ml agora é a primeira opção (padrão)
   const [dosagemUnidade, setDosagemUnidade] = useState("ml");
   const [estoqueAtual, setEstoqueAtual] = useState("");
 
@@ -134,12 +132,13 @@ function Criar() {
     e.preventDefault();
     if (!ativa || !tipo) return;
     
-    // ✅ Calcula a data de fim automaticamente se tiver prazo em dias
-    let fimCalculado = f.fim;
+    // ✅ Cálculo à prova de erros da data de fim
+    let fimCalculado: any = f.fim;
     if (f.prazoDias && f.inicio) {
-      const dataInicio = new Date(f.inicio + "T12:00:00");
+      const inicioStr = f.inicio || hojeYMD();
+      const dataInicio = new Date(inicioStr);
       dataInicio.setDate(dataInicio.getDate() + Number(f.prazoDias) - 1);
-      fimCalculado = dataInicio.toISOString().split("T")[0];
+      fimCalculado = dataInicio.toISOString().slice(0, 10);
     }
 
     const base = { pessoaId: ativa.id, criadoEm: nowLocalISO(), cuidado: tipo, situacao: "proximo" as const };
@@ -359,7 +358,6 @@ function Criar() {
                 <Campo label="Nome">{inp("medicamento", "text", true)}</Campo>
 
                 <div className="grid grid-cols-[1.5fr_2fr] gap-3">
-                  {/* ✅ Mudou de "Qtd." para "Dosagem" */}
                   <Campo label="Dosagem">
                     <input
                       className="field"
@@ -371,7 +369,6 @@ function Criar() {
                   </Campo>
                   <Campo label="Unidade">
                     <select className="field" value={dosagemUnidade} onChange={(e) => setDosagemUnidade(e.target.value)}>
-                      {/* ✅ ml agora é o primeiro */}
                       <option value="ml">ml (mililitros)</option>
                       <option value="Gotas">Gotas</option>
                       <option value="Comprimido(s)">Comprimido(s)</option>
@@ -381,7 +378,6 @@ function Criar() {
                   </Campo>
                 </div>
 
-                {/* ✅ Controle de Estoque Dinâmico */}
                 {(dosagemUnidade === "Comprimido(s)" || dosagemUnidade === "Cápsula(s)" || dosagemUnidade === "Injeção") ? (
                   <Campo label="Controle de Estoque (unidades)">
                     <input
@@ -482,7 +478,6 @@ function Criar() {
                 <Campo label="Profissional que prescreveu">{inp("profissional")}</Campo>
                 <Campo label="Especialidade">{inp("especialidade")}</Campo>
                 
-                {/* ✅ Início e Prazo em dias */}
                 <div className="grid grid-cols-2 gap-3">
                   <Campo label="Início">{inp("inicio", "date")}</Campo>
                   <Campo label="Prazo (dias)">
