@@ -74,6 +74,8 @@ function Acompanhamento() {
     return arr.sort((a, b) => a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
+  const proximasDoses = agendaHoje.filter((a) => !a.log);
+
   const logsFiltrados = useMemo(() => {
     return logs
       .filter((i: any) => !filtroMed || i.titulo.toLowerCase().includes(filtroMed.toLowerCase()))
@@ -105,12 +107,12 @@ function Acompanhamento() {
 
         <div className="px-4"><SeletorTesouro /></div>
 
-        {/* ✅ BLOCO 1: REMÉDIOS DE HOJE (Título dentro do bloco) */}
+        {/* BLOCO 1: LEMBRETES DE HOJE (Título voltou) */}
         <section className="px-4 mt-6">
           <div className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 30px 5px var(--tema-claro)", border: "1px solid var(--tema)" }}>
-            <div className="flex items-center gap-2 border-b border-border/50 pb-3 mb-3">
-              <PillIcon className="h-5 w-5" style={{ color: "var(--tema)" }} />
-              <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>Remédios</h2>
+            <div className="flex items-center gap-2 border-b border-border/50 pb-2 mb-3">
+              <Clock className="h-4 w-4" style={{ color: "var(--tema)" }} />
+              <h2 className="font-display text-lg font-bold italic" style={{ color: "var(--tema-escuro)" }}>Lembretes de Hoje</h2>
             </div>
 
             {agendaHoje.length === 0 ? (
@@ -120,7 +122,11 @@ function Acompanhamento() {
                 <div key={idx} className="flex items-center justify-between border-b border-border/50 pb-3 last:border-0 last:pb-0">
                   <div>
                     <p className="font-bold text-sm">{a.med.medicamento}</p>
-                    <p className="text-xs text-muted-foreground">{a.med.dosagem} · Restam {a.med.estoqueAtual ?? 0} un.</p>
+                    <p className="text-xs text-muted-foreground">
+                      {a.med.dosagem}
+                      {/* ✅ Só mostra estoque se não for ml */}
+                      {a.med.dosagemUnidade !== "ml" && a.med.estoqueAtual !== undefined && ` · Restam ${a.med.estoqueAtual} un.`}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-display font-bold text-lg" style={{ color: "var(--tema)" }}>{a.horario}</span>
@@ -139,12 +145,12 @@ function Acompanhamento() {
           </div>
         </section>
 
-        {/* ✅ BLOCO 2: COMPROMISSOS DE HOJE (Título dentro do bloco) */}
+        {/* BLOCO 2: COMPROMISSOS DE HOJE (Título diminuído) */}
         <section className="px-4 mt-6">
           <div className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 30px 5px var(--tema-claro)", border: "1px solid var(--tema)" }}>
-            <div className="flex items-center gap-2 border-b border-border/50 pb-3 mb-3">
-              <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />
-              <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>Compromissos</h2>
+            <div className="flex items-center gap-2 border-b border-border/50 pb-2 mb-3">
+              <Stethoscope className="h-4 w-4" style={{ color: "var(--tema)" }} />
+              <h2 className="font-display text-lg font-bold italic" style={{ color: "var(--tema-escuro)" }}>Compromissos</h2>
             </div>
 
             <div className="space-y-3">
@@ -241,7 +247,8 @@ function Acompanhamento() {
             {filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao).length === 0 ? (
               <p className="text-sm text-muted-foreground">Nada por aqui.</p>
             ) : (
-              ordenarPorDataHora(filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)).map((i) => <CompromissoCard key={i.id} item={i} />)
+              /* ✅ Compacto para ficar igual medicações */
+              ordenarPorDataHora(filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)).map((i) => <CompromissoCard key={i.id} item={i} compacto />)
             )}
           </section>
         )}
@@ -261,7 +268,8 @@ function Acompanhamento() {
             <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso agendado.</p>
           ) : (
             <div className="max-h-[400px] space-y-2 overflow-y-auto pr-1">
-              {proximos.map((i) => <CompromissoCard key={i.id} item={i} />)}
+              {/* ✅ Compacto para ficar igual medicações */}
+              {proximos.map((i) => <CompromissoCard key={i.id} item={i} compacto />)}
             </div>
           )}
         </section>
@@ -269,7 +277,7 @@ function Acompanhamento() {
     );
   }
 
-  // --- TELA DE MEDICAÇÕES (SEM o bloco Lembretes de Hoje) ---
+  // --- TELA DE MEDICAÇÕES ---
   return (
     <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
       <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold">
@@ -321,6 +329,33 @@ function Acompanhamento() {
             ? emUso.map(m => <CompromissoCard key={m.id} item={m} compacto />)
             : encerradas.map(m => <CompromissoCard key={m.id} item={m} compacto />)
           }
+        </div>
+      </section>
+
+      {/* ✅ BLOCO QUE TINHA SUMIDO: TODOS OS PRÓXIMOS AGENDAMENTOS */}
+      <section className="space-y-3 mt-4 pb-24">
+        <h2 className="font-sans text-base font-semibold text-foreground">
+          Todos os próximos agendamentos
+        </h2>
+        <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+          {proximasDoses.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic">Nenhuma dose pendente para hoje.</p>
+          ) : (
+            proximasDoses.map((a, idx) => (
+              <div key={idx} className="notebook flex items-center justify-between p-3" style={{ borderColor: "var(--tema-claro)" }}>
+                <div className="flex items-center gap-3">
+                  <div className="grid h-8 w-8 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
+                    <PillIcon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">{a.med.medicamento}</p>
+                    <p className="text-xs text-muted-foreground">{a.med.dosagem}</p>
+                  </div>
+                </div>
+                <span className="font-display font-bold text-lg" style={{ color: "var(--tema)" }}>{a.horario}</span>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
