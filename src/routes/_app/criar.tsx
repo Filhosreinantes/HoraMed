@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_app/criar")({
   component: Criar,
 });
 
-type K = "data"|"hora"|"local"|"profissional"|"especialidade"|"tipoTerapia"|"tipoExame"|"recomendacoes"|"medicamento"|"dosagem"|"frequencia"|"inicio"|"fim"|"programacao"|"meses"|"diaSemana";
+type K = "data"|"hora"|"local"|"profissional"|"especialidade"|"tipoTerapia"|"tipoExame"|"recomendacoes"|"medicamento"|"frequencia"|"inicio"|"fim"|"programacao"|"meses"|"diaSemana";
 type F = Partial<Record<K, string>>;
 
 function Criar() {
@@ -37,6 +37,11 @@ function Criar() {
   const [vezesAoDia, setVezesAoDia] = useState(1);
   const [horaInicial, setHoraInicial] = useState("08:00");
   const [diasSemana, setDiasSemana] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+
+  // ✅ NOVOS ESTADOS: dosagem separada + estoque
+  const [dosagemValor, setDosagemValor] = useState("");
+  const [dosagemUnidade, setDosagemUnidade] = useState("Comprimido(s)");
+  const [estoqueAtual, setEstoqueAtual] = useState("");
 
   const [salvando, setSalvando] = useState(false);
 
@@ -110,7 +115,12 @@ function Criar() {
         id: uid(),
         titulo: `Medicação · ${f.medicamento}`,
         medicamento: f.medicamento,
-        dosagem: f.dosagem,
+        // ✅ String exibida no card (mantida)
+        dosagem: `${dosagemValor} ${dosagemUnidade}`.trim(),
+        // ✅ Novos campos
+        dosagemValor: dosagemValor || undefined,
+        dosagemUnidade: dosagemUnidade || undefined,
+        estoqueAtual: estoqueAtual ? Number(estoqueAtual) : undefined,
         horarios: horariosCalculados,
         frequencia: `${vezesAoDia}x ao dia`,
         profissional: f.profissional,
@@ -151,7 +161,7 @@ function Criar() {
       </h1>
       <SeletorTesouro prefixo="Para" />
 
-      {/* ✅ CARDS COM BORDA DOURADA + AURA QUANDO SELECIONADO */}
+      {/* CARDS */}
       <div className="grid grid-cols-2 gap-3">
         {[
           { tipo: "Consulta", icone: Stethoscope },
@@ -302,8 +312,41 @@ function Criar() {
             {tipo === "Medicação" && (
               <>
                 <Campo label="Nome">{inp("medicamento", "text", true)}</Campo>
-                <Campo label="Dosagem">{inp("dosagem")}</Campo>
 
+                {/* ✅ DOSAGEM SEPARADA: Quantidade + Unidade */}
+                <div className="grid grid-cols-[1fr_2fr] gap-3">
+                  <Campo label="Qtd.">
+                    <input
+                      className="field"
+                      type="number"
+                      placeholder="Ex: 1"
+                      value={dosagemValor}
+                      onChange={(e) => setDosagemValor(e.target.value)}
+                    />
+                  </Campo>
+                  <Campo label="Unidade">
+                    <select className="field" value={dosagemUnidade} onChange={(e) => setDosagemUnidade(e.target.value)}>
+                      <option value="Comprimido(s)">Comprimido(s)</option>
+                      <option value="ml">ml (mililitros)</option>
+                      <option value="Gotas">Gotas</option>
+                      <option value="Cápsula(s)">Cápsula(s)</option>
+                      <option value="Injeção">Injeção</option>
+                    </select>
+                  </Campo>
+                </div>
+
+                {/* ✅ CONTROLE DE ESTOQUE */}
+                <Campo label="Controle de Estoque (Opcional)">
+                  <input
+                    className="field"
+                    type="number"
+                    placeholder="Ex: 30 (quantos tem na caixa)"
+                    value={estoqueAtual}
+                    onChange={(e) => setEstoqueAtual(e.target.value)}
+                  />
+                </Campo>
+
+                {/* FOTO DA CAIXA */}
                 <div>
                   <span className="text-xs font-semibold block mb-1">Foto da Caixa</span>
                   {fotoUrl ? (
