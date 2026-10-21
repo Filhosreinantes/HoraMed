@@ -11,7 +11,6 @@ import { CompromissoCard } from "@/components/compromisso-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
-
 export const Route = createFileRoute("/_app/acompanhamento")({
   head: () => ({ meta: [{ title: "Rotina Azul 💙" }] }),
   component: Acompanhamento,
