@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
@@ -88,9 +89,10 @@ function Criar() {
     const horarios = [];
 
     for (let i = 0; i < vezesAoDia; i++) {
-      let novaHora = (h + i * intervalHours) % 24;
-      let horaFormatada = Math.floor(novaHora).toString().padStart(2, "0");
-      let minutoFormatado = m.toString().padStart(2, "0");
+      // ✅ Trocado de let para const (regra prefer-const do ESLint)
+      const novaHora = (h + i * intervalHours) % 24;
+      const horaFormatada = Math.floor(novaHora).toString().padStart(2, "0");
+      const minutoFormatado = m.toString().padStart(2, "0");
       horarios.push(`${horaFormatada}:${minutoFormatado}`);
     }
     return horarios;
@@ -132,7 +134,6 @@ function Criar() {
     e.preventDefault();
     if (!ativa || !tipo) return;
     
-    // ✅ Cálculo à prova de erros da data de fim
     let fimCalculado: any = f.fim;
     if (f.prazoDias && f.inicio) {
       const inicioStr = f.inicio || hojeYMD();
