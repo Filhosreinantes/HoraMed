@@ -6,6 +6,7 @@ import { AppProvider, useApp } from "@/lib/app-store";
 import { desconectarUsuaria } from "@/lib/notificacoes";
 import { ehAppAndroid, limparAlarmes } from "@/lib/alarmes";
 import { CheckoutPix } from "@/components/checkout-pix";
+import { PLANOS, reais } from "@/lib/planos";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { ConfiabilidadePrompt } from "@/components/confiabilidade";
 
@@ -105,7 +106,7 @@ function Shell() {
                 onClick={() => setComprando(true)}
                 className="mt-6 block w-full rounded-2xl bg-[#5B92C7] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#4a7eb3]"
               >
-                Assinar agora por R$ 5,00/mês
+                Assinar agora por {reais(PLANOS.mensal.centavos)}/mês
               </button>
             </>
           )}

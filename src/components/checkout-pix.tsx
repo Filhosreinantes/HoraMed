@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { PLANOS, reais, type PlanoId } from "@/lib/planos";
 
 type Pix = { id: string; status: string; qrText: string; qrPng: string | null; expiraEm: string };
 type Etapa =
@@ -48,10 +49,13 @@ function mascaraCpf(v: string) {
 
 export function CheckoutPix({
   emailInicial,
+  plano = "mensal",
   onFechar,
   onPago,
 }: {
   emailInicial: string;
+  /** Plano a cobrar; o preço e o prazo valem os do servidor. */
+  plano?: PlanoId;
   onFechar: () => void;
   /** Chamado ao continuar depois do pagamento confirmado (ex.: rechecar a assinatura). */
   onPago?: () => void;
@@ -96,6 +100,7 @@ export function CheckoutPix({
         nome,
         email,
         cpf,
+        plano,
         ref: localStorage.getItem("afiliado_ref"),
       });
       setEtapa({ tipo: "pix", pix });
@@ -123,7 +128,9 @@ export function CheckoutPix({
       <div className="max-h-[95vh] w-full max-w-sm space-y-4 overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
         <div className="text-center">
           <h2 className="font-display text-2xl font-bold text-foreground">Assinar Rotina Azul</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Acesso por 30 dias · R$ 5,00 no PIX</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {PLANOS[plano].nome} · {reais(PLANOS[plano].centavos)} no PIX
+          </p>
         </div>
 
         {etapa.tipo === "dados" && (

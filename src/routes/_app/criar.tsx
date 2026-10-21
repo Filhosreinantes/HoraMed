@@ -153,7 +153,7 @@ function Criar() {
 
   return (
     <div className="space-y-5">
-      <header className="text-center px-4 mb-2 flex flex-col items-center">
+      <header className="text-center px-4 mb-2 pt-6 flex flex-col items-center">
         <h1 className="font-display text-4xl font-bold italic text-[var(--tema-escuro)] flex items-center justify-center gap-2">
           Rotina Azul <span className="text-3xl not-italic">💙</span>
         </h1>

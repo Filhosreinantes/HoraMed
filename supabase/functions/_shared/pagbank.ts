@@ -1,7 +1,8 @@
 // Código compartilhado pelas funções do checkout PIX do Rotina Azul.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-export const PRECO_CENTAVOS = 500; // R$ 5,00 — definido aqui, nunca pelo navegador
+// Preço e prazo de cada plano vêm de src/lib/planos.ts e nunca do navegador (ele só diz o id).
+export { PLANOS, ehPlano, type PlanoId } from "../../../src/lib/planos.ts";
 export const MINUTOS_PARA_PAGAR = 30;
 
 const sandbox = Deno.env.get("ROTINA_PAGBANK_SANDBOX") === "true";

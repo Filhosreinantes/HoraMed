@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Pencil, Plus, LogOut } from "lucide-react";
+import { Pencil, Plus, LogOut, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { NotificacoesCartao } from "@/components/notificacoes-cartao";
 import { ConfiabilidadeCartao } from "@/components/confiabilidade";
@@ -32,9 +32,10 @@ const EMOJIS_PESSOAS = [
 const TEMAS = ["azul", "rosa", "verde", "amarelo", "lilás"];
 
 function Perfil() {
-  const { ativa, user, recarregar, setAtivaId } = useApp();
+  const { ativa, pessoas, user, recarregar, setAtivaId, assinaturaAtiva } = useApp();
   const [form, setForm] = useState<Partial<Pessoa> | null>(null);
   const [sair, setSair] = useState(false);
+  const [excluir, setExcluir] = useState(false);
 
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,9 +61,34 @@ function Perfil() {
     recarregar();
   };
 
+  // Apaga o Tesouro e tudo que foi registrado para ele (consultas, remédios, doses).
+  const excluirTesouro = async () => {
+    if (!form?.id) return;
+    const { error: e1 } = await supabase.from("pedacinho_registros").delete().eq("pessoa_id", form.id).eq("user_id", user.id);
+    if (e1) { toast.error("Não foi possível excluir os registros deste Tesouro."); return; }
+    const { error: e2 } = await supabase.from("pedacinho_pessoas").delete().eq("id", form.id).eq("user_id", user.id);
+    if (e2) { toast.error("Não foi possível excluir o Tesouro."); return; }
+    toast.success("Tesouro excluído.");
+    setExcluir(false);
+    setForm(null);
+    recarregar();
+  };
+
   return (
     <div className="space-y-5">
-      <h1 className="text-3xl font-semibold">Perfil</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-semibold">Perfil</h1>
+        {/* Plano atual; toca para ver a assinatura */}
+        <Link
+          to="/assinatura"
+          aria-label="Minha assinatura"
+          className={`rounded-full px-3.5 py-1.5 text-xs font-bold tracking-wider ${
+            assinaturaAtiva === true ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {assinaturaAtiva === true ? "PRO" : "FREE"}
+        </Link>
+      </div>
       <SeletorTesouro prefixo="Tesouro Ativo" />
 
       {ativa && (
@@ -82,12 +108,12 @@ function Perfil() {
         <Plus className="h-5 w-5" /> Adicionar outro Tesouro
       </Botao>
 
-      {/* Lembretes: ativar, reativar, desativar e testar neste aparelho */}
+      {/* Lembretes: resumo e atalho (engrenagem) para configurações e permissões */}
       {ehAppAndroid() ? <ConfiabilidadeCartao /> : <NotificacoesCartao />}
 
       <Divisor />
 
-      <Botao variant="danger" className="flex w-full items-center justify-center gap-2" onClick={() => setSair(true)}>
+      <Botao variant="laranja" className="flex w-full items-center justify-center gap-2" onClick={() => setSair(true)}>
         <LogOut className="h-5 w-5" /> Sair da conta
       </Botao>
 
@@ -120,7 +146,41 @@ function Perfil() {
               <Botao type="button" variant="outline" className="flex-1" onClick={() => setForm(null)}>Cancelar</Botao>
               <Botao type="submit" className="flex-1">Salvar</Botao>
             </div>
+            {form.id && (
+              <button
+                type="button"
+                onClick={() => setExcluir(true)}
+                className="flex w-full items-center justify-center gap-2 pt-1 text-sm font-semibold text-destructive"
+              >
+                <Trash2 className="h-4 w-4" /> Excluir este Tesouro
+              </button>
+            )}
           </form>
+        </div>
+      )}
+
+      {excluir && form?.id && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/40 p-4" onClick={() => setExcluir(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="notebook w-full max-w-sm p-6 text-center">
+            {pessoas.length <= 1 ? (
+              <>
+                <h2 className="text-xl font-semibold">Não dá para excluir</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Você precisa ter pelo menos um Tesouro. Adicione outro antes de excluir este.</p>
+                <Botao className="mt-5 w-full" onClick={() => setExcluir(false)}>Entendi</Botao>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold">Excluir {form.nome}?</h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Todas as consultas, exames, terapias, medicações e doses registradas para este Tesouro serão apagadas, também no Meu Pedacinho Azul. Isso não pode ser desfeito.
+                </p>
+                <div className="mt-5 flex gap-2">
+                  <Botao variant="outline" className="flex-1" onClick={() => setExcluir(false)}>Cancelar</Botao>
+                  <Botao variant="danger" className="flex-1" onClick={excluirTesouro}>Excluir</Botao>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 
@@ -131,7 +191,7 @@ function Perfil() {
             <p className="mt-2 text-sm text-muted-foreground">Você precisará entrar novamente com seu e-mail e senha.</p>
             <div className="mt-5 flex gap-2">
               <Botao variant="outline" className="flex-1" onClick={() => setSair(false)}>Ficar</Botao>
-              <Botao variant="danger" className="flex-1" onClick={async () => { await supabase.auth.signOut(); toast.success("Até logo!"); }}>Sair</Botao>
+              <Botao variant="laranja" className="flex-1" onClick={async () => { await supabase.auth.signOut(); toast.success("Até logo!"); }}>Sair</Botao>
             </div>
           </div>
         </div>

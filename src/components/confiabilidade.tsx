@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+import { Settings } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { App as AppNativo } from "@capacitor/app";
 import { toast } from "sonner";
@@ -37,7 +39,7 @@ const ITENS: {
 ];
 
 /** Estado das permissões, atualizado ao voltar das configurações do Android. */
-function useConfiabilidade() {
+export function useConfiabilidade() {
   const [estado, setEstado] = useState<Confiabilidade | null>(null);
   const verificar = useCallback(
     () =>
@@ -56,7 +58,7 @@ function useConfiabilidade() {
   return { estado, verificar };
 }
 
-function Lista({ estado, verificar }: { estado: Confiabilidade; verificar: () => void }) {
+export function Lista({ estado, verificar }: { estado: Confiabilidade; verificar: () => void }) {
   const corrigir = async (acao: () => Promise<unknown>) => {
     try {
       await acao();
@@ -100,25 +102,33 @@ function Lista({ estado, verificar }: { estado: Confiabilidade; verificar: () =>
   );
 }
 
-const tudoCerto = (e: Confiabilidade) => e.notificacoes && e.telaCheia && e.bateria;
+export const tudoCerto = (e: Confiabilidade) => e.notificacoes && e.telaCheia && e.bateria;
 
-/** Cartão do perfil no app Android: permissões dos alarmes. */
+/** Cartão do perfil no app Android: resumo e atalho para as configurações. */
 export function ConfiabilidadeCartao() {
-  const { estado, verificar } = useConfiabilidade();
+  const { estado } = useConfiabilidade();
   if (!estado) return null;
 
   return (
-    <div className="notebook space-y-3 p-4">
-      <p className="font-semibold text-foreground">
-        {tudoCerto(estado)
-          ? "✅ Lembretes prontos neste celular"
-          : "⚠️ Ajuste os lembretes deste celular"}
-      </p>
+    <div className="notebook space-y-2 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-semibold text-foreground">
+          {tudoCerto(estado)
+            ? "✅ Lembretes prontos neste celular"
+            : "⚠️ Ajuste os lembretes deste celular"}
+        </p>
+        <Link
+          to="/configuracoes"
+          aria-label="Configurações e permissões"
+          className="shrink-0 rounded-full bg-muted p-2.5 text-accent"
+        >
+          <Settings className="h-5 w-5" />
+        </Link>
+      </div>
       <p className="text-xs text-muted-foreground">
         O alarme toca no horário de cada remédio, mesmo sem internet, e continua tocando até você
-        tocar em "Já tomei" ou "Adiar". Se a dose não for registrada, toca de novo 15 minutos depois.
+        tocar em "Já tomei" ou "Adiar".
       </p>
-      <Lista estado={estado} verificar={verificar} />
     </div>
   );
 }

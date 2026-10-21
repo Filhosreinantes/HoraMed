@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Botao, Campo, Divisor } from "@/components/ui-kit";
 import { CheckoutPix } from "@/components/checkout-pix";
 import { ehAppAndroid, urlDoSite } from "@/lib/plataforma";
+import { PLANOS, reais } from "@/lib/planos";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
@@ -123,7 +124,7 @@ function Login() {
               <span className="block rounded-full bg-gold/20 px-3 py-1 text-xs font-bold text-foreground">
                 Assinar
               </span>
-              <span className="mt-1 block text-sm font-bold text-gold">R$ 5,00/mês</span>
+              <span className="mt-1 block text-sm font-bold text-gold">{reais(PLANOS.mensal.centavos)}/mês</span>
             </div>
           </button>
         </div>

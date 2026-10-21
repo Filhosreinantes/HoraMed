@@ -132,11 +132,12 @@ export function Botao({
   variant = "primary",
   className,
   ...p
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ghost" | "danger" | "outline" }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ghost" | "danger" | "outline" | "laranja" }) {
   const v = {
     primary: "bg-primary text-primary-foreground shadow-soft",
     ghost: "text-accent underline-offset-4 hover:underline",
     danger: "bg-destructive text-destructive-foreground",
+    laranja: "bg-[#E8923A] text-white shadow-soft",
     outline: "border border-gold/50 bg-card text-foreground",
   }[variant];
   return (

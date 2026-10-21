@@ -1,5 +1,5 @@
 // Checkout PIX do Rotina Azul.
-//   { acao: "criar", nome, email, cpf, ref? } → cria a intenção + pedido PIX no PagBank
+//   { acao: "criar", nome, email, cpf, plano?, ref? } → cria a intenção + pedido PIX no PagBank
 //   { acao: "status", id }                    → status do pagamento (para a tela atualizar sozinha)
 import {
   cors,
@@ -8,7 +8,8 @@ import {
   json,
   MINUTOS_PARA_PAGAR,
   pagbank,
-  PRECO_CENTAVOS,
+  PLANOS,
+  ehPlano,
   sincronizarCheckout,
 } from "../_shared/pagbank.ts";
 
@@ -35,6 +36,9 @@ async function criar(body: Record<string, unknown>) {
   const email = String(body.email ?? "").trim().toLowerCase().slice(0, 200);
   const cpf = String(body.cpf ?? "").replace(/\D/g, "");
   const ref = String(body.ref ?? "").trim().slice(0, 64) || null;
+  const plano = body.plano ?? "mensal";
+  if (!ehPlano(plano)) return json({ error: "Plano inválido." }, 400);
+  const { centavos, nome: nomePlano } = PLANOS[plano];
 
   if (nome.split(/\s+/).length < 2) return json({ error: "Informe seu nome completo." }, 400);
   if (!EMAIL.test(email)) return json({ error: "E-mail inválido." }, 400);
@@ -48,6 +52,7 @@ async function criar(body: Record<string, unknown>) {
     .eq("email", email)
     .eq("cpf", cpf)
     .eq("status", "pendente")
+    .eq("plano", plano)
     .not("qr_text", "is", null)
     .gt("expira_em", new Date(agora.getTime() + 5 * 60_000).toISOString())
     .order("created_at", { ascending: false })
@@ -66,7 +71,7 @@ async function criar(body: Record<string, unknown>) {
   const expira = new Date(agora.getTime() + MINUTOS_PARA_PAGAR * 60_000);
   const { data: intencao, error } = await db
     .from("rotina_checkouts")
-    .insert({ nome, email, cpf, codigo_ref: ref, valor_centavos: PRECO_CENTAVOS, expira_em: expira.toISOString() })
+    .insert({ nome, email, cpf, codigo_ref: ref, valor_centavos: centavos, plano, expira_em: expira.toISOString() })
     .select("id")
     .single();
   if (error || !intencao) throw new Error(`criar intenção: ${error?.message}`);
@@ -82,8 +87,8 @@ async function criar(body: Record<string, unknown>) {
       body: JSON.stringify({
         reference_id: intencao.id,
         customer: { name: nome, email, tax_id: cpf },
-        items: [{ reference_id: "rotina-azul-mensal", name: "Rotina Azul - 30 dias", quantity: 1, unit_amount: PRECO_CENTAVOS }],
-        qr_codes: [{ amount: { value: PRECO_CENTAVOS }, expiration_date: dataBrasilia(expira) }],
+        items: [{ reference_id: `rotina-azul-${plano}`, name: `Rotina Azul - ${nomePlano}`, quantity: 1, unit_amount: centavos }],
+        qr_codes: [{ amount: { value: centavos }, expiration_date: dataBrasilia(expira) }],
         notification_urls: [webhook],
       }),
     });

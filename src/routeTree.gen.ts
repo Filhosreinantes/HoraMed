@@ -14,8 +14,12 @@ import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as AppAcompanhamentoRouteImport } from './routes/_app/acompanhamento'
+import { Route as AppAssinaturaRouteImport } from './routes/_app/assinatura'
+import { Route as AppConfiabilidadeRouteImport } from './routes/_app/confiabilidade'
+import { Route as AppConfiguracoesRouteImport } from './routes/_app/configuracoes'
 import { Route as AppCriarRouteImport } from './routes/_app/criar'
 import { Route as AppPerfilRouteImport } from './routes/_app/perfil'
+import { Route as AppPlanosRouteImport } from './routes/_app/planos'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -41,6 +45,21 @@ const AppAcompanhamentoRoute = AppAcompanhamentoRouteImport.update({
   path: '/acompanhamento',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppAssinaturaRoute = AppAssinaturaRouteImport.update({
+  id: '/assinatura',
+  path: '/assinatura',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppConfiabilidadeRoute = AppConfiabilidadeRouteImport.update({
+  id: '/confiabilidade',
+  path: '/confiabilidade',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppCriarRoute = AppCriarRouteImport.update({
   id: '/criar',
   path: '/criar',
@@ -51,22 +70,35 @@ const AppPerfilRoute = AppPerfilRouteImport.update({
   path: '/perfil',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppPlanosRoute = AppPlanosRouteImport.update({
+  id: '/planos',
+  path: '/planos',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/acompanhamento': typeof AppAcompanhamentoRoute
+  '/assinatura': typeof AppAssinaturaRoute
+  '/confiabilidade': typeof AppConfiabilidadeRoute
+  '/configuracoes': typeof AppConfiguracoesRoute
   '/criar': typeof AppCriarRoute
   '/perfil': typeof AppPerfilRoute
+  '/planos': typeof AppPlanosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/acompanhamento': typeof AppAcompanhamentoRoute
+  '/assinatura': typeof AppAssinaturaRoute
+  '/confiabilidade': typeof AppConfiabilidadeRoute
+  '/configuracoes': typeof AppConfiguracoesRoute
   '/criar': typeof AppCriarRoute
   '/perfil': typeof AppPerfilRoute
+  '/planos': typeof AppPlanosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -75,8 +107,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/_app/acompanhamento': typeof AppAcompanhamentoRoute
+  '/_app/assinatura': typeof AppAssinaturaRoute
+  '/_app/confiabilidade': typeof AppConfiabilidadeRoute
+  '/_app/configuracoes': typeof AppConfiguracoesRoute
   '/_app/criar': typeof AppCriarRoute
   '/_app/perfil': typeof AppPerfilRoute
+  '/_app/planos': typeof AppPlanosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -85,16 +121,24 @@ export interface FileRouteTypes {
     | '/login'
     | '/redefinir-senha'
     | '/acompanhamento'
+    | '/assinatura'
+    | '/confiabilidade'
+    | '/configuracoes'
     | '/criar'
     | '/perfil'
+    | '/planos'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/redefinir-senha'
     | '/acompanhamento'
+    | '/assinatura'
+    | '/confiabilidade'
+    | '/configuracoes'
     | '/criar'
     | '/perfil'
+    | '/planos'
   id:
     | '__root__'
     | '/'
@@ -102,8 +146,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/redefinir-senha'
     | '/_app/acompanhamento'
+    | '/_app/assinatura'
+    | '/_app/confiabilidade'
+    | '/_app/configuracoes'
     | '/_app/criar'
     | '/_app/perfil'
+    | '/_app/planos'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -150,6 +198,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAcompanhamentoRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/_app/assinatura': {
+      id: '/_app/assinatura'
+      path: '/assinatura'
+      fullPath: '/assinatura'
+      preLoaderRoute: typeof AppAssinaturaRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/confiabilidade': {
+      id: '/_app/confiabilidade'
+      path: '/confiabilidade'
+      fullPath: '/confiabilidade'
+      preLoaderRoute: typeof AppConfiabilidadeRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/configuracoes': {
+      id: '/_app/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AppConfiguracoesRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/_app/criar': {
       id: '/_app/criar'
       path: '/criar'
@@ -164,19 +233,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPerfilRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/_app/planos': {
+      id: '/_app/planos'
+      path: '/planos'
+      fullPath: '/planos'
+      preLoaderRoute: typeof AppPlanosRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
   }
 }
 
 interface AppRouteRouteChildren {
   AppAcompanhamentoRoute: typeof AppAcompanhamentoRoute
+  AppAssinaturaRoute: typeof AppAssinaturaRoute
+  AppConfiabilidadeRoute: typeof AppConfiabilidadeRoute
+  AppConfiguracoesRoute: typeof AppConfiguracoesRoute
   AppCriarRoute: typeof AppCriarRoute
   AppPerfilRoute: typeof AppPerfilRoute
+  AppPlanosRoute: typeof AppPlanosRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppAcompanhamentoRoute: AppAcompanhamentoRoute,
+  AppAssinaturaRoute: AppAssinaturaRoute,
+  AppConfiabilidadeRoute: AppConfiabilidadeRoute,
+  AppConfiguracoesRoute: AppConfiguracoesRoute,
   AppCriarRoute: AppCriarRoute,
   AppPerfilRoute: AppPerfilRoute,
+  AppPlanosRoute: AppPlanosRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(

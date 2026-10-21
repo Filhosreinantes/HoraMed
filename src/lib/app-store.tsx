@@ -18,6 +18,8 @@ interface Ctx {
   recarregar: () => Promise<void>;
   salvarRegistros: (lista: Dados[], tipo?: string) => Promise<boolean>;
   assinaturaAtiva: boolean | null | "erro";
+  /** Fim do período pago (ISO), ou null sem assinatura. */
+  assinaturaAte: string | null;
   checarAssinatura: () => Promise<void>;
 }
 
@@ -30,6 +32,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
   const [registros, setRegistros] = useState<(Dados & { tipo?: string })[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [assinaturaAtiva, setAssinaturaAtiva] = useState<boolean | null | "erro">(null);
+  const [assinaturaAte, setAssinaturaAte] = useState<string | null>(null);
 
   // ✅ 1. CRÍTICO: Conecta o dispositivo ao ID do Supabase
   useEffect(() => {
@@ -66,6 +69,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
       setAssinaturaAtiva("erro");
       return;
     }
+    setAssinaturaAte(data?.ativa_ate ?? null);
     setAssinaturaAtiva(data?.ativa_ate ? new Date(data.ativa_ate) > new Date() : false);
   }, [user.email]);
 
@@ -243,7 +247,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
   }, [registros, ativaId]);
 
   return (
-    <AppCtx.Provider value={{ user, pessoas, ativa, setAtivaId, itens, logs, carregando, recarregar, salvarRegistros, assinaturaAtiva, checarAssinatura }}>
+    <AppCtx.Provider value={{ user, pessoas, ativa, setAtivaId, itens, logs, carregando, recarregar, salvarRegistros, assinaturaAtiva, assinaturaAte, checarAssinatura }}>
       {children}
     </AppCtx.Provider>
   );

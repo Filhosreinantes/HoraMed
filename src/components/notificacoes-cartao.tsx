@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+import { Settings } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
@@ -62,7 +64,16 @@ export function NotificacoesCartao() {
 
   return (
     <div className="notebook space-y-3 p-4">
-      <p className="font-semibold text-foreground">{TITULO[estado]}</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-semibold text-foreground">{TITULO[estado]}</p>
+        <Link
+          to="/configuracoes"
+          aria-label="Configurações e permissões"
+          className="shrink-0 rounded-full bg-muted p-2.5 text-accent"
+        >
+          <Settings className="h-5 w-5" />
+        </Link>
+      </div>
 
       {estado === "ativas" && (
         <>
@@ -70,13 +81,6 @@ export function NotificacoesCartao() {
             Você recebe um aviso no horário de cada remédio e outro 15 minutos depois, se a dose
             ainda não tiver sido registrada.
           </p>
-          <button
-            onClick={desativar}
-            disabled={ocupado}
-            className={`${botao} border border-gray-300 text-gray-500`}
-          >
-            Desativar lembretes neste aparelho
-          </button>
         </>
       )}
 
@@ -125,5 +129,29 @@ export function NotificacoesCartao() {
         <p className="text-xs text-muted-foreground">{MENSAGEM[estado]}</p>
       )}
     </div>
+  );
+}
+
+/** Botão para desligar os lembretes neste aparelho (página de configurações, só no navegador). */
+export function DesativarLembretes() {
+  const [estado, setEstado] = useState<EstadoNotificacoes | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  useEffect(() => {
+    estadoNotificacoes().then(setEstado);
+  }, []);
+  if (estado !== "ativas") return null;
+  return (
+    <button
+      disabled={ocupado}
+      onClick={async () => {
+        setOcupado(true);
+        setEstado(await desativarNotificacoes());
+        setOcupado(false);
+        toast.success("Lembretes desligados neste aparelho.");
+      }}
+      className="w-full rounded-2xl border border-gray-300 py-3 text-sm font-bold text-gray-500 transition disabled:opacity-60"
+    >
+      Desativar lembretes neste aparelho
+    </button>
   );
 }

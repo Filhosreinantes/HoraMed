@@ -181,6 +181,10 @@ function Acompanhamento() {
         <div className="px-4"><SeletorTesouro /></div>
 
         <div className="px-4 mt-6">
+          <h2 className="font-display text-xl font-bold italic mb-3 flex items-center gap-2">
+            <Clock className="h-5 w-5" style={{ color: "var(--tema)" }} /> Para Hoje
+          </h2>
+
           <div className="notebook p-4 space-y-3 mb-4" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
             <p className="font-display text-base font-bold text-muted-foreground border-b border-border/50 pb-2">Medicações</p>
             {agendaHoje.length === 0 ? (
