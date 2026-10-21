@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2 } from "lucide-react";
+import { X, ChevronLeft, Check, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, Infinity as InfinityIcon } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -62,48 +62,93 @@ function Acompanhamento() {
     return lista;
   }, [itens, buscaProximos]);
 
-  // ✅ Lógica corrigida: respeita a data de início, os dias da semana e as doses pendentes
+  // ✅ 1. Lista "Para Hoje" (usada no Menu Inicial)
   const agendaHoje = useMemo(() => {
     const arr: any[] = [];
     
     emUso.forEach((m) => {
-      // 1. Verifica se hoje está dentro do período (inicio e fim)
-      const dataInicio = m.inicio; // YYYY-MM-DD
-      const dataFim = m.fim; // YYYY-MM-DD ou undefined
-      if (dataInicio && hoje < dataInicio) return; // Ainda não começou
-      if (dataFim && hoje > dataFim) return; // Já terminou
+      const dataInicio = m.inicio;
+      const dataFim = m.fim;
+      if (dataInicio && hoje < dataInicio) return;
+      if (dataFim && hoje > dataFim) return;
 
-      // 2. Verifica se hoje é um dia ativo da semana
       const diasDaSemana = m.diasSemana || [0, 1, 2, 3, 4, 5, 6];
       const hojeIndex = new Date().getDay(); 
       if (!diasDaSemana.includes(hojeIndex)) return;
 
       const horarios = m.horarios || [];
       
-      // 3. ✅ AQUI ESTÁ A MÁGICA: Filtro para o PRIMEIRO dia do tratamento.
-      // Se começou hoje, não mostra as doses de madrugada/manhã que pertencem ao dia seguinte.
       let horariosValidos = horarios;
       if (m.inicio === hoje && horarios.length > 0) {
-        const horaInicio = horarios[0]; // Ex: "16:00"
+        const horaInicio = horarios[0];
         horariosValidos = horarios.filter((h: string) => h >= horaInicio);
       }
 
-      // 4. Filtra os que já foram tomados
       const dosesPendentes = horariosValidos.filter((h: string) => {
         return !doseRegistrada(logs, m.id, hoje, h.trim());
       });
 
-      // 5. Adiciona as doses pendentes na lista
       dosesPendentes.forEach((hora: string) => {
-        arr.push({ med: m, horario: hora, log: null });
+        arr.push({ med: m, data: hoje, horario: hora, log: null });
       });
     });
 
-    // 6. Ordena pelo horário para manter organizado
     return arr.sort((a, b) => a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
-  const proximasDoses = agendaHoje;
+  // ✅ 2. Lista "Todos os próximos agendamentos" (mostra até 15 dias para contínuos)
+  const proximosAgendamentos = useMemo(() => {
+    const arr: any[] = [];
+    
+    // Limite de 15 dias para remédios contínuos (evita carregar infinitos cards)
+    const dataLimite = new Date();
+    dataLimite.setDate(dataLimite.getDate() + 15);
+    const limiteYMD = `${dataLimite.getFullYear()}-${String(dataLimite.getMonth() + 1).padStart(2, "0")}-${String(dataLimite.getDate()).padStart(2, "0")}`;
+
+    emUso.forEach((m) => {
+      const dataInicio = m.inicio || hoje;
+      // Se o remédio não tiver data de fim, usa o limite de 15 dias
+      const dataFim = m.fim || limiteYMD;
+      
+      if (dataFim < hoje) return;
+
+      const diasDaSemana = m.diasSemana || [0, 1, 2, 3, 4, 5, 6];
+      const horarios = m.horarios || [];
+      if (horarios.length === 0) return;
+
+      let dataIteracao = hoje > dataInicio ? hoje : dataInicio;
+      
+      while (dataIteracao <= dataFim) {
+        const d = parseYMD(dataIteracao);
+        const diaSemana = d.getDay();
+        
+        if (diasDaSemana.includes(diaSemana)) {
+          let horariosValidos = horarios;
+          
+          if (dataIteracao === dataInicio) {
+            const horaInicio = horarios[0];
+            horariosValidos = horarios.filter((h: string) => h >= horaInicio);
+          }
+
+          const dosesPendentes = horariosValidos.filter((h: string) => {
+            return !doseRegistrada(logs, m.id, dataIteracao, h.trim());
+          });
+
+          dosesPendentes.forEach((hora: string) => {
+            arr.push({ med: m, data: dataIteracao, horario: hora });
+          });
+        }
+
+        d.setDate(d.getDate() + 1);
+        dataIteracao = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      }
+    });
+
+    return arr.sort((a, b) => {
+      if (a.data !== b.data) return a.data.localeCompare(b.data);
+      return a.horario.localeCompare(b.horario);
+    });
+  }, [emUso, logs, hoje]);
 
   const logsFiltrados = useMemo(() => {
     return logs
@@ -112,9 +157,9 @@ function Acompanhamento() {
       .sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
   }, [logs, filtroMed, dataHistorico]);
 
-  const registrarMedicacao = async (item: any, horario: string, novoHorario?: string) => {
+  const registrarMedicacao = async (item: any, data: string, horario: string, novoHorario?: string) => {
     const titulo = novoHorario ? `Atrasou: ${item.medicamento} (${horario} -> ${novoHorario})` : `Tomou: ${item.medicamento} (${horario})`;
-    const dados: Dados = { id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo, cuidado: "Medicação_Log" as any, evento: true, parentId: item.id, data: hoje, horario };
+    const dados: Dados = { id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo, cuidado: "Medicação_Log" as any, evento: true, parentId: item.id, data: data, horario };
 
     let ok = await salvarRegistros([dados], "medicacao_logs");
 
@@ -205,7 +250,10 @@ function Acompanhamento() {
               agendaHoje.map((a, idx) => (
                 <div key={idx} className="flex items-center justify-between border-b border-border/50 pb-2 last:border-0 last:pb-0">
                   <div>
-                    <p className="font-bold text-sm">{a.med.medicamento}</p>
+                    <p className="font-bold text-sm flex items-center gap-1">
+                      {a.med.medicamento}
+                      {!a.med.fim && <InfinityIcon className="h-3 w-3 text-muted-foreground" title="Uso contínuo" />}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {a.med.dosagem}
                       {a.med.dosagemUnidade !== "ml" && a.med.estoqueAtual !== undefined && ` · Restam ${a.med.estoqueAtual} un.`}
@@ -214,7 +262,7 @@ function Acompanhamento() {
                   <div className="flex items-center gap-2">
                     <span className="font-display font-bold text-lg" style={{ color: "var(--tema)" }}>{a.horario}</span>
                     <div className="flex flex-col gap-1">
-                      <button onClick={() => registrarMedicacao(a.med, a.horario)} className="text-[10px] font-bold text-white px-2 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Tomei</button>
+                      <button onClick={() => registrarMedicacao(a.med, hoje, a.horario)} className="text-[10px] font-bold text-white px-2 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Tomei</button>
                       <button onClick={() => setAtrasoModal({ item: a.med, horario: a.horario })} className="text-[10px] font-bold rounded-md px-2 py-1 border" style={{ borderColor: "var(--tema)", color: "var(--tema-escuro)" }}>Atrasei</button>
                     </div>
                   </div>
@@ -374,20 +422,30 @@ function Acompanhamento() {
       </section>
 
       <section className="space-y-3 mt-4">
-        <h2 className="font-sans text-base font-semibold text-foreground">
-          Todos os próximos agendamentos
-        </h2>
-        <div className="space-y-3">
-          {proximasDoses.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">Nenhuma dose pendente para hoje.</p>
+        <div className="flex items-center justify-between">
+          <h2 className="font-sans text-base font-semibold text-foreground">Todos os próximos agendamentos</h2>
+          {emUso.some(m => !m.fim) && (
+            <span className="text-[10px] font-bold text-muted-foreground uppercase bg-muted px-2 py-0.5 rounded-full">Inclui contínuos</span>
+          )}
+        </div>
+        <p className="text-[11px] text-muted-foreground -mt-1 mb-2">Exibindo os próximos 15 dias para remédios de uso contínuo.</p>
+        
+        <div className="max-h-[400px] overflow-y-auto pr-1 space-y-3">
+          {proximosAgendamentos.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic">Nenhuma dose pendente.</p>
           ) : (
-            proximasDoses.map((a, idx) => {
-              const itemFormatado = { ...a.med, data: hoje, hora: a.horario, situacao: "proximo", cuidado: "Medicação" as Cuidado } as Item;
+            proximosAgendamentos.map((a, idx) => {
+              const itemFormatado = { ...a.med, data: a.data, hora: a.horario, situacao: "proximo", cuidado: "Medicação" as Cuidado } as Item;
+              const isHoje = a.data === hoje;
+              const [ano, mes, dia] = a.data.split("-");
+              const dataFormatada = `${dia}/${mes}/${ano}`;
+              
               return (
-                <div key={`${a.med.id}-${a.horario}-${idx}`} className="space-y-2">
+                <div key={`${a.med.id}-${a.data}-${a.horario}-${idx}`} className="space-y-1 pb-1">
                   <CompromissoCard item={itemFormatado} compacto />
-                  <p className="text-xs text-muted-foreground pl-2">
-                    Hoje, às {a.horario}
+                  <p className="text-[11px] font-semibold text-muted-foreground pl-2 uppercase tracking-wide flex items-center gap-1">
+                    {isHoje ? "Hoje" : dataFormatada}, às {a.horario}
+                    {!a.med.fim && <InfinityIcon className="h-3 w-3 text-muted-foreground/70" />}
                   </p>
                 </div>
               );
@@ -469,7 +527,7 @@ function Acompanhamento() {
               <button onClick={() => setAtrasoModal(null)} className="flex-1 rounded-full border py-2 text-sm font-bold text-muted-foreground">Cancelar</button>
               <button onClick={() => {
                 const novoH = atrasoModal.novoHorario || new Date().toTimeString().slice(0, 5);
-                registrarMedicacao(atrasoModal.item, atrasoModal.horario, novoH);
+                registrarMedicacao(atrasoModal.item, hoje, atrasoModal.horario, novoH);
               }} className="flex-1 rounded-full bg-primary py-2 text-sm font-bold text-primary-foreground">Salvar</button>
             </div>
           </div>
