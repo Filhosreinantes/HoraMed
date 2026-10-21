@@ -18,6 +18,10 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
   const ehMedicamento = item.cuidado === "Medicação";
   const mostraEstoque = item.dosagemUnidade !== "ml" && item.estoqueAtual !== undefined;
 
+  const tituloExibicao = ehMedicamento 
+    ? (item.medicamento || item.titulo.replace("Medicação · ", ""))
+    : tituloComTipo(item);
+
   const quando = ehMedicamento
     ? [item.inicio && `desde ${formatData(item.inicio)}`, item.fim ? `até ${formatData(item.fim)}` : "uso contínuo"].filter(Boolean).join(" · ")
     : [formatData(item.data), item.hora].filter(Boolean).join(" · ");
@@ -40,6 +44,13 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
       toast.error("Não foi possível salvar. Tente novamente.");
     } finally {
       setSalvando(false);
+    }
+  };
+
+  const excluir = async () => {
+    if (confirm("Tem certeza que deseja excluir?")) {
+      await salvarRegistros([{ id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo: "Excluído", cuidado: item.cuidado, evento: true, parentId: item.id, acao: "excluir" }], item.cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos");
+      toast.success("Excluído!");
     }
   };
 
@@ -72,42 +83,44 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
           </button>
 
           <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setExpandido((v) => !v)}>
-            <p className={`break-words font-semibold ${compacto ? "text-sm leading-tight" : "text-lg"}`}>{tituloComTipo(item)}</p>
+            <p className={`break-words font-semibold ${compacto ? "text-sm leading-tight" : "text-lg"}`}>{tituloExibicao}</p>
             {ehMedicamento ? (
               <div className={`mt-1 flex flex-col gap-0.5 ${compacto ? "text-[11px]" : "text-sm"} text-muted-foreground`}>
                 <span>{item.dosagem}</span>
-                {/* ✅ Só mostra estoque se não for ml */}
                 {mostraEstoque && <span>Restam {item.estoqueAtual} un.</span>}
               </div>
             ) : (
               <>
-                {!compacto && subtitulo(item) && <p className="break-words text-sm font-normal text-muted-foreground">{subtitulo(item)}</p>}
+                {/* ✅ Data sempre visível */}
                 <div className={`flex items-center gap-2 ${compacto ? "text-[11px]" : "text-xs"} text-muted-foreground mt-1`}>
+                  {item.data && <span className="font-semibold text-accent">{formatData(item.data)}</span>}
                   <span className="font-semibold text-accent">{item.hora}</span>
-                  {!compacto && <span>{quando}</span>}
                 </div>
+                {!compacto && subtitulo(item) && <p className="break-words text-sm font-normal text-muted-foreground">{subtitulo(item)}</p>}
               </>
             )}
           </div>
 
-          {compacto && pendente && !ehMedicamento ? (
-            <div className="flex flex-col gap-1 shrink-0">
-              <button onClick={() => registrar("feito")} className="text-[10px] font-bold text-white px-2 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Compareceu</button>
-              <button onClick={() => registrar("faltou")} className="text-[10px] font-bold rounded-md px-2 py-1 border" style={{ borderColor: "var(--tema)", color: "var(--tema-escuro)" }}>Faltou</button>
-              <button onClick={() => registrar("cancelado")} className="text-[10px] font-bold text-muted-foreground px-2 py-1">Cancelou</button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 shrink-0">
+          {/* ✅ Botões de Ação, Editar e Excluir */}
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <div className="flex items-center gap-1">
+              {/* Editar e Excluir (Sempre visíveis) */}
+              <button onClick={() => alert("Editar em breve")} className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Pencil className="h-4 w-4" /></button>
+              <button onClick={excluir} className="p-1 text-muted-foreground hover:text-red-500 transition"><Trash2 className="h-4 w-4" /></button>
+              
               {ehMedicamento && (
-                <button onClick={() => setAlarmeAberto(true)} className={`grid ${compacto ? "h-8 w-8" : "h-10 w-10"} place-items-center rounded-full transition hover:opacity-80`} style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
-                  <Clock className={compacto ? "h-4 w-4" : "h-5 w-5"} />
-                </button>
+                <button onClick={() => setAlarmeAberto(true)} className="p-1 text-muted-foreground hover:text-[var(--tema)] transition"><Clock className="h-4 w-4" /></button>
               )}
-              <button onClick={() => setExpandido((v) => !v)} className={compacto ? "p-1" : "p-2"}>
-                <ChevronDown className={`${compacto ? "h-4 w-4" : "h-5 w-5"} transition-transform ${expandido ? "rotate-180" : ""}`} />
-              </button>
             </div>
-          )}
+
+            {/* Se for compacto e pendente, mostra os botões de status embaixo dos ícones */}
+            {compacto && pendente && !ehMedicamento && (
+              <div className="flex gap-1">
+                <button onClick={() => registrar("feito")} className="text-[10px] font-bold text-white px-2 py-0.5 rounded bg-[var(--tema)]">Compareceu</button>
+                <button onClick={() => registrar("faltou")} className="text-[10px] font-bold border border-[var(--tema)] text-[var(--tema-escuro)] px-2 py-0.5 rounded">Faltou</button>
+              </div>
+            )}
+          </div>
         </div>
 
         {expandido && (
@@ -133,7 +146,6 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
           </div>
         )}
       </article>
-
       {alarmeAberto && <AlarmeModal item={item} fechar={() => setAlarmeAberto(false)} />}
     </>
   );
