@@ -25,17 +25,13 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
     ? (item.medicamento || item.titulo.replace("Medicação · ", ""))
     : tituloComTipo(item);
 
-  const quando = ehMedicamento
-    ? [item.inicio && `desde ${formatData(item.inicio)}`, item.fim ? `até ${formatData(item.fim)}` : "uso contínuo"].filter(Boolean).join(" · ")
-    : [formatData(item.data), item.hora].filter(Boolean).join(" · ");
-
   const iniciarEdicao = () => {
     setFormEdicao({ ...item });
     setEditando(true);
     setExpandido(true);
   };
 
-  // ✅ Correção: Salvar edições SEMPRE em "acontecimentos"
+  // ✅ 1. SALVAR EDIÇÃO (Sempre em "acontecimentos" para garantir leitura)
   const salvarEdicao = async (isRemarcar: boolean = false) => {
     if (salvando) return;
     setSalvando(true);
@@ -45,7 +41,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
       const ok = await salvarRegistros([{
         id: uid(), pessoaId, criadoEm: nowLocalISO(), titulo: isRemarcar ? `Remarcado` : `Editado`,
         cuidado, evento: true, parentId: id, acao: "editar", alteracoes
-      }], "acontecimentos");
+      }], "acontecimentos"); // ✅ Sempre na tabela mestre
 
       if (ok) {
         toast.success(isRemarcar ? "Sessão remarcada com sucesso!" : "Editado com sucesso!");
@@ -58,6 +54,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
     }
   };
 
+  // ✅ 2. REGISTRAR (Tomou/Faltou)
   const registrar = async (situacao: Situacao) => {
     if (salvando) return;
     setSalvando(true);
@@ -70,6 +67,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
 
       const itensParaSalvar: Dados[] = [dadosLog];
 
+      // Desconto de estoque
       if (ehMedicamento && situacao === "feito" && mostraEstoque) {
         const qtdTomada = Number(item.dosagemValor || 1);
         const novoEstoque = Math.max(0, (item.estoqueAtual || 0) - qtdTomada);
@@ -79,7 +77,6 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
         });
       }
 
-      // O log de medicação em si fica na tabela dele, mas o "acontecimento" fica em acontecimentos
       const tabela = item.cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos";
       const ok = await salvarRegistros(itensParaSalvar, tabela);
 
@@ -94,14 +91,30 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
     }
   };
 
-  // ✅ Correção: Exclusão SEMPRE em "acontecimentos"
+  // ✅ 3. EXCLUIR (Sempre em "acontecimentos")
   const excluir = async () => {
-    if (confirm("Tem certeza que deseja excluir?")) {
-      await salvarRegistros([{ 
-        id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo: "Excluído", 
-        cuidado: item.cuidado, evento: true, parentId: item.id, acao: "excluir" 
-      }], "acontecimentos");
-      toast.success("Excluído!");
+    if (!confirm("Tem certeza que deseja excluir? Isso removerá o item da lista.")) return;
+    
+    try {
+      const ok = await salvarRegistros([{ 
+        id: uid(), 
+        pessoaId: item.pessoaId, 
+        criadoEm: nowLocalISO(), 
+        titulo: "Excluído", 
+        cuidado: item.cuidado, 
+        evento: true, 
+        parentId: item.id, 
+        acao: "excluir" 
+      }], "acontecimentos"); // ✅ Forçamos a gravação na tabela master de eventos
+
+      if (ok) {
+        toast.success("Excluído com sucesso!");
+      } else {
+        toast.error("Erro ao excluir.");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro de conexão ao excluir.");
     }
   };
 
