@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, RefreshCw, Thermometer, Heart, Lock, Activity, Smile, Printer, CheckCircle2, Trophy } from "lucide-react";
+import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, RefreshCw, Thermometer, Heart, Lock, Activity, Smile, Printer, Trophy } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -10,7 +10,7 @@ import {
 import { Botao, Divisor, Pill, SeletorTesouro } from "@/components/ui-kit";
 import { CompromissoCard } from "@/components/compromisso-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { VozInput } from "@/components/voz-input"; // ✅ Importando o componente de voz
+import { VozInput } from "@/components/voz-input";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/acompanhamento")({
@@ -48,7 +48,6 @@ function Acompanhamento() {
   const [tratamentoSelecionado, setTratamentoSelecionado] = useState<string | null>(null);
   const [sintomasTexto, setSintomasTexto] = useState("");
   
-  // ✅ Estados para Bem-Estar (Tesouro e Atividades)
   const [bemEstarAba, setBemEstarAba] = useState<"tesouro" | "atividades">("tesouro");
   const [tesouroForm, setTesouroForm] = useState({ sentimento: "", gratidao: "" });
   const [atividadeForm, setAtividadeForm] = useState({ atividade: "", duracao: "", sentimento: "", gratidao: "" });
@@ -66,6 +65,7 @@ function Acompanhamento() {
   const meds = itens.filter((i) => i.cuidado === "Medicação");
   const emUso = ordenarPorDataHora(meds.filter((m) => medicacaoEmUso(m)));
   const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
+  
   const continuos = useMemo(() => {
     const mapa: Record<string, any> = {};
     emUso.filter(m => !m.fim).forEach(m => {
@@ -87,7 +87,7 @@ function Acompanhamento() {
     if (!tratamentoSelecionado) return [];
     return itens
       .filter(i => (i.cuidado as string) === "Sintoma" && (i as any).tratamento === tratamentoSelecionado)
-      .sort((a, b) => (a.data || "").localeCompare(b.data || "")); // Ordem cronológica para o relatório
+      .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
   }, [itens, tratamentoSelecionado]);
 
   const remedioDoTratamento = useMemo(() => {
@@ -172,7 +172,6 @@ function Acompanhamento() {
     return arr.sort((a, b) => a.data.localeCompare(b.data) || a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
-  // ✅ Separação dos registros de Bem-estar e Tesouro
   const logsTesouro = useMemo(() => itens.filter(i => (i.cuidado as string) === "Tesouro").sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || "")), [itens]);
   const logsAtividade = useMemo(() => itens.filter(i => (i.cuidado as string) === "BemEstar").sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || "")), [itens]);
 
@@ -231,13 +230,11 @@ function Acompanhamento() {
     }
   };
 
-  // ✅ IMPRESSÃO DO RELATÓRIO DE TRATAMENTO
   const imprimirRelatorio = () => {
     if (!ativa || !remedioDoTratamento) return;
     
     const dataInicio = remedioDoTratamento.inicio ? remedioDoTratamento.inicio.split('-').reverse().join('/') : '-';
     
-    // Monta o HTML do relatório
     const htmlSintomas = historicoTratamento.map(h => `
       <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
         <p style="font-weight: bold; margin: 0 0 4px 0; color: #333;">Dia ${h.data.split('-').reverse().join('/')}</p>
@@ -288,7 +285,6 @@ function Acompanhamento() {
     }, 500);
   };
 
-  // ✅ Salvar Tesouro
   const salvarTesouro = async () => {
     if (!ativa) return;
     const dados: Dados = {
@@ -302,7 +298,6 @@ function Acompanhamento() {
     }
   };
 
-  // ✅ Salvar Atividade
   const salvarAtividade = async () => {
     if (!ativa) return;
     const dados: Dados = {
@@ -355,7 +350,6 @@ function Acompanhamento() {
     </div>
   );
 
-  // --- TELA DE TRATAMENTO ---
   if (view === "tratamento") {
     if (tratamentoSelecionado) {
       return (
@@ -384,7 +378,6 @@ function Acompanhamento() {
                 <Printer className="h-3 w-3" /> Imprimir
               </button>
             </div>
-            {/* ✅ Campo de voz */}
             <VozInput 
               className="field text-sm min-h-24" 
               placeholder="Escreva aqui o que sente e acompanhe os efeitos do remédio." 
@@ -440,7 +433,6 @@ function Acompanhamento() {
     );
   }
 
-  // --- TELA DE BEM-ESTAR ---
   if (view === "bemestar") {
     if (assinaturaAtiva === false) return <RenderPremiumLock titulo="Bem-estar" />;
     
@@ -450,13 +442,11 @@ function Acompanhamento() {
         <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Bem-estar</h1></header>
         <SeletorTesouro />
 
-        {/* ✅ Abas para alternar entre Tesouro e Atividades */}
         <div className="flex gap-2 justify-center mb-4">
           <Pill ativo={bemEstarAba === "tesouro"} onClick={() => setBemEstarAba("tesouro")}>Registro do Tesouro</Pill>
           <Pill ativo={bemEstarAba === "atividades"} onClick={() => setBemEstarAba("atividades")}>Minhas Atividades</Pill>
         </div>
 
-        {/* ✅ Conteúdo: Tesouro */}
         {bemEstarAba === "tesouro" && (
           <>
             <section className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
@@ -503,7 +493,6 @@ function Acompanhamento() {
           </>
         )}
 
-        {/* ✅ Conteúdo: Atividades */}
         {bemEstarAba === "atividades" && (
           <>
             <section className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
@@ -565,7 +554,6 @@ function Acompanhamento() {
     );
   }
 
-  // --- MENU INICIAL ---
   if (view === "menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
