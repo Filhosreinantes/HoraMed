@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, RefreshCw } from "lucide-react";
+import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, RefreshCw, Thermometer, Heart, Lock, Activity, Smile } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_app/acompanhamento")({
   component: Acompanhamento,
 });
 
-type View = "menu" | "compromissos" | "medicacoes";
+type View = "menu" | "compromissos" | "medicacoes" | "sintomas" | "bemestar";
 type Periodo = "mes" | "ano" | "tudo";
 type Drill = { cuidado: Cuidado; situacao: Situacao } | null;
 
@@ -29,7 +29,7 @@ const LINHAS: { s: Situacao; label: string }[] = [
 ];
 
 function Acompanhamento() {
-  const { itens, logs, carregando, salvarRegistros } = useApp();
+  const { itens, logs, carregando, salvarRegistros, ativa, assinaturaAtiva } = useApp();
   const navigate = useNavigate();
   const [view, setView] = useState<View>("menu");
   const [periodo, setPeriodo] = useState<Periodo>("mes");
@@ -44,6 +44,10 @@ function Acompanhamento() {
   const [viagemInicio, setViagemInicio] = useState(hojeYMD());
   const [viagemFim, setViagemFim] = useState(hojeYMD());
 
+  // ✅ Estados para os novos blocos
+  const [sintomasForm, setSintomasForm] = useState({ febre: false, temperatura: "", pressao: "", glicose: "", sentimento: "", gratidao: "" });
+  const [bemestarForm, setBemestarForm] = useState({ atividade: "", duracao: "", sentimento: "", gratidao: "" });
+
   const hoje = hojeYMD();
 
   const filtrados = useMemo(() => {
@@ -57,7 +61,6 @@ function Acompanhamento() {
   const meds = itens.filter((i) => i.cuidado === "Medicação");
   const emUso = ordenarPorDataHora(meds.filter((m) => medicacaoEmUso(m)));
   const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
-
   const continuos = useMemo(() => {
     const mapa: Record<string, any> = {};
     emUso.filter(m => !m.fim).forEach(m => {
@@ -71,7 +74,7 @@ function Acompanhamento() {
   }, [emUso]);
 
   const proximos = useMemo(() => {
-    let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação"));
+    let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação" && (i.cuidado as string) !== "Sintoma" && (i.cuidado as string) !== "BemEstar"));
     if (buscaProximos) lista = lista.filter((i) => i.cuidado === buscaProximos);
     return lista;
   }, [itens, buscaProximos]);
@@ -147,6 +150,9 @@ function Acompanhamento() {
     return arr.sort((a, b) => a.data.localeCompare(b.data) || a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
+  const logsSintomas = useMemo(() => itens.filter(i => (i.cuidado as string) === "Sintoma").sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || "")), [itens]);
+  const logsBemEstar = useMemo(() => itens.filter(i => (i.cuidado as string) === "BemEstar").sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || "")), [itens]);
+
   const logsFiltrados = useMemo(() => {
     return logs
       .filter((i: any) => !filtroMed || i.titulo.toLowerCase().includes(filtroMed.toLowerCase()))
@@ -164,15 +170,7 @@ function Acompanhamento() {
       const qtdTomada = Number(item.dosagemValor || 1);
       const novoEstoque = Math.max(0, item.estoqueAtual - qtdTomada);
       ok = await salvarRegistros([{
-        id: uid(),
-        pessoaId: item.pessoaId,
-        criadoEm: nowLocalISO(),
-        titulo: "Atualização de estoque",
-        cuidado: item.cuidado,
-        evento: true,
-        parentId: item.id,
-        acao: "editar",
-        alteracoes: { estoqueAtual: novoEstoque }
+        id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo: "Atualização de estoque", cuidado: item.cuidado, evento: true, parentId: item.id, acao: "editar", alteracoes: { estoqueAtual: novoEstoque }
       }], "acontecimentos");
     }
 
@@ -182,9 +180,36 @@ function Acompanhamento() {
     }
   };
 
+  // ✅ Funções de salvar os novos blocos
+  const salvarSintomas = async () => {
+    if (!ativa) return;
+    const dados: Dados = {
+      id: uid(), pessoaId: ativa.id, criadoEm: nowLocalISO(), titulo: "Registro de Sintomas", cuidado: "Sintoma" as any, data: hoje, situacao: "feito",
+      ...sintomasForm
+    } as any;
+    const ok = await salvarRegistros([dados]);
+    if (ok) {
+      toast.success("Sintomas registrados!");
+      setSintomasForm({ febre: false, temperatura: "", pressao: "", glicose: "", sentimento: "", gratidao: "" });
+    }
+  };
+
+  const salvarBemEstar = async () => {
+    if (!ativa) return;
+    const dados: Dados = {
+      id: uid(), pessoaId: ativa.id, criadoEm: nowLocalISO(), titulo: "Bem-estar", cuidado: "BemEstar" as any, data: hoje, situacao: "feito",
+      ...bemestarForm
+    } as any;
+    const ok = await salvarRegistros([dados]);
+    if (ok) {
+      toast.success("Bem-estar registrado!");
+      setBemestarForm({ atividade: "", duracao: "", sentimento: "", gratidao: "" });
+    }
+  };
+
   const excluirLog = async (log: any) => {
     if (!confirm("Excluir este registro de dose?")) return;
-    const ok = await salvarRegistros([{ id: uid(), pessoaId: log.pessoaId, criadoEm: nowLocalISO(), titulo: "Excluído", cuidado: "Medicação_Log" as any, evento: true, parentId: log.id, acao: "excluir" }], "medicacao_logs");
+    const ok = await salvarRegistros([{ id: uid(), pessoaId: log.pessoaId, criadoEm: nowLocalISO(), titulo: "Excluído", cuidado: log.cuidado, evento: true, parentId: log.id, acao: "excluir" }], "medicacao_logs");
     if (ok) toast.success("Registro excluído!");
   };
 
@@ -208,6 +233,146 @@ function Acompanhamento() {
 
   if (carregando) return <div className="space-y-3 p-4"><Skeleton className="h-40 rounded-3xl bg-muted" /><Skeleton className="h-40 rounded-3xl bg-muted" /></div>;
 
+  // --- BLOQUEIO PREMIUM ---
+  const RenderPremiumLock = ({ titulo }: { titulo: string }) => (
+    <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+      <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+      <header><h1 className="font-display text-3xl font-semibold italic text-foreground">{titulo}</h1></header>
+      <div className="notebook p-8 mt-10 flex flex-col items-center gap-4 text-center" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
+        <Lock className="h-12 w-12 text-amber-500" />
+        <h2 className="font-display text-2xl font-bold italic text-foreground">Recurso Premium</h2>
+        <p className="text-sm text-muted-foreground">O diário de {titulo} está disponível apenas para assinantes do Rotina Azul Premium.</p>
+        <Botao className="mt-4 w-full" style={{ backgroundColor: "var(--tema)", color: "white" }}>Conhecer o Premium</Botao>
+      </div>
+    </div>
+  );
+
+  if (view === "sintomas") {
+    if (assinaturaAtiva === false) return <RenderPremiumLock titulo="Sintomas" />;
+    return (
+      <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
+        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Sintomas</h1></header>
+        <SeletorTesouro />
+
+        <section className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
+          <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
+            <Activity className="h-4 w-4" style={{ color: "var(--tema)" }} /> Novo Registro
+          </h2>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted-foreground">Febre?</span>
+              <button type="button" onClick={() => setSintomasForm(p => ({...p, febre: !p.febre}))} className={`w-full rounded-xl px-3 py-2 text-sm font-bold border transition ${sintomasForm.febre ? 'bg-red-100 border-red-300 text-red-700' : 'bg-white border-border text-muted-foreground'}`}>
+                {sintomasForm.febre ? "Sim" : "Não"}
+              </button>
+            </label>
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted-foreground">Temperatura</span>
+              <input type="text" className="field text-sm" placeholder="Ex: 38.5" value={sintomasForm.temperatura} onChange={(e) => setSintomasForm(p => ({...p, temperatura: e.target.value}))} />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted-foreground">Pressão</span>
+              <input type="text" className="field text-sm" placeholder="Ex: 120/80" value={sintomasForm.pressao} onChange={(e) => setSintomasForm(p => ({...p, pressao: e.target.value}))} />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted-foreground">Glicose</span>
+              <input type="text" className="field text-sm" placeholder="Ex: 90" value={sintomasForm.glicose} onChange={(e) => setSintomasForm(p => ({...p, glicose: e.target.value}))} />
+            </label>
+          </div>
+
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-muted-foreground">Como está se sentindo? (Sintomas)</span>
+            <textarea className="field text-sm min-h-20" placeholder="Ex: Dor de cabeça, cansaço..." value={sintomasForm.sentimento} onChange={(e) => setSintomasForm(p => ({...p, sentimento: e.target.value}))} />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-muted-foreground">Gratidão / Coisas boas</span>
+            <textarea className="field text-sm min-h-20" placeholder="Ex: Hoje brincou bastante..." value={sintomasForm.gratidao} onChange={(e) => setSintomasForm(p => ({...p, gratidao: e.target.value}))} />
+          </label>
+
+          <Botao onClick={salvarSintomas} className="w-full" style={{ backgroundColor: "var(--tema)", color: "white" }}>Salvar Registro</Botao>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="font-sans text-base font-semibold text-foreground">Histórico de Sintomas</h2>
+          {logsSintomas.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum registro ainda.</p> : logsSintomas.map(l => (
+            <div key={l.id} className="notebook p-4 space-y-1 bg-white text-sm">
+              <div className="flex justify-between font-bold text-foreground">
+                <span>{l.criadoEm?.slice(0, 10).split('-').reverse().join('/')}</span>
+                <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
+              </div>
+              <p className="text-muted-foreground"><span className="font-semibold text-foreground">Febre:</span> {(l as any).febre ? "Sim" : "Não"} {(l as any).temperatura && `(${(l as any).temperatura})`}</p>
+              {(l as any).pressao && <p className="text-muted-foreground"><span className="font-semibold text-foreground">Pressão:</span> {(l as any).pressao}</p>}
+              {(l as any).glicose && <p className="text-muted-foreground"><span className="font-semibold text-foreground">Glicose:</span> {(l as any).glicose}</p>}
+              {(l as any).sentimento && <p className="text-muted-foreground mt-2 italic">"{(l as any).sentimento}"</p>}
+              {(l as any).gratidao && <p className="text-muted-foreground mt-1 italic">Gratidão: "{(l as any).gratidao}"</p>}
+            </div>
+          ))}
+        </section>
+      </div>
+    );
+  }
+
+  if (view === "bemestar") {
+    if (assinaturaAtiva === false) return <RenderPremiumLock titulo="Bem-estar" />;
+    return (
+      <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
+        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Bem-estar</h1></header>
+        <SeletorTesouro />
+
+        <section className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
+          <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
+            <Smile className="h-4 w-4" style={{ color: "var(--tema)" }} /> Novo Registro
+          </h2>
+          
+          <div className="grid grid-cols-[2fr_1fr] gap-3">
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted-foreground">Atividade</span>
+              <input type="text" className="field text-sm" placeholder="Ex: Caminhada, Yoga..." value={bemestarForm.atividade} onChange={(e) => setBemestarForm(p => ({...p, atividade: e.target.value}))} />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted-foreground">Duração (min)</span>
+              <input type="number" className="field text-sm" placeholder="Ex: 30" value={bemestarForm.duracao} onChange={(e) => setBemestarForm(p => ({...p, duracao: e.target.value}))} />
+            </label>
+          </div>
+
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-muted-foreground">Como está se sentindo?</span>
+            <textarea className="field text-sm min-h-20" placeholder="Ex: Mais disposto..." value={bemestarForm.sentimento} onChange={(e) => setBemestarForm(p => ({...p, sentimento: e.target.value}))} />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-muted-foreground">Gratidão / Coisas boas</span>
+            <textarea className="field text-sm min-h-20" placeholder="Ex: Conseguiu terminar a atividade..." value={bemestarForm.gratidao} onChange={(e) => setBemestarForm(p => ({...p, gratidao: e.target.value}))} />
+          </label>
+
+          <Botao onClick={salvarBemEstar} className="w-full" style={{ backgroundColor: "var(--tema)", color: "white" }}>Salvar Registro</Botao>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="font-sans text-base font-semibold text-foreground">Histórico de Bem-estar</h2>
+          {logsBemEstar.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum registro ainda.</p> : logsBemEstar.map(l => (
+            <div key={l.id} className="notebook p-4 space-y-1 bg-white text-sm">
+              <div className="flex justify-between font-bold text-foreground">
+                <span>{(l as any).atividade || "Bem-estar"}</span>
+                <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(0, 10).split('-').reverse().join('/')} {l.criadoEm?.slice(11, 16)}</span>
+              </div>
+              {(l as any).duracao && <p className="text-muted-foreground"><span className="font-semibold text-foreground">Duração:</span> {(l as any).duracao} min</p>}
+              {(l as any).sentimento && <p className="text-muted-foreground mt-2 italic">"{(l as any).sentimento}"</p>}
+              {(l as any).gratidao && <p className="text-muted-foreground mt-1 italic">Gratidão: "{(l as any).gratidao}"</p>}
+            </div>
+          ))}
+        </section>
+      </div>
+    );
+  }
+
+  // --- MENU INICIAL ---
   if (view === "menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
@@ -270,6 +435,7 @@ function Acompanhamento() {
           </div>
         </div>
 
+        {/* ✅ NOVOS BLOCOS NO MENU */}
         <div className="grid grid-cols-2 gap-4 px-4 mt-6">
           <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
             <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
@@ -278,6 +444,14 @@ function Acompanhamento() {
           <button onClick={() => setView("medicacoes")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
             <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><PillIcon className="h-5 w-5" /></div>
             <span className="font-display text-sm font-semibold italic text-center">Medicação</span>
+          </button>
+          <button onClick={() => setView("sintomas")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Thermometer className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Sintomas</span>
+          </button>
+          <button onClick={() => setView("bemestar")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Heart className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Bem-estar</span>
           </button>
         </div>
       </div>
