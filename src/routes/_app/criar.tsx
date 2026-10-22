@@ -51,6 +51,7 @@ function Criar() {
 
   const [tratamento, setTratamento] = useState("");
   const [tratamentoOutro, setTratamentoOutro] = useState("");
+  const [mostrarLista, setMostrarLista] = useState(false); // ✅ Estado para controlar a lista
 
   const [salvando, setSalvando] = useState(false);
 
@@ -77,7 +78,7 @@ function Criar() {
         if (med.fotoUrl) setFotoUrl(med.fotoUrl);
         
         if (med.tratamento) {
-          const opcoes = ["Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite", "Asma", "Bronquite", "Sinusite", "Gastrite", "Refluxo", "Diabetes", "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático", "Tireoide", "Ansiedade", "Depressão", "Dor", "Febre", "Vitaminas / Suplementos"];
+          const opcoes = ["Febre", "Dor", "Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite", "Asma", "Bronquite", "Sinusite", "Gastrite", "Refluxo", "Diabetes", "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático", "Tireoide", "Ansiedade", "Depressão", "Vitaminas / Suplementos"];
           if (opcoes.includes(med.tratamento)) {
             setTratamento(med.tratamento);
           } else {
@@ -398,7 +399,7 @@ function Criar() {
                 {(dosagemUnidade === "Comprimido(s)" || dosagemUnidade === "Cápsula(s)" || dosagemUnidade === "Injeção") ? (
                   <Campo label="Estoque">
                     <input
-                      className="field text-xs" // ✅ Fonte menor para caber o texto
+                      className="field text-xs"
                       type="number"
                       placeholder="Escreva só números. Quantos comprimidos tem."
                       value={estoqueAtual}
@@ -408,7 +409,7 @@ function Criar() {
                 ) : (
                   <Campo label="Estoque">
                     <input
-                      className="field text-xs" // ✅ Fonte menor para caber o texto
+                      className="field text-xs"
                       type="number"
                       placeholder="Escreva só números. Quantos ml tem no frasco."
                       value={estoqueAtual}
@@ -417,16 +418,11 @@ function Criar() {
                   </Campo>
                 )}
 
-                {/* ✅ VISUAL DO TRATAMENTO PADRONIZADO COM A PÁGINA */}
                 <Campo label="Tratamento">
                   <div className="border-[1.5px] border-[#E2E8F0] rounded-2xl bg-white overflow-hidden">
-                    {/* Botão que abre e fecha a lista (Estilo dropdown) */}
                     <button
                       type="button"
-                      onClick={() => {
-                        const el = document.getElementById('lista-tratamentos');
-                        if (el) el.classList.toggle('hidden');
-                      }}
+                      onClick={() => setMostrarLista(!mostrarLista)} // ✅ Usando o estado seguro
                       className="w-full flex items-center justify-between p-3 text-sm text-left bg-white hover:bg-gray-50 transition"
                     >
                       <span className={tratamento ? "text-foreground font-medium" : "text-muted-foreground"}>
@@ -437,46 +433,46 @@ function Criar() {
                       </svg>
                     </button>
 
-                    {/* Lista de doenças oculta por padrão */}
-                    <div id="lista-tratamentos" className="hidden border-t border-[#E2E8F0] max-h-56 overflow-y-auto p-2 bg-slate-50">
-                      {[
-                        "Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite",
-                        "Asma", "Bronquite", "Sinusite", "Gastrite", "Refluxo", "Diabetes",
-                        "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático",
-                        "Tireoide", "Ansiedade", "Depressão", "Dor", "Febre", "Vitaminas / Suplementos"
-                      ].map(doenca => (
+                    {/* ✅ Lista oculta controlada pelo estado, sem duplicar na renderização */}
+                    {mostrarLista && (
+                      <div className="border-t border-[#E2E8F0] max-h-56 overflow-y-auto p-2 bg-slate-50">
+                        {[
+                          "Febre", "Dor", "Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite",
+                          "Asma", "Bronquite", "Sinusite", "Gastrite", "Refluxo", "Diabetes",
+                          "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático",
+                          "Tireoide", "Ansiedade", "Depressão", "Vitaminas / Suplementos"
+                        ].map(doenca => (
+                          <button
+                            key={doenca}
+                            type="button"
+                            onClick={() => {
+                              setTratamento(doenca);
+                              setTratamentoOutro("");
+                              setMostrarLista(false);
+                            }}
+                            className={`w-full text-left p-2.5 text-sm rounded-lg mb-1 transition ${
+                              tratamento === doenca ? "bg-primary text-primary-foreground font-bold" : "hover:bg-white text-foreground"
+                            }`}
+                          >
+                            {doenca}
+                          </button>
+                        ))}
+                        
                         <button
-                          key={doenca}
                           type="button"
                           onClick={() => {
-                            setTratamento(doenca);
-                            setTratamentoOutro(""); // limpa o campo outro se escolher da lista
-                            document.getElementById('lista-tratamentos')?.classList.add('hidden');
+                            setTratamento("Outro");
+                            setMostrarLista(false);
                           }}
-                          className={`w-full text-left p-2.5 text-sm rounded-lg mb-1 transition ${
-                            tratamento === doenca ? "bg-primary text-primary-foreground font-bold" : "hover:bg-white text-foreground"
+                          className={`w-full text-left p-2.5 text-sm rounded-lg mt-1 border-t border-gray-200 transition ${
+                            tratamento === "Outro" ? "bg-primary text-primary-foreground font-bold" : "hover:bg-white text-foreground font-semibold"
                           }`}
                         >
-                          {doenca}
+                          Outro (não listado acima)
                         </button>
-                      ))}
-                      
-                      {/* Botão Outro */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTratamento("Outro");
-                          document.getElementById('lista-tratamentos')?.classList.add('hidden');
-                        }}
-                        className={`w-full text-left p-2.5 text-sm rounded-lg mt-1 border-t border-gray-200 transition ${
-                          tratamento === "Outro" ? "bg-primary text-primary-foreground font-bold" : "hover:bg-white text-foreground font-semibold"
-                        }`}
-                      >
-                        Outro (não listado acima)
-                      </button>
-                    </div>
+                      </div>
+                    )}
 
-                    {/* Campo que aparece só se escolher Outro */}
                     {tratamento === "Outro" && (
                       <div className="p-3 border-t border-[#E2E8F0] bg-white">
                         <input
