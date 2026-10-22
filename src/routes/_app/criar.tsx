@@ -49,9 +49,9 @@ function Criar() {
   const [dosagemUnidade, setDosagemUnidade] = useState("ml");
   const [estoqueAtual, setEstoqueAtual] = useState("");
 
-  // ✅ Novos estados para o Tratamento
-  const [tratamentos, setTratamentos] = useState<string[]>([]);
-  const [outroTratamento, setOutroTratamento] = useState("");
+  // ✅ Estados alterados para "Tratamento Único" e "Complemento"
+  const [tratamento, setTratamento] = useState("");
+  const [complementoTratamento, setComplementoTratamento] = useState("");
 
   const [salvando, setSalvando] = useState(false);
 
@@ -77,9 +77,9 @@ function Criar() {
         }
         if (med.diasSemana) setDiasSemana(med.diasSemana);
         if (med.fotoUrl) setFotoUrl(med.fotoUrl);
-        // ✅ Traz os tratamentos anteriores
-        if (med.tratamentos) setTratamentos(med.tratamentos);
-        if (med.outroTratamento) setOutroTratamento(med.outroTratamento);
+        // ✅ Traz o tratamento e complemento anteriores
+        if (med.tratamento) setTratamento(med.tratamento);
+        if (med.complementoTratamento) setComplementoTratamento(med.complementoTratamento);
       }
     }
   }, [duplicar, itens]);
@@ -110,15 +110,6 @@ function Criar() {
       prev.includes(diaIndex)
         ? prev.filter((d) => d !== diaIndex)
         : [...prev, diaIndex]
-    );
-  };
-
-  // ✅ Função para marcar/desmarcar doenças
-  const toggleTratamento = (t: string) => {
-    setTratamentos(prev => 
-      prev.includes(t) 
-        ? prev.filter(x => x !== t) 
-        : [...prev, t]
     );
   };
 
@@ -184,9 +175,9 @@ function Criar() {
         fim: fimCalculado || undefined,
         fotoUrl: fotoUrl,
         diasSemana: diasSemana,
-        // ✅ Salvando os tratamentos no banco
-        tratamentos: tratamentos,
-        outroTratamento: outroTratamento || undefined,
+        // ✅ Salvando tratamento único e complemento
+        tratamento: tratamento || undefined,
+        complementoTratamento: complementoTratamento || undefined,
       }];
     } else {
       const prog = f.programacao as Programacao;
@@ -398,37 +389,40 @@ function Criar() {
                   </Campo>
                 </div>
 
-                {/* ✅ NOVO CAMPO: O que este remédio trata? */}
+                {/* ✅ NOVO BLOCO DE TRATAMENTO (Dropdown + Complemento) */}
                 <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <span className="text-sm font-semibold flex items-center gap-2 text-slate-700">
-                    <Stethoscope className="h-4 w-4" /> O que este remédio trata? (Opcional)
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      "Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite",
-                      "Diabetes", "Hipertensão", "Cardiológico", "Renal", "Hepático"
-                    ].map(doenca => (
-                      <button
-                        key={doenca}
-                        type="button"
-                        onClick={() => toggleTratamento(doenca)}
-                        className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${
-                          tratamentos.includes(doenca)
-                            ? "bg-primary text-primary-foreground border border-primary"
-                            : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
-                        }`}
-                      >
-                        {doenca}
-                      </button>
-                    ))}
-                  </div>
-                  <input
-                    type="text"
-                    className="field mt-2 text-sm"
-                    placeholder="Outro tratamento (digite aqui)..."
-                    value={outroTratamento}
-                    onChange={(e) => setOutroTratamento(e.target.value)}
-                  />
+                  <Campo label="Qual o tratamento?">
+                    <select className="field" value={tratamento} onChange={(e) => setTratamento(e.target.value)}>
+                      <option value="">Selecione...</option>
+                      <option value="Gripe">Gripe</option>
+                      <option value="Resfriado">Resfriado</option>
+                      <option value="Infecção urinária">Infecção urinária</option>
+                      <option value="Alergia">Alergia</option>
+                      <option value="Laringite">Laringite</option>
+                      <option value="Asma / Bronquite">Asma / Bronquite</option>
+                      <option value="Sinusite">Sinusite</option>
+                      <option value="Gastrite / Refluxo">Gastrite / Refluxo</option>
+                      <option value="Diabetes">Diabetes</option>
+                      <option value="Hipertensão">Hipertensão</option>
+                      <option value="Colesterol">Colesterol</option>
+                      <option value="Cardiológico">Cardiológico</option>
+                      <option value="Renal">Renal</option>
+                      <option value="Hepático">Hepático</option>
+                      <option value="Tireoide">Tireoide</option>
+                      <option value="Ansiedade / Depressão">Ansiedade / Depressão</option>
+                      <option value="Dor / Febre">Dor / Febre</option>
+                      <option value="Vitaminas / Suplementos">Vitaminas / Suplementos</option>
+                    </select>
+                  </Campo>
+                  <Campo label="Complemento do tratamento">
+                    <input
+                      type="text"
+                      className="field"
+                      placeholder="Ex: Arritmia, Pressão alta, etc."
+                      value={complementoTratamento}
+                      onChange={(e) => setComplementoTratamento(e.target.value)}
+                    />
+                  </Campo>
                 </div>
 
                 {(dosagemUnidade === "Comprimido(s)" || dosagemUnidade === "Cápsula(s)" || dosagemUnidade === "Injeção") ? (
