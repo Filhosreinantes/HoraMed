@@ -49,8 +49,9 @@ function Criar() {
   const [dosagemUnidade, setDosagemUnidade] = useState("ml");
   const [estoqueAtual, setEstoqueAtual] = useState("");
 
-  // ✅ Apenas um estado para o tratamento (aceita escolha ou digitação)
+  // ✅ Estados para o novo check-list de tratamento
   const [tratamento, setTratamento] = useState("");
+  const [tratamentoOutro, setTratamentoOutro] = useState("");
 
   const [salvando, setSalvando] = useState(false);
 
@@ -75,7 +76,17 @@ function Criar() {
         }
         if (med.diasSemana) setDiasSemana(med.diasSemana);
         if (med.fotoUrl) setFotoUrl(med.fotoUrl);
-        if (med.tratamento) setTratamento(med.tratamento); // Traz o tratamento salvo
+        
+        // ✅ Verifica se o tratamento salvo está na lista ou é um "Outro"
+        if (med.tratamento) {
+          const opcoes = ["Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite", "Asma / Bronquite", "Sinusite", "Gastrite / Refluxo", "Diabetes", "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático", "Tireoide", "Ansiedade", "Depressão", "Dor", "Febre", "Vitaminas / Suplementos"];
+          if (opcoes.includes(med.tratamento)) {
+            setTratamento(med.tratamento);
+          } else {
+            setTratamento("Outro");
+            setTratamentoOutro(med.tratamento);
+          }
+        }
       }
     }
   }, [duplicar, itens]);
@@ -154,6 +165,8 @@ function Criar() {
       lista = [{ ...base, id: uid(), titulo: `Exame · ${f.tipoExame}`, tipoExame: f.tipoExame, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, recomendacoes: f.recomendacoes }];
     } else if (tipo === "Medicação") {
       const horariosCalculados = calcularHorarios();
+      
+      const tratamentoFinal = tratamento === "Outro" ? tratamentoOutro : tratamento;
 
       lista = [{
         ...base,
@@ -172,7 +185,7 @@ function Criar() {
         fim: fimCalculado || undefined,
         fotoUrl: fotoUrl,
         diasSemana: diasSemana,
-        tratamento: tratamento || undefined, // Salva o que foi escolhido ou digitado
+        tratamento: tratamentoFinal || undefined,
       }];
     } else {
       const prog = f.programacao as Programacao;
@@ -294,11 +307,6 @@ function Criar() {
                 color: var(--tema-escuro);
                 font-weight: 600;
               }
-              /* Esconde a setinha padrão do datalist no Chrome/Safari para ficar mais bonito */
-              input[list]::-webkit-calendar-picker-indicator {
-                opacity: 0.5;
-                cursor: pointer;
-              }
             `}</style>
 
             {tipo === "Consulta" && (
@@ -389,61 +397,106 @@ function Criar() {
                   </Campo>
                 </div>
 
-                {/* ✅ CAMPO ÚNICO E INTELIGENTE (Datalist) */}
-                <Campo label="O que este remédio trata?">
-                  <input
-                    type="text"
-                    className="field"
-                    list="lista-tratamentos"
-                    placeholder="Selecione ou digite..."
-                    value={tratamento}
-                    onChange={(e) => setTratamento(e.target.value)}
-                  />
-                  <datalist id="lista-tratamentos">
-                    <option value="Gripe" />
-                    <option value="Resfriado" />
-                    <option value="Infecção urinária" />
-                    <option value="Alergia" />
-                    <option value="Laringite" />
-                    <option value="Asma / Bronquite" />
-                    <option value="Sinusite" />
-                    <option value="Gastrite / Refluxo" />
-                    <option value="Diabetes" />
-                    <option value="Hipertensão" />
-                    <option value="Colesterol" />
-                    <option value="Cardiológico" />
-                    <option value="Renal" />
-                    <option value="Hepático" />
-                    <option value="Tireoide" />
-                    <option value="Ansiedade" />
-                    <option value="Depressão" />
-                    <option value="Dor" />
-                    <option value="Febre" />
-                    <option value="Vitaminas / Suplementos" />
-                  </datalist>
-                </Campo>
-
+                {/* ✅ BLOCO DE ESTOQUE MOVIDO PARA CIMA E SIMPLIFICADO */}
                 {(dosagemUnidade === "Comprimido(s)" || dosagemUnidade === "Cápsula(s)" || dosagemUnidade === "Injeção") ? (
-                  <Campo label="Controle de Estoque (unidades)">
+                  <Campo label="Estoque">
                     <input
                       className="field"
                       type="number"
-                      placeholder="Ex: 30 (quantos tem na caixa)"
+                      placeholder="Escreva só números. Quantos comprimidos tem."
                       value={estoqueAtual}
                       onChange={(e) => setEstoqueAtual(e.target.value)}
                     />
                   </Campo>
                 ) : (
-                  <Campo label="Volume do Frasco (ml)">
+                  <Campo label="Estoque">
                     <input
                       className="field"
                       type="number"
-                      placeholder="Ex: 100 (total do frasco)"
+                      placeholder="Escreva só números. Quantos ml tem no frasco."
                       value={estoqueAtual}
                       onChange={(e) => setEstoqueAtual(e.target.value)}
                     />
                   </Campo>
                 )}
+
+                {/* ✅ NOVO VISUAL DO TRATAMENTO (Baseado no print) */}
+                <div className="space-y-3 bg-[#FCF9F2] p-4 rounded-2xl border border-[#E8D8B8]">
+                  <span className="text-sm font-semibold flex items-center gap-2 text-[#5D4037]">
+                    Tratamento
+                  </span>
+                  
+                  <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                    {[
+                      "Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite",
+                      "Asma / Bronquite", "Sinusite", "Gastrite / Refluxo", "Diabetes",
+                      "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático",
+                      "Tireoide", "Ansiedade", "Depressão", "Dor", "Febre", "Vitaminas / Suplementos"
+                    ].map(doenca => {
+                      const selecionado = tratamento === doenca;
+                      return (
+                        <button
+                          key={doenca}
+                          type="button"
+                          onClick={() => {
+                            setTratamento(selecionado ? "" : doenca);
+                            if (selecionado) setTratamentoOutro(""); 
+                          }}
+                          className={`flex items-center gap-3 w-full p-3 rounded-xl border transition-all text-left ${
+                            selecionado 
+                              ? "bg-white border-[#8D6E63] shadow-sm" 
+                              : "bg-white border-transparent hover:border-[#D7CCC8]"
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
+                            selecionado ? "border-[#8D6E63] bg-white" : "border-[#D7CCC8] bg-white"
+                          }`}>
+                            {selecionado && <div className="w-2.5 h-2.5 bg-[#8D6E63] rounded-sm" />}
+                          </div>
+                          <span className={`text-sm ${selecionado ? "text-[#4E342E] font-medium" : "text-[#5D4037]"}`}>
+                            {doenca}
+                          </span>
+                        </button>
+                      );
+                    })}
+
+                    {/* ✅ Opção Outro com campo de texto expansível */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const isOutro = tratamento === "Outro";
+                        setTratamento(isOutro ? "" : "Outro");
+                        if (isOutro) setTratamentoOutro("");
+                      }}
+                      className={`flex items-center gap-3 w-full p-3 rounded-xl border transition-all text-left mt-2 ${
+                        tratamento === "Outro" 
+                          ? "bg-white border-[#8D6E63] shadow-sm" 
+                          : "bg-white border-transparent hover:border-[#D7CCC8]"
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
+                        tratamento === "Outro" ? "border-[#8D6E63] bg-white" : "border-[#D7CCC8] bg-white"
+                      }`}>
+                        {tratamento === "Outro" && <div className="w-2.5 h-2.5 bg-[#8D6E63] rounded-sm" />}
+                      </div>
+                      <span className={`text-sm ${tratamento === "Outro" ? "text-[#4E342E] font-medium" : "text-[#5D4037]"}`}>
+                        Outro (não listado acima)
+                      </span>
+                    </button>
+
+                    {tratamento === "Outro" && (
+                      <div className="pl-8 pr-2 pb-2">
+                        <input
+                          type="text"
+                          className="field text-sm w-full"
+                          placeholder="Escreva aqui o que mais dói..."
+                          value={tratamentoOutro}
+                          onChange={(e) => setTratamentoOutro(e.target.value)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 <div>
                   <span className="text-xs font-semibold block mb-1">Foto da Caixa</span>
