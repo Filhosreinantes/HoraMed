@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef } from "react";
 import { Mic, MicOff } from "lucide-react";
 import { toast } from "sonner";
@@ -17,7 +18,6 @@ export function VozInput({
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    // Verifica se o navegador suporta a API de voz
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       recognitionRef.current = new SpeechRecognition();
