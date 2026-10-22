@@ -2,7 +2,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
-import { Camera, Loader2, X, Clock, CalendarDays, Stethoscope, Leaf, FileText, Pill } from "lucide-react";
+import { Camera, Loader2, X, Clock, CalendarDays, Stethoscope, Leaf, FileText, Pill, Check } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import { supabase } from "@/lib/supabase";
 import { DIAS_SEMANA, gerarSessoes, nowLocalISO, uid, hojeYMD, type Cuidado, type Dados, type Programacao } from "@/lib/cuidados";
@@ -51,7 +51,8 @@ function Criar() {
 
   const [tratamento, setTratamento] = useState("");
   const [tratamentoOutro, setTratamentoOutro] = useState("");
-  const [mostrarLista, setMostrarLista] = useState(false); // ✅ Estado para controlar a lista
+  const [mostrarLista, setMostrarLista] = useState(false);
+  const [digitandoOutro, setDigitandoOutro] = useState(false); // ✅ Novo estado
 
   const [salvando, setSalvando] = useState(false);
 
@@ -420,21 +421,48 @@ function Criar() {
 
                 <Campo label="Tratamento">
                   <div className="border-[1.5px] border-[#E2E8F0] rounded-2xl bg-white overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setMostrarLista(!mostrarLista)} // ✅ Usando o estado seguro
-                      className="w-full flex items-center justify-between p-3 text-sm text-left bg-white hover:bg-gray-50 transition"
-                    >
-                      <span className={tratamento ? "text-foreground font-medium" : "text-muted-foreground"}>
-                        {tratamento === "Outro" ? tratamentoOutro || "Outro" : tratamento || "Selecione ou escreva abaixo..."}
-                      </span>
-                      <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
+                    
+                    {/* ✅ Se estiver digitando "Outro", mostra APENAS o campo de texto */}
+                    {digitandoOutro ? (
+                      <div className="p-3 flex items-center gap-2">
+                        <input
+                          type="text"
+                          className="w-full bg-transparent text-sm focus:outline-none text-foreground"
+                          placeholder="Escreva aqui o seu tratamento."
+                          value={tratamentoOutro}
+                          onChange={(e) => setTratamentoOutro(e.target.value)}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!tratamentoOutro.trim()) {
+                              setTratamento("");
+                            }
+                            setDigitandoOutro(false);
+                          }}
+                          className="p-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      /* ✅ Se não estiver digitando, mostra o botão principal */
+                      <button
+                        type="button"
+                        onClick={() => setMostrarLista(!mostrarLista)}
+                        className="w-full flex items-center justify-between p-3 text-sm text-left bg-white hover:bg-gray-50 transition"
+                      >
+                        <span className={tratamento ? "text-foreground font-medium" : "text-muted-foreground"}>
+                          {tratamento || "Selecione ou escreva abaixo..."}
+                        </span>
+                        <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    )}
 
-                    {/* ✅ Lista oculta controlada pelo estado, sem duplicar na renderização */}
-                    {mostrarLista && (
+                    {mostrarLista && !digitandoOutro && (
                       <div className="border-t border-[#E2E8F0] max-h-56 overflow-y-auto p-2 bg-slate-50">
                         {[
                           "Febre", "Dor", "Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite",
@@ -463,6 +491,7 @@ function Criar() {
                           onClick={() => {
                             setTratamento("Outro");
                             setMostrarLista(false);
+                            setDigitandoOutro(true);
                           }}
                           className={`w-full text-left p-2.5 text-sm rounded-lg mt-1 border-t border-gray-200 transition ${
                             tratamento === "Outro" ? "bg-primary text-primary-foreground font-bold" : "hover:bg-white text-foreground font-semibold"
@@ -473,18 +502,6 @@ function Criar() {
                       </div>
                     )}
 
-                    {tratamento === "Outro" && (
-                      <div className="p-3 border-t border-[#E2E8F0] bg-white">
-                        <input
-                          type="text"
-                          className="w-full bg-transparent text-sm focus:outline-none text-foreground"
-                          placeholder="Escreva aqui o seu tratamento."
-                          value={tratamentoOutro}
-                          onChange={(e) => setTratamentoOutro(e.target.value)}
-                          autoFocus
-                        />
-                      </div>
-                    )}
                   </div>
                 </Campo>
 
