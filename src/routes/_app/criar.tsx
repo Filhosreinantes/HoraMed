@@ -49,7 +49,6 @@ function Criar() {
   const [dosagemUnidade, setDosagemUnidade] = useState("ml");
   const [estoqueAtual, setEstoqueAtual] = useState("");
 
-  // ✅ Estados para o novo check-list de tratamento
   const [tratamento, setTratamento] = useState("");
   const [tratamentoOutro, setTratamentoOutro] = useState("");
 
@@ -77,9 +76,8 @@ function Criar() {
         if (med.diasSemana) setDiasSemana(med.diasSemana);
         if (med.fotoUrl) setFotoUrl(med.fotoUrl);
         
-        // ✅ Verifica se o tratamento salvo está na lista ou é um "Outro"
         if (med.tratamento) {
-          const opcoes = ["Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite", "Asma / Bronquite", "Sinusite", "Gastrite / Refluxo", "Diabetes", "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático", "Tireoide", "Ansiedade", "Depressão", "Dor", "Febre", "Vitaminas / Suplementos"];
+          const opcoes = ["Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite", "Asma", "Bronquite", "Sinusite", "Gastrite", "Refluxo", "Diabetes", "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático", "Tireoide", "Ansiedade", "Depressão", "Dor", "Febre", "Vitaminas / Suplementos"];
           if (opcoes.includes(med.tratamento)) {
             setTratamento(med.tratamento);
           } else {
@@ -397,11 +395,10 @@ function Criar() {
                   </Campo>
                 </div>
 
-                {/* ✅ BLOCO DE ESTOQUE MOVIDO PARA CIMA E SIMPLIFICADO */}
                 {(dosagemUnidade === "Comprimido(s)" || dosagemUnidade === "Cápsula(s)" || dosagemUnidade === "Injeção") ? (
                   <Campo label="Estoque">
                     <input
-                      className="field"
+                      className="field text-xs" // ✅ Fonte menor para caber o texto
                       type="number"
                       placeholder="Escreva só números. Quantos comprimidos tem."
                       value={estoqueAtual}
@@ -411,7 +408,7 @@ function Criar() {
                 ) : (
                   <Campo label="Estoque">
                     <input
-                      className="field"
+                      className="field text-xs" // ✅ Fonte menor para caber o texto
                       type="number"
                       placeholder="Escreva só números. Quantos ml tem no frasco."
                       value={estoqueAtual}
@@ -420,83 +417,80 @@ function Criar() {
                   </Campo>
                 )}
 
-                {/* ✅ NOVO VISUAL DO TRATAMENTO (Baseado no print) */}
-                <div className="space-y-3 bg-[#FCF9F2] p-4 rounded-2xl border border-[#E8D8B8]">
-                  <span className="text-sm font-semibold flex items-center gap-2 text-[#5D4037]">
-                    Tratamento
-                  </span>
-                  
-                  <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                    {[
-                      "Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite",
-                      "Asma / Bronquite", "Sinusite", "Gastrite / Refluxo", "Diabetes",
-                      "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático",
-                      "Tireoide", "Ansiedade", "Depressão", "Dor", "Febre", "Vitaminas / Suplementos"
-                    ].map(doenca => {
-                      const selecionado = tratamento === doenca;
-                      return (
+                {/* ✅ VISUAL DO TRATAMENTO PADRONIZADO COM A PÁGINA */}
+                <Campo label="Tratamento">
+                  <div className="border-[1.5px] border-[#E2E8F0] rounded-2xl bg-white overflow-hidden">
+                    {/* Botão que abre e fecha a lista (Estilo dropdown) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById('lista-tratamentos');
+                        if (el) el.classList.toggle('hidden');
+                      }}
+                      className="w-full flex items-center justify-between p-3 text-sm text-left bg-white hover:bg-gray-50 transition"
+                    >
+                      <span className={tratamento ? "text-foreground font-medium" : "text-muted-foreground"}>
+                        {tratamento === "Outro" ? tratamentoOutro || "Outro" : tratamento || "Selecione ou escreva abaixo..."}
+                      </span>
+                      <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Lista de doenças oculta por padrão */}
+                    <div id="lista-tratamentos" className="hidden border-t border-[#E2E8F0] max-h-56 overflow-y-auto p-2 bg-slate-50">
+                      {[
+                        "Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite",
+                        "Asma", "Bronquite", "Sinusite", "Gastrite", "Refluxo", "Diabetes",
+                        "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático",
+                        "Tireoide", "Ansiedade", "Depressão", "Dor", "Febre", "Vitaminas / Suplementos"
+                      ].map(doenca => (
                         <button
                           key={doenca}
                           type="button"
                           onClick={() => {
-                            setTratamento(selecionado ? "" : doenca);
-                            if (selecionado) setTratamentoOutro(""); 
+                            setTratamento(doenca);
+                            setTratamentoOutro(""); // limpa o campo outro se escolher da lista
+                            document.getElementById('lista-tratamentos')?.classList.add('hidden');
                           }}
-                          className={`flex items-center gap-3 w-full p-3 rounded-xl border transition-all text-left ${
-                            selecionado 
-                              ? "bg-white border-[#8D6E63] shadow-sm" 
-                              : "bg-white border-transparent hover:border-[#D7CCC8]"
+                          className={`w-full text-left p-2.5 text-sm rounded-lg mb-1 transition ${
+                            tratamento === doenca ? "bg-primary text-primary-foreground font-bold" : "hover:bg-white text-foreground"
                           }`}
                         >
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
-                            selecionado ? "border-[#8D6E63] bg-white" : "border-[#D7CCC8] bg-white"
-                          }`}>
-                            {selecionado && <div className="w-2.5 h-2.5 bg-[#8D6E63] rounded-sm" />}
-                          </div>
-                          <span className={`text-sm ${selecionado ? "text-[#4E342E] font-medium" : "text-[#5D4037]"}`}>
-                            {doenca}
-                          </span>
+                          {doenca}
                         </button>
-                      );
-                    })}
-
-                    {/* ✅ Opção Outro com campo de texto expansível */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const isOutro = tratamento === "Outro";
-                        setTratamento(isOutro ? "" : "Outro");
-                        if (isOutro) setTratamentoOutro("");
-                      }}
-                      className={`flex items-center gap-3 w-full p-3 rounded-xl border transition-all text-left mt-2 ${
-                        tratamento === "Outro" 
-                          ? "bg-white border-[#8D6E63] shadow-sm" 
-                          : "bg-white border-transparent hover:border-[#D7CCC8]"
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
-                        tratamento === "Outro" ? "border-[#8D6E63] bg-white" : "border-[#D7CCC8] bg-white"
-                      }`}>
-                        {tratamento === "Outro" && <div className="w-2.5 h-2.5 bg-[#8D6E63] rounded-sm" />}
-                      </div>
-                      <span className={`text-sm ${tratamento === "Outro" ? "text-[#4E342E] font-medium" : "text-[#5D4037]"}`}>
+                      ))}
+                      
+                      {/* Botão Outro */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTratamento("Outro");
+                          document.getElementById('lista-tratamentos')?.classList.add('hidden');
+                        }}
+                        className={`w-full text-left p-2.5 text-sm rounded-lg mt-1 border-t border-gray-200 transition ${
+                          tratamento === "Outro" ? "bg-primary text-primary-foreground font-bold" : "hover:bg-white text-foreground font-semibold"
+                        }`}
+                      >
                         Outro (não listado acima)
-                      </span>
-                    </button>
+                      </button>
+                    </div>
 
+                    {/* Campo que aparece só se escolher Outro */}
                     {tratamento === "Outro" && (
-                      <div className="pl-8 pr-2 pb-2">
+                      <div className="p-3 border-t border-[#E2E8F0] bg-white">
                         <input
                           type="text"
-                          className="field text-sm w-full"
-                          placeholder="Escreva aqui o que mais dói..."
+                          className="w-full bg-transparent text-sm focus:outline-none text-foreground"
+                          placeholder="Escreva aqui o seu tratamento."
                           value={tratamentoOutro}
                           onChange={(e) => setTratamentoOutro(e.target.value)}
+                          autoFocus
                         />
                       </div>
                     )}
                   </div>
-                </div>
+                </Campo>
 
                 <div>
                   <span className="text-xs font-semibold block mb-1">Foto da Caixa</span>
