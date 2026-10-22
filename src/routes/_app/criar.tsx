@@ -49,8 +49,13 @@ function Criar() {
   const [dosagemUnidade, setDosagemUnidade] = useState("ml");
   const [estoqueAtual, setEstoqueAtual] = useState("");
 
+  // ✅ Novos estados para o Tratamento
+  const [tratamentos, setTratamentos] = useState<string[]>([]);
+  const [outroTratamento, setOutroTratamento] = useState("");
+
   const [salvando, setSalvando] = useState(false);
 
+  // Preenchimento automático ao clicar em "Renovar"
   useEffect(() => {
     if (duplicar && itens.length > 0) {
       const med: any = itens.find(i => i.id === duplicar);
@@ -72,6 +77,9 @@ function Criar() {
         }
         if (med.diasSemana) setDiasSemana(med.diasSemana);
         if (med.fotoUrl) setFotoUrl(med.fotoUrl);
+        // ✅ Traz os tratamentos anteriores
+        if (med.tratamentos) setTratamentos(med.tratamentos);
+        if (med.outroTratamento) setOutroTratamento(med.outroTratamento);
       }
     }
   }, [duplicar, itens]);
@@ -89,7 +97,6 @@ function Criar() {
     const horarios = [];
 
     for (let i = 0; i < vezesAoDia; i++) {
-      // ✅ Trocado de let para const (regra prefer-const do ESLint)
       const novaHora = (h + i * intervalHours) % 24;
       const horaFormatada = Math.floor(novaHora).toString().padStart(2, "0");
       const minutoFormatado = m.toString().padStart(2, "0");
@@ -103,6 +110,15 @@ function Criar() {
       prev.includes(diaIndex)
         ? prev.filter((d) => d !== diaIndex)
         : [...prev, diaIndex]
+    );
+  };
+
+  // ✅ Função para marcar/desmarcar doenças
+  const toggleTratamento = (t: string) => {
+    setTratamentos(prev => 
+      prev.includes(t) 
+        ? prev.filter(x => x !== t) 
+        : [...prev, t]
     );
   };
 
@@ -168,6 +184,9 @@ function Criar() {
         fim: fimCalculado || undefined,
         fotoUrl: fotoUrl,
         diasSemana: diasSemana,
+        // ✅ Salvando os tratamentos no banco
+        tratamentos: tratamentos,
+        outroTratamento: outroTratamento || undefined,
       }];
     } else {
       const prog = f.programacao as Programacao;
@@ -379,6 +398,39 @@ function Criar() {
                   </Campo>
                 </div>
 
+                {/* ✅ NOVO CAMPO: O que este remédio trata? */}
+                <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <span className="text-sm font-semibold flex items-center gap-2 text-slate-700">
+                    <Stethoscope className="h-4 w-4" /> O que este remédio trata? (Opcional)
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite",
+                      "Diabetes", "Hipertensão", "Cardiológico", "Renal", "Hepático"
+                    ].map(doenca => (
+                      <button
+                        key={doenca}
+                        type="button"
+                        onClick={() => toggleTratamento(doenca)}
+                        className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${
+                          tratamentos.includes(doenca)
+                            ? "bg-primary text-primary-foreground border border-primary"
+                            : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        {doenca}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    className="field mt-2 text-sm"
+                    placeholder="Outro tratamento (digite aqui)..."
+                    value={outroTratamento}
+                    onChange={(e) => setOutroTratamento(e.target.value)}
+                  />
+                </div>
+
                 {(dosagemUnidade === "Comprimido(s)" || dosagemUnidade === "Cápsula(s)" || dosagemUnidade === "Injeção") ? (
                   <Campo label="Controle de Estoque (unidades)">
                     <input
@@ -512,4 +564,4 @@ function Criar() {
       )}
     </div>
   );
-}  // Testando atualização final
+}
