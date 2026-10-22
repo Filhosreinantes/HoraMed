@@ -52,7 +52,7 @@ function Criar() {
   const [tratamento, setTratamento] = useState("");
   const [tratamentoOutro, setTratamentoOutro] = useState("");
   const [mostrarLista, setMostrarLista] = useState(false);
-  const [digitandoOutro, setDigitandoOutro] = useState(false); // ✅ Novo estado
+  const [digitandoOutro, setDigitandoOutro] = useState(false);
 
   const [salvando, setSalvando] = useState(false);
 
@@ -83,7 +83,7 @@ function Criar() {
           if (opcoes.includes(med.tratamento)) {
             setTratamento(med.tratamento);
           } else {
-            setTratamento("Outro");
+            setTratamento(med.tratamento); // Salva o nome personalizado direto
             setTratamentoOutro(med.tratamento);
           }
         }
@@ -165,8 +165,6 @@ function Criar() {
       lista = [{ ...base, id: uid(), titulo: `Exame · ${f.tipoExame}`, tipoExame: f.tipoExame, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, recomendacoes: f.recomendacoes }];
     } else if (tipo === "Medicação") {
       const horariosCalculados = calcularHorarios();
-      
-      const tratamentoFinal = tratamento === "Outro" ? tratamentoOutro : tratamento;
 
       lista = [{
         ...base,
@@ -185,7 +183,7 @@ function Criar() {
         fim: fimCalculado || undefined,
         fotoUrl: fotoUrl,
         diasSemana: diasSemana,
-        tratamento: tratamentoFinal || undefined,
+        tratamento: tratamento || undefined, // ✅ Agora salva o texto final (ou "Ouvido" ou "Febre")
       }];
     } else {
       const prog = f.programacao as Programacao;
@@ -422,7 +420,6 @@ function Criar() {
                 <Campo label="Tratamento">
                   <div className="border-[1.5px] border-[#E2E8F0] rounded-2xl bg-white overflow-hidden">
                     
-                    {/* ✅ Se estiver digitando "Outro", mostra APENAS o campo de texto */}
                     {digitandoOutro ? (
                       <div className="p-3 flex items-center gap-2">
                         <input
@@ -436,8 +433,11 @@ function Criar() {
                         <button
                           type="button"
                           onClick={() => {
-                            if (!tratamentoOutro.trim()) {
-                              setTratamento("");
+                            // ✅ A MÁGICA: Pega o texto e coloca como o valor do tratamento
+                            if (tratamentoOutro.trim()) {
+                              setTratamento(tratamentoOutro);
+                            } else {
+                              setTratamento(""); // Se apagar tudo, limpa o tratamento
                             }
                             setDigitandoOutro(false);
                           }}
@@ -447,7 +447,6 @@ function Criar() {
                         </button>
                       </div>
                     ) : (
-                      /* ✅ Se não estiver digitando, mostra o botão principal */
                       <button
                         type="button"
                         onClick={() => setMostrarLista(!mostrarLista)}
@@ -489,19 +488,16 @@ function Criar() {
                         <button
                           type="button"
                           onClick={() => {
-                            setTratamento("Outro");
+                            setTratamentoOutro(""); // limpa o campo ao abrir
                             setMostrarLista(false);
                             setDigitandoOutro(true);
                           }}
-                          className={`w-full text-left p-2.5 text-sm rounded-lg mt-1 border-t border-gray-200 transition ${
-                            tratamento === "Outro" ? "bg-primary text-primary-foreground font-bold" : "hover:bg-white text-foreground font-semibold"
-                          }`}
+                          className={`w-full text-left p-2.5 text-sm rounded-lg mt-1 border-t border-gray-200 transition hover:bg-white text-foreground font-semibold`}
                         >
                           Outro (não listado acima)
                         </button>
                       </div>
                     )}
-
                   </div>
                 </Campo>
 
