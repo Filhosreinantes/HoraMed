@@ -49,13 +49,11 @@ function Criar() {
   const [dosagemUnidade, setDosagemUnidade] = useState("ml");
   const [estoqueAtual, setEstoqueAtual] = useState("");
 
-  // ✅ Estados para Tratamento Único e o campo de digitar se for "Outro"
+  // ✅ Apenas um estado para o tratamento (aceita escolha ou digitação)
   const [tratamento, setTratamento] = useState("");
-  const [tratamentoOutro, setTratamentoOutro] = useState("");
 
   const [salvando, setSalvando] = useState(false);
 
-  // Preenchimento automático ao clicar em "Renovar"
   useEffect(() => {
     if (duplicar && itens.length > 0) {
       const med: any = itens.find(i => i.id === duplicar);
@@ -77,17 +75,7 @@ function Criar() {
         }
         if (med.diasSemana) setDiasSemana(med.diasSemana);
         if (med.fotoUrl) setFotoUrl(med.fotoUrl);
-        
-        // ✅ Verifica se o tratamento salvo está na lista padrão ou é um "Outro"
-        if (med.tratamento) {
-          const opcoes = ["Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite", "Asma / Bronquite", "Sinusite", "Gastrite / Refluxo", "Diabetes", "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático", "Tireoide", "Ansiedade", "Depressão", "Dor", "Febre", "Vitaminas / Suplementos"];
-          if (opcoes.includes(med.tratamento)) {
-            setTratamento(med.tratamento);
-          } else {
-            setTratamento("Outro");
-            setTratamentoOutro(med.tratamento);
-          }
-        }
+        if (med.tratamento) setTratamento(med.tratamento); // Traz o tratamento salvo
       }
     }
   }, [duplicar, itens]);
@@ -166,9 +154,6 @@ function Criar() {
       lista = [{ ...base, id: uid(), titulo: `Exame · ${f.tipoExame}`, tipoExame: f.tipoExame, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, recomendacoes: f.recomendacoes }];
     } else if (tipo === "Medicação") {
       const horariosCalculados = calcularHorarios();
-      
-      // ✅ Define qual será o tratamento salvo
-      const tratamentoFinal = tratamento === "Outro" ? tratamentoOutro : tratamento;
 
       lista = [{
         ...base,
@@ -187,7 +172,7 @@ function Criar() {
         fim: fimCalculado || undefined,
         fotoUrl: fotoUrl,
         diasSemana: diasSemana,
-        tratamento: tratamentoFinal || undefined, // Salva a doença escolhida ou digitada
+        tratamento: tratamento || undefined, // Salva o que foi escolhido ou digitado
       }];
     } else {
       const prog = f.programacao as Programacao;
@@ -309,6 +294,11 @@ function Criar() {
                 color: var(--tema-escuro);
                 font-weight: 600;
               }
+              /* Esconde a setinha padrão do datalist no Chrome/Safari para ficar mais bonito */
+              input[list]::-webkit-calendar-picker-indicator {
+                opacity: 0.5;
+                cursor: pointer;
+              }
             `}</style>
 
             {tipo === "Consulta" && (
@@ -399,48 +389,39 @@ function Criar() {
                   </Campo>
                 </div>
 
-                {/* ✅ BLOCO DE TRATAMENTO SIMPLIFICADO */}
-                <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <Campo label="Qual o tratamento?">
-                    <select className="field" value={tratamento} onChange={(e) => setTratamento(e.target.value)}>
-                      <option value="">Selecione...</option>
-                      <option value="Gripe">Gripe</option>
-                      <option value="Resfriado">Resfriado</option>
-                      <option value="Infecção urinária">Infecção urinária</option>
-                      <option value="Alergia">Alergia</option>
-                      <option value="Laringite">Laringite</option>
-                      <option value="Asma / Bronquite">Asma / Bronquite</option>
-                      <option value="Sinusite">Sinusite</option>
-                      <option value="Gastrite / Refluxo">Gastrite / Refluxo</option>
-                      <option value="Diabetes">Diabetes</option>
-                      <option value="Hipertensão">Hipertensão</option>
-                      <option value="Colesterol">Colesterol</option>
-                      <option value="Cardiológico">Cardiológico</option>
-                      <option value="Renal">Renal</option>
-                      <option value="Hepático">Hepático</option>
-                      <option value="Tireoide">Tireoide</option>
-                      <option value="Ansiedade">Ansiedade</option>
-                      <option value="Depressão">Depressão</option>
-                      <option value="Dor">Dor</option>
-                      <option value="Febre">Febre</option>
-                      <option value="Vitaminas / Suplementos">Vitaminas / Suplementos</option>
-                      <option value="Outro">Outro</option>
-                    </select>
-                  </Campo>
-                  
-                  {/* ✅ Campo que só aparece se escolher "Outro" */}
-                  {tratamento === "Outro" && (
-                    <Campo label="Especifique o tratamento">
-                      <input
-                        type="text"
-                        className="field"
-                        placeholder="Digite a doença ou condição..."
-                        value={tratamentoOutro}
-                        onChange={(e) => setTratamentoOutro(e.target.value)}
-                      />
-                    </Campo>
-                  )}
-                </div>
+                {/* ✅ CAMPO ÚNICO E INTELIGENTE (Datalist) */}
+                <Campo label="O que este remédio trata?">
+                  <input
+                    type="text"
+                    className="field"
+                    list="lista-tratamentos"
+                    placeholder="Selecione ou digite..."
+                    value={tratamento}
+                    onChange={(e) => setTratamento(e.target.value)}
+                  />
+                  <datalist id="lista-tratamentos">
+                    <option value="Gripe" />
+                    <option value="Resfriado" />
+                    <option value="Infecção urinária" />
+                    <option value="Alergia" />
+                    <option value="Laringite" />
+                    <option value="Asma / Bronquite" />
+                    <option value="Sinusite" />
+                    <option value="Gastrite / Refluxo" />
+                    <option value="Diabetes" />
+                    <option value="Hipertensão" />
+                    <option value="Colesterol" />
+                    <option value="Cardiológico" />
+                    <option value="Renal" />
+                    <option value="Hepático" />
+                    <option value="Tireoide" />
+                    <option value="Ansiedade" />
+                    <option value="Depressão" />
+                    <option value="Dor" />
+                    <option value="Febre" />
+                    <option value="Vitaminas / Suplementos" />
+                  </datalist>
+                </Campo>
 
                 {(dosagemUnidade === "Comprimido(s)" || dosagemUnidade === "Cápsula(s)" || dosagemUnidade === "Injeção") ? (
                   <Campo label="Controle de Estoque (unidades)">
