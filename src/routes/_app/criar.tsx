@@ -49,9 +49,9 @@ function Criar() {
   const [dosagemUnidade, setDosagemUnidade] = useState("ml");
   const [estoqueAtual, setEstoqueAtual] = useState("");
 
-  // ✅ Estados alterados para "Tratamento Único" e "Complemento"
+  // ✅ Estados para Tratamento Único e o campo de digitar se for "Outro"
   const [tratamento, setTratamento] = useState("");
-  const [complementoTratamento, setComplementoTratamento] = useState("");
+  const [tratamentoOutro, setTratamentoOutro] = useState("");
 
   const [salvando, setSalvando] = useState(false);
 
@@ -77,9 +77,17 @@ function Criar() {
         }
         if (med.diasSemana) setDiasSemana(med.diasSemana);
         if (med.fotoUrl) setFotoUrl(med.fotoUrl);
-        // ✅ Traz o tratamento e complemento anteriores
-        if (med.tratamento) setTratamento(med.tratamento);
-        if (med.complementoTratamento) setComplementoTratamento(med.complementoTratamento);
+        
+        // ✅ Verifica se o tratamento salvo está na lista padrão ou é um "Outro"
+        if (med.tratamento) {
+          const opcoes = ["Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite", "Asma / Bronquite", "Sinusite", "Gastrite / Refluxo", "Diabetes", "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático", "Tireoide", "Ansiedade", "Depressão", "Dor", "Febre", "Vitaminas / Suplementos"];
+          if (opcoes.includes(med.tratamento)) {
+            setTratamento(med.tratamento);
+          } else {
+            setTratamento("Outro");
+            setTratamentoOutro(med.tratamento);
+          }
+        }
       }
     }
   }, [duplicar, itens]);
@@ -158,6 +166,10 @@ function Criar() {
       lista = [{ ...base, id: uid(), titulo: `Exame · ${f.tipoExame}`, tipoExame: f.tipoExame, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, recomendacoes: f.recomendacoes }];
     } else if (tipo === "Medicação") {
       const horariosCalculados = calcularHorarios();
+      
+      // ✅ Define qual será o tratamento salvo
+      const tratamentoFinal = tratamento === "Outro" ? tratamentoOutro : tratamento;
+
       lista = [{
         ...base,
         id: uid(),
@@ -175,9 +187,7 @@ function Criar() {
         fim: fimCalculado || undefined,
         fotoUrl: fotoUrl,
         diasSemana: diasSemana,
-        // ✅ Salvando tratamento único e complemento
-        tratamento: tratamento || undefined,
-        complementoTratamento: complementoTratamento || undefined,
+        tratamento: tratamentoFinal || undefined, // Salva a doença escolhida ou digitada
       }];
     } else {
       const prog = f.programacao as Programacao;
@@ -389,7 +399,7 @@ function Criar() {
                   </Campo>
                 </div>
 
-                {/* ✅ NOVO BLOCO DE TRATAMENTO (Dropdown + Complemento) */}
+                {/* ✅ BLOCO DE TRATAMENTO SIMPLIFICADO */}
                 <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
                   <Campo label="Qual o tratamento?">
                     <select className="field" value={tratamento} onChange={(e) => setTratamento(e.target.value)}>
@@ -409,20 +419,27 @@ function Criar() {
                       <option value="Renal">Renal</option>
                       <option value="Hepático">Hepático</option>
                       <option value="Tireoide">Tireoide</option>
-                      <option value="Ansiedade / Depressão">Ansiedade / Depressão</option>
-                      <option value="Dor / Febre">Dor / Febre</option>
+                      <option value="Ansiedade">Ansiedade</option>
+                      <option value="Depressão">Depressão</option>
+                      <option value="Dor">Dor</option>
+                      <option value="Febre">Febre</option>
                       <option value="Vitaminas / Suplementos">Vitaminas / Suplementos</option>
+                      <option value="Outro">Outro</option>
                     </select>
                   </Campo>
-                  <Campo label="Complemento do tratamento">
-                    <input
-                      type="text"
-                      className="field"
-                      placeholder="Ex: Arritmia, Pressão alta, etc."
-                      value={complementoTratamento}
-                      onChange={(e) => setComplementoTratamento(e.target.value)}
-                    />
-                  </Campo>
+                  
+                  {/* ✅ Campo que só aparece se escolher "Outro" */}
+                  {tratamento === "Outro" && (
+                    <Campo label="Especifique o tratamento">
+                      <input
+                        type="text"
+                        className="field"
+                        placeholder="Digite a doença ou condição..."
+                        value={tratamentoOutro}
+                        onChange={(e) => setTratamentoOutro(e.target.value)}
+                      />
+                    </Campo>
+                  )}
                 </div>
 
                 {(dosagemUnidade === "Comprimido(s)" || dosagemUnidade === "Cápsula(s)" || dosagemUnidade === "Injeção") ? (
