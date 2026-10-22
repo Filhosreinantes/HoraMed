@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, RefreshCw, Thermometer, Heart, Lock, Activity, Smile } from "lucide-react";
+import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, RefreshCw, Thermometer, Heart, Lock, Activity, Smile, Printer, CheckCircle2 } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_app/acompanhamento")({
   component: Acompanhamento,
 });
 
-type View = "menu" | "compromissos" | "medicacoes" | "sintomas" | "bemestar";
+type View = "menu" | "compromissos" | "medicacoes" | "tratamento" | "bemestar";
 type Periodo = "mes" | "ano" | "tudo";
 type Drill = { cuidado: Cuidado; situacao: Situacao } | null;
 
@@ -44,8 +44,9 @@ function Acompanhamento() {
   const [viagemInicio, setViagemInicio] = useState(hojeYMD());
   const [viagemFim, setViagemFim] = useState(hojeYMD());
 
-  // ✅ Estados para os novos blocos
-  const [sintomasForm, setSintomasForm] = useState({ febre: false, temperatura: "", pressao: "", glicose: "", sentimento: "", gratidao: "" });
+  // ✅ Estados para o bloco de TRATAMENTO
+  const [tratamentoSelecionado, setTratamentoSelecionado] = useState<string | null>(null);
+  const [sintomasTexto, setSintomasTexto] = useState("");
   const [bemestarForm, setBemestarForm] = useState({ atividade: "", duracao: "", sentimento: "", gratidao: "" });
 
   const hoje = hojeYMD();
@@ -72,6 +73,26 @@ function Acompanhamento() {
     });
     return Object.values(mapa);
   }, [emUso]);
+
+  // ✅ Pega apenas os tratamentos únicos que a mãe cadastrou nos remédios
+  const tratamentosUnicos = useMemo(() => {
+    const arr = meds.map(m => m.tratamento).filter(Boolean);
+    return Array.from(new Set(arr)) as string[];
+  }, [meds]);
+
+  // ✅ Histórico de sintomas do tratamento selecionado
+  const historicoTratamento = useMemo(() => {
+    if (!tratamentoSelecionado) return [];
+    return itens
+      .filter(i => (i.cuidado as string) === "Sintoma" && (i as any).tratamento === tratamentoSelecionado)
+      .sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
+  }, [itens, tratamentoSelecionado]);
+
+  // ✅ Dados do remédio que está vinculado a esse tratamento
+  const remedioDoTratamento = useMemo(() => {
+    if (!tratamentoSelecionado) return null;
+    return meds.find(m => m.tratamento === tratamentoSelecionado);
+  }, [meds, tratamentoSelecionado]);
 
   const proximos = useMemo(() => {
     let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação" && (i.cuidado as string) !== "Sintoma" && (i.cuidado as string) !== "BemEstar"));
@@ -150,7 +171,6 @@ function Acompanhamento() {
     return arr.sort((a, b) => a.data.localeCompare(b.data) || a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
-  const logsSintomas = useMemo(() => itens.filter(i => (i.cuidado as string) === "Sintoma").sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || "")), [itens]);
   const logsBemEstar = useMemo(() => itens.filter(i => (i.cuidado as string) === "BemEstar").sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || "")), [itens]);
 
   const logsFiltrados = useMemo(() => {
@@ -180,17 +200,33 @@ function Acompanhamento() {
     }
   };
 
-  // ✅ Funções de salvar os novos blocos
-  const salvarSintomas = async () => {
-    if (!ativa) return;
+  // ✅ Salvar sintomas do tratamento
+  const salvarSintomaTratamento = async () => {
+    if (!ativa || !tratamentoSelecionado || !sintomasTexto.trim()) return;
     const dados: Dados = {
-      id: uid(), pessoaId: ativa.id, criadoEm: nowLocalISO(), titulo: "Registro de Sintomas", cuidado: "Sintoma" as any, data: hoje, situacao: "feito",
-      ...sintomasForm
+      id: uid(), pessoaId: ativa.id, criadoEm: nowLocalISO(), titulo: `Sintoma: ${tratamentoSelecionado}`, cuidado: "Sintoma" as any, data: hoje, situacao: "feito",
+      tratamento: tratamentoSelecionado,
+      sintomas: sintomasTexto
     } as any;
     const ok = await salvarRegistros([dados]);
     if (ok) {
       toast.success("Sintomas registrados!");
-      setSintomasForm({ febre: false, temperatura: "", pressao: "", glicose: "", sentimento: "", gratidao: "" });
+      setSintomasTexto("");
+    }
+  };
+
+  // ✅ Encerrar tratamento
+  const encerrarTratamento = async () => {
+    if (!remedioDoTratamento) return;
+    if (!confirm("Tem certeza que deseja encerrar este tratamento? Ele não aparecerá mais nos remédios em uso.")) return;
+    
+    const ok = await salvarRegistros([{
+      id: uid(), pessoaId: ativa.id, criadoEm: nowLocalISO(), titulo: "Tratamento encerrado", cuidado: remedioDoTratamento.cuidado, evento: true, parentId: remedioDoTratamento.id, acao: "editar", alteracoes: { fim: hoje }
+    }], "acontecimentos");
+    
+    if (ok) {
+      toast.success("Tratamento encerrado!");
+      setTratamentoSelecionado(null);
     }
   };
 
@@ -233,7 +269,6 @@ function Acompanhamento() {
 
   if (carregando) return <div className="space-y-3 p-4"><Skeleton className="h-40 rounded-3xl bg-muted" /><Skeleton className="h-40 rounded-3xl bg-muted" /></div>;
 
-  // --- BLOQUEIO PREMIUM ---
   const RenderPremiumLock = ({ titulo }: { titulo: string }) => (
     <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
       <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
@@ -247,76 +282,89 @@ function Acompanhamento() {
     </div>
   );
 
-  if (view === "sintomas") {
-    if (assinaturaAtiva === false) return <RenderPremiumLock titulo="Sintomas" />;
-    return (
-      <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
-        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Sintomas</h1></header>
-        <SeletorTesouro />
+  // --- TELA DE TRATAMENTO ---
+  if (view === "tratamento") {
+    if (tratamentoSelecionado) {
+      return (
+        <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
+          <Botao variant="ghost" onClick={() => setTratamentoSelecionado(null)} className="mb-2 flex items-center gap-1 text-sm font-semibold"><ChevronLeft className="h-4 w-4" /> Voltar aos Tratamentos</Botao>
+          <header><h1 className="font-display text-3xl font-semibold italic text-foreground">{tratamentoSelecionado}</h1></header>
+          <SeletorTesouro />
 
-        <section className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
-          <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
-            <Activity className="h-4 w-4" style={{ color: "var(--tema)" }} /> Novo Registro
-          </h2>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block space-y-1">
-              <span className="text-xs font-semibold text-muted-foreground">Febre?</span>
-              <button type="button" onClick={() => setSintomasForm(p => ({...p, febre: !p.febre}))} className={`w-full rounded-xl px-3 py-2 text-sm font-bold border transition ${sintomasForm.febre ? 'bg-red-100 border-red-300 text-red-700' : 'bg-white border-border text-muted-foreground'}`}>
-                {sintomasForm.febre ? "Sim" : "Não"}
-              </button>
-            </label>
-            <label className="block space-y-1">
-              <span className="text-xs font-semibold text-muted-foreground">Temperatura</span>
-              <input type="text" className="field text-sm" placeholder="Ex: 38.5" value={sintomasForm.temperatura} onChange={(e) => setSintomasForm(p => ({...p, temperatura: e.target.value}))} />
-            </label>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block space-y-1">
-              <span className="text-xs font-semibold text-muted-foreground">Pressão</span>
-              <input type="text" className="field text-sm" placeholder="Ex: 120/80" value={sintomasForm.pressao} onChange={(e) => setSintomasForm(p => ({...p, pressao: e.target.value}))} />
-            </label>
-            <label className="block space-y-1">
-              <span className="text-xs font-semibold text-muted-foreground">Glicose</span>
-              <input type="text" className="field text-sm" placeholder="Ex: 90" value={sintomasForm.glicose} onChange={(e) => setSintomasForm(p => ({...p, glicose: e.target.value}))} />
-            </label>
-          </div>
-
-          <label className="block space-y-1">
-            <span className="text-xs font-semibold text-muted-foreground">Como está se sentindo? (Sintomas)</span>
-            <textarea className="field text-sm min-h-20" placeholder="Ex: Dor de cabeça, cansaço..." value={sintomasForm.sentimento} onChange={(e) => setSintomasForm(p => ({...p, sentimento: e.target.value}))} />
-          </label>
-
-          <label className="block space-y-1">
-            <span className="text-xs font-semibold text-muted-foreground">Gratidão / Coisas boas</span>
-            <textarea className="field text-sm min-h-20" placeholder="Ex: Hoje brincou bastante..." value={sintomasForm.gratidao} onChange={(e) => setSintomasForm(p => ({...p, gratidao: e.target.value}))} />
-          </label>
-
-          <Botao onClick={salvarSintomas} className="w-full" style={{ backgroundColor: "var(--tema)", color: "white" }}>Salvar Registro</Botao>
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="font-sans text-base font-semibold text-foreground">Histórico de Sintomas</h2>
-          {logsSintomas.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum registro ainda.</p> : logsSintomas.map(l => (
-            <div key={l.id} className="notebook p-4 space-y-1 bg-white text-sm">
-              <div className="flex justify-between font-bold text-foreground">
-                <span>{l.criadoEm?.slice(0, 10).split('-').reverse().join('/')}</span>
-                <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
+          {/* Dados do Remédio Vinculado */}
+          {remedioDoTratamento && (
+            <div className="notebook p-5 space-y-2 bg-slate-50 border-slate-200">
+              <div className="flex items-center gap-2 border-b border-border/50 pb-2 mb-2">
+                <PillIcon className="h-5 w-5" style={{ color: "var(--tema)" }} />
+                <h2 className="font-display text-lg font-bold italic" style={{ color: "var(--tema-escuro)" }}>Remédio: {remedioDoTratamento.medicamento}</h2>
               </div>
-              <p className="text-muted-foreground"><span className="font-semibold text-foreground">Febre:</span> {(l as any).febre ? "Sim" : "Não"} {(l as any).temperatura && `(${(l as any).temperatura})`}</p>
-              {(l as any).pressao && <p className="text-muted-foreground"><span className="font-semibold text-foreground">Pressão:</span> {(l as any).pressao}</p>}
-              {(l as any).glicose && <p className="text-muted-foreground"><span className="font-semibold text-foreground">Glicose:</span> {(l as any).glicose}</p>}
-              {(l as any).sentimento && <p className="text-muted-foreground mt-2 italic">"{(l as any).sentimento}"</p>}
-              {(l as any).gratidao && <p className="text-muted-foreground mt-1 italic">Gratidão: "{(l as any).gratidao}"</p>}
+              <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Dosagem:</span> {remedioDoTratamento.dosagem}</p>
+              <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Início:</span> {remedioDoTratamento.inicio ? remedioDoTratamento.inicio.split('-').reverse().join('/') : '-'}</p>
             </div>
-          ))}
-        </section>
+          )}
+
+          {/* Registrar Sintomas */}
+          <section className="notebook p-5 space-y-4 relative" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
+            <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
+              <Activity className="h-4 w-4" style={{ color: "var(--tema)" }} /> Sintomas Diários
+            </h2>
+            <textarea 
+              className="field text-sm min-h-24 w-full" 
+              placeholder="Escreva aqui o que sente e acompanhe os efeitos do remédio." 
+              value={sintomasTexto} 
+              onChange={(e) => setSintomasTexto(e.target.value)} 
+            />
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Botao onClick={salvarSintomaTratamento} className="flex-1" style={{ backgroundColor: "var(--tema)", color: "white" }}>Salvar Sintoma</Botao>
+              <Botao onClick={encerrarTratamento} variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50">Tratamento encerrado</Botao>
+            </div>
+          </section>
+
+          {/* Histórico */}
+          <section className="space-y-3">
+            <h2 className="font-sans text-base font-semibold text-foreground">Histórico de Sintomas</h2>
+            {historicoTratamento.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum sintoma registrado ainda.</p> : historicoTratamento.map(l => (
+              <div key={l.id} className="notebook p-4 space-y-1 bg-white text-sm">
+                <div className="flex justify-between font-bold text-foreground">
+                  <span>{l.data.split('-').reverse().join('/')}</span>
+                  <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
+                </div>
+                <p className="text-muted-foreground italic">"{(l as any).sintomas}"</p>
+              </div>
+            ))}
+          </section>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Tratamentos</h1></header>
+        <SeletorTesouro />
+        
+        <div className="notebook p-5 mt-4 space-y-3">
+          <h2 className="font-display text-xl font-semibold italic text-foreground mb-4">Selecione o tratamento</h2>
+          {tratamentosUnicos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum tratamento cadastrado nos remédios ainda.</p>
+          ) : (
+            tratamentosUnicos.map(t => (
+              <button
+                key={t}
+                onClick={() => setTratamentoSelecionado(t)}
+                className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition"
+              >
+                <span className="font-bold text-sm text-foreground">{t}</span>
+                <ChevronLeft className="h-4 w-4 text-muted-foreground rotate-180" />
+              </button>
+            ))
+          )}
+        </div>
       </div>
     );
   }
 
+  // --- TELA DE BEM-ESTAR ---
   if (view === "bemestar") {
     if (assinaturaAtiva === false) return <RenderPremiumLock titulo="Bem-estar" />;
     return (
@@ -346,11 +394,6 @@ function Acompanhamento() {
             <textarea className="field text-sm min-h-20" placeholder="Ex: Mais disposto..." value={bemestarForm.sentimento} onChange={(e) => setBemestarForm(p => ({...p, sentimento: e.target.value}))} />
           </label>
 
-          <label className="block space-y-1">
-            <span className="text-xs font-semibold text-muted-foreground">Gratidão / Coisas boas</span>
-            <textarea className="field text-sm min-h-20" placeholder="Ex: Conseguiu terminar a atividade..." value={bemestarForm.gratidao} onChange={(e) => setBemestarForm(p => ({...p, gratidao: e.target.value}))} />
-          </label>
-
           <Botao onClick={salvarBemEstar} className="w-full" style={{ backgroundColor: "var(--tema)", color: "white" }}>Salvar Registro</Botao>
         </section>
 
@@ -364,7 +407,6 @@ function Acompanhamento() {
               </div>
               {(l as any).duracao && <p className="text-muted-foreground"><span className="font-semibold text-foreground">Duração:</span> {(l as any).duracao} min</p>}
               {(l as any).sentimento && <p className="text-muted-foreground mt-2 italic">"{(l as any).sentimento}"</p>}
-              {(l as any).gratidao && <p className="text-muted-foreground mt-1 italic">Gratidão: "{(l as any).gratidao}"</p>}
             </div>
           ))}
         </section>
@@ -435,7 +477,6 @@ function Acompanhamento() {
           </div>
         </div>
 
-        {/* ✅ NOVOS BLOCOS NO MENU */}
         <div className="grid grid-cols-2 gap-4 px-4 mt-6">
           <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
             <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
@@ -445,9 +486,9 @@ function Acompanhamento() {
             <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><PillIcon className="h-5 w-5" /></div>
             <span className="font-display text-sm font-semibold italic text-center">Medicação</span>
           </button>
-          <button onClick={() => setView("sintomas")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+          <button onClick={() => setView("tratamento")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
             <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Thermometer className="h-5 w-5" /></div>
-            <span className="font-display text-sm font-semibold italic text-center">Sintomas</span>
+            <span className="font-display text-sm font-semibold italic text-center">Tratamento</span>
           </button>
           <button onClick={() => setView("bemestar")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
             <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Heart className="h-5 w-5" /></div>
