@@ -209,7 +209,6 @@ function Acompanhamento() {
     <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2"><Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao><header><h1 className="font-display text-3xl font-semibold italic text-foreground">{titulo}</h1></header><div className="notebook p-8 mt-10 flex flex-col items-center gap-4 text-center" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}><Lock className="h-12 w-12 text-amber-500" /><h2 className="font-display text-2xl font-bold italic text-foreground">Recurso Premium</h2><p className="text-sm text-muted-foreground">O diário de {titulo} está disponível apenas para assinantes do Rotina Azul Premium.</p><Botao className="mt-4 w-full" style={{ backgroundColor: "var(--tema)", color: "white" }}>Conhecer o Premium</Botao></div></div>
   );
 
-  // ✅ MENU INICIAL (APENAS OS 4 BOTÕES, SEM O CARD "PARA HOJE")
   if (view === "menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
@@ -245,7 +244,6 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ MENU DE MEDICAÇÕES
   if (view === "medicacoes_menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -274,7 +272,6 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: PRÓXIMOS AGENDAMENTOS
   if (view === "medicacoes_proximos") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -312,7 +309,6 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: HISTÓRICO DE DOSES
   if (view === "medicacoes_historico") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -332,7 +328,6 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: MEUS REMÉDIOS
   if (view === "medicacoes_estoque") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -358,7 +353,6 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: PLANEJADOR DE VIAGENS
   if (view === "medicacoes_viagem") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -388,7 +382,6 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: TRATAMENTO (seleção)
   if (view === "tratamento" && !tratamentoSelecionado) {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -412,7 +405,6 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: TRATAMENTO (detalhes)
   if (view === "tratamento" && tratamentoSelecionado) {
     return (
       <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
@@ -483,7 +475,6 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: BEM-ESTAR
   if (view === "bemestar") {
     if (assinaturaAtiva === false) return <RenderPremiumLock titulo="Bem-estar" />;
     
@@ -587,7 +578,6 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: COMPROMISSOS
   if (view === "compromissos") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
