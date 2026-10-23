@@ -19,7 +19,6 @@ function Hoje() {
   const navigate = useNavigate();
   const hoje = hojeYMD();
   
-  // ✅ Estado para controlar se a lista de doses está expandida
   const [listaDosesExpandida, setListaDosesExpandida] = useState(false);
 
   const emUso = itens.filter((i) => i.cuidado === "Medicação" && medicacaoEmUso(i));
@@ -56,7 +55,6 @@ function Hoje() {
 
   if (carregando) return <div className="p-4 space-y-3"><Skeleton className="h-60 rounded-3xl bg-muted" /></div>;
 
-  // ✅ Define quantas doses mostrar com base no estado
   const dosesVisiveis = listaDosesExpandida ? agendaHoje : agendaHoje.slice(0, 3);
 
   return (
@@ -88,7 +86,6 @@ function Hoje() {
               <div className="space-y-2">
                 <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)]">Medicações para tomar</p>
                 
-                {/* ✅ Lista de doses (mesmo padrão dos 3 primeiros) */}
                 {dosesVisiveis.map((a: any, idx: number) => (
                   <div key={idx} className="flex items-center justify-between bg-white/80 p-2 rounded-xl shadow-sm border border-white/50">
                     <span className="font-bold text-sm text-foreground truncate mr-2">{a.med.medicamento}</span>
@@ -99,7 +96,6 @@ function Hoje() {
                   </div>
                 ))}
                 
-                {/* ✅ Botão que expande/recolhe a lista no mesmo lugar */}
                 {agendaHoje.length > 3 && (
                   <button 
                     onClick={() => setListaDosesExpandida(!listaDosesExpandida)} 
@@ -123,7 +119,6 @@ function Hoje() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)] mb-2">Compromissos</p>
                 <div className="space-y-2">
-                  {/* ✅ Usando o CompromissoCard original (que já tem o clique para abrir os detalhes) */}
                   {compromissosHoje.map((i) => (
                     <CompromissoCard key={i.id} item={i} compacto />
                   ))}
@@ -134,7 +129,6 @@ function Hoje() {
         </div>
       </div>
 
-      {/* ✅ Botões com aviso de "Toque para abrir" */}
       <div className="grid grid-cols-2 gap-4 px-4 mt-6">
         <button onClick={() => navigate({ to: "/acompanhamento" })} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10 group">
           <div className="grid h-10 w-10 place-items-center rounded-full group-hover:scale-110 transition-transform" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
