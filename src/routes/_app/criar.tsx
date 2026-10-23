@@ -30,12 +30,17 @@ export const Route = createFileRoute("/_app/criar")({
 type K = "data"|"hora"|"local"|"profissional"|"especialidade"|"tipoTerapia"|"tipoExame"|"recomendacoes"|"medicamento"|"frequencia"|"inicio"|"fim"|"programacao"|"meses"|"diaSemana"|"prazoDias";
 type F = Partial<Record<K, string>>;
 
-export function Criar() {
+export function Criar({ tipoInicial, onFechar }: { tipoInicial?: any, onFechar?: () => void } = {}) {
   const { duplicar } = Route.useSearch() as { duplicar?: string };
   const { ativa, salvarRegistros, itens } = useApp(); 
   const navigate = useNavigate();
   const [tipo, setTipo] = useState<Cuidado | null>(null);
   const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1", inicio: hojeYMD() });
+useEffect(() => {
+  if (tipoInicial) {
+    setTipo(tipoInicial);
+  }
+}, [tipoInicial]);
 
   const [fotoUrl, setFotoUrl] = useState("");
   const [enviandoFoto, setEnviandoFoto] = useState<"caixa" | null>(null);
