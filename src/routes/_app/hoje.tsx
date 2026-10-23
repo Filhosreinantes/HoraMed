@@ -78,6 +78,7 @@ function Hoje() {
               </div>
             ) : (
               <div className="space-y-2">
+                {/* ✅ Texto ajustado */}
                 <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)]">Medicações para tomar</p>
                 {agendaHoje.slice(0, 3).map((a, idx) => (
                   <div key={idx} className="flex items-center justify-between bg-white/80 p-2 rounded-xl shadow-sm border border-white/50">
@@ -102,6 +103,7 @@ function Hoje() {
                <p className="text-xs text-muted-foreground italic text-center">Nenhum compromisso para hoje.</p>
             ) : (
               <div>
+                {/* ✅ Texto ajustado */}
                 <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)] mb-2">Compromissos</p>
                 <div className="space-y-2">
                   {compromissosHoje.slice(0, 2).map((i) => (
@@ -119,6 +121,7 @@ function Hoje() {
         </div>
       </div>
 
+      {/* ✅ Botões com aviso de "Toque para abrir" */}
       <div className="grid grid-cols-2 gap-4 px-4 mt-6">
         <button onClick={() => navigate({ to: "/acompanhamento" })} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10 group">
           <div className="grid h-10 w-10 place-items-center rounded-full group-hover:scale-110 transition-transform" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
