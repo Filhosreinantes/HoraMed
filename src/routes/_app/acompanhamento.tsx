@@ -46,7 +46,6 @@ function Acompanhamento() {
   const [viagemFim, setViagemFim] = useState(hojeYMD());
 
   const [tratamentoSelecionado, setTratamentoSelecionado] = useState<string | null>(null);
-  // ✅ Novos campos para Sintomas Inteligentes
   const [sintomasTexto, setSintomasTexto] = useState("");
   const [pressao, setPressao] = useState("");
   const [glicose, setGlicose] = useState("");
@@ -81,6 +80,33 @@ function Acompanhamento() {
     return Object.values(mapa);
   }, [emUso]);
 
+  // ✅ LÓGICA INTELIGENTE: Agrupa os remédios por nome e conta quantas caixas/doses
+  const remediosAgrupados = useMemo(() => {
+    const mapa: Record<string, { med: any, dosesTomadas: number, caixasTomadas: number }> = {};
+    
+    // Filtra todos os medicamentos e cria os grupos
+    meds.forEach(m => {
+      const nome = m.medicamento || "Desconhecido";
+      if (!mapa[nome]) {
+        mapa[nome] = { 
+          med: m, 
+          dosesTomadas: logs.filter(l => l.parentId === m.id).length,
+          caixasTomadas: 0 
+        };
+      } else {
+        // Se já existe, mantém o mais recente para mostrar os dados atualizados
+        if (m.inicio && (m.inicio > (mapa[nome].med.inicio || ""))) {
+          mapa[nome].med = m;
+        }
+        // Soma as doses tomadas de todos os ciclos desse remédio
+        mapa[nome].dosesTomadas += logs.filter(l => l.parentId === m.id).length;
+        mapa[nome].caixasTomadas += 1;
+      }
+    });
+
+    return Object.values(mapa);
+  }, [meds, logs]);
+
   const tratamentosUnicos = useMemo(() => {
     const arr = meds.map(m => m.tratamento).filter(Boolean);
     return Array.from(new Set(arr)) as string[];
@@ -98,7 +124,6 @@ function Acompanhamento() {
     return meds.find(m => m.tratamento === tratamentoSelecionado);
   }, [meds, tratamentoSelecionado]);
 
-  // ✅ Verifica se o tratamento é de Hipertensão ou Diabetes para mostrar os campos
   const isHipertensao = tratamentoSelecionado?.toLowerCase().includes("hipertensão");
   const isDiabetes = tratamentoSelecionado?.toLowerCase().includes("diabetes");
 
@@ -392,7 +417,6 @@ function Acompanhamento() {
               </button>
             </div>
 
-            {/* ✅ Campos Inteligentes de Pressão e Glicose */}
             {(isHipertensao || isDiabetes) && (
               <div className="grid grid-cols-2 gap-3 mb-3">
                 {isHipertensao && (
@@ -430,7 +454,6 @@ function Acompanhamento() {
                   <span>{l.data.split('-').reverse().join('/')}</span>
                   <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
                 </div>
-                {/* ✅ Mostra as taxas salvas se existirem */}
                 {(l as any).pressao && <p className="text-[var(--tema-escuro)] font-semibold text-xs">Pressão: {(l as any).pressao}</p>}
                 {(l as any).glicose && <p className="text-[var(--tema-escuro)] font-semibold text-xs">Glicose: {(l as any).glicose}</p>}
                 <p className="text-muted-foreground italic mt-1">"{(l as any).sintomas}"</p>
@@ -476,7 +499,6 @@ function Acompanhamento() {
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
         <header>
           <h1 className="font-display text-3xl font-semibold italic text-foreground">Bem-estar</h1>
-          {/* ✅ Subtítulo adicionado */}
           <p className="text-xs font-sans italic text-muted-foreground mt-1">Cuidando do corpo e da mente.</p>
         </header>
         <SeletorTesouro />
@@ -604,7 +626,6 @@ function Acompanhamento() {
           <p className="text-sm font-semibold tracking-widest uppercase mt-1" style={{ color: "var(--tema)" }}>
             Acompanhamento
           </p>
-          {/* ✅ Subtítulo adicionado no Menu Inicial */}
           <p className="text-xs font-sans italic text-muted-foreground mt-2">
             Cuidando do corpo e da mente.
           </p>
@@ -874,10 +895,27 @@ function Acompanhamento() {
           <Pill ativo={filtroRemedios === "encerrados"} onClick={() => setFiltroRemedios("encerrados")}>Encerrados ({encerradas.length})</Pill>
         </div>
         <div className="space-y-2 mt-2">
-          {filtroRemedios === "uso"
-            ? emUso.map(m => <CompromissoCard key={m.id} item={m} compacto />)
-            : encerradas.map(m => <CompromissoCard key={m.id} item={m} compacto />)
-          }
+          {/* ✅ Exibe a lista de remédios agrupados */}
+          {remediosAgrupados.filter(r => filtroRemedios === "uso" ? medicacaoEmUso(r.med) : !medicacaoEmUso(r.med)).map(r => (
+            <div key={r.med.id} className="notebook p-4 space-y-1 bg-white text-sm">
+              <div className="flex justify-between font-bold text-foreground">
+                <span>{r.med.medicamento}</span>
+                <span className="text-xs text-muted-foreground">{r.med.dosagem}</span>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                <span className="font-semibold text-foreground">Estoque atual:</span> {r.med.estoqueAtual || 0} {r.med.dosagemUnidade || "un"}
+              </p>
+              {/* ✅ Contadores de histórico */}
+              <div className="flex gap-4 mt-2 pt-2 border-t border-border/50">
+                <p className="text-xs text-[var(--tema-escuro)] font-semibold">
+                  {r.dosesTomadas} doses tomadas
+                </p>
+                <p className="text-xs text-[var(--tema-escuro)] font-semibold">
+                  {r.caixasTomadas} {r.caixasTomadas === 1 ? 'ciclo' : 'ciclos'} registrados
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
