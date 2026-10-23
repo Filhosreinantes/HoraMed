@@ -1,11 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Clock, Stethoscope, Pill as PillIcon, ChevronRight } from "lucide-react";
+import { Clock, Stethoscope, Pill as PillIcon, ChevronRight, ChevronDown } from "lucide-react";
 import { useApp } from "@/lib/app-store";
-import { hojeYMD, medicacaoEmUso, doseRegistrada, nowLocalISO, uid, type Dados } from "@/lib/cuidados";
+import { hojeYMD, medicacaoEmUso, doseRegistrada, nowLocalISO, uid, type Dados, type Item } from "@/lib/cuidados";
 import { SeletorTesouro } from "@/components/ui-kit";
-import { CompromissoCard } from "@/components/compromisso-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -15,8 +13,8 @@ export const Route = createFileRoute("/_app/hoje")({
 });
 
 function Hoje() {
-  const { itens, logs, carregando, salvarRegistros } = useApp();
-  const navigate = useNavigate();
+  const { itens, logs, carregando, salvarRegistros, navigate } = useApp();
+  const routerNavigate = useNavigate();
   const hoje = hojeYMD();
 
   // Lógica para calcular o que tem para hoje
@@ -82,7 +80,8 @@ function Hoje() {
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)]">Medicações Pendentes ({agendaHoje.length})</p>
+                {/* ✅ Trocado "Pendentes" por "Tomar" e adicionado o número de forma leve */}
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)]">Tomar ({agendaHoje.length})</p>
                 {agendaHoje.slice(0, 3).map((a, idx) => (
                   <div key={idx} className="flex items-center justify-between bg-white/80 p-2 rounded-xl shadow-sm border border-white/50">
                     <span className="font-bold text-sm text-foreground truncate mr-2">{a.med.medicamento}</span>
@@ -93,7 +92,7 @@ function Hoje() {
                   </div>
                 ))}
                 {agendaHoje.length > 3 && (
-                  <button onClick={() => navigate({ to: "/acompanhamento" })} className="text-xs font-bold text-[var(--tema)] mt-1 hover:underline flex items-center gap-1">
+                  <button onClick={() => routerNavigate({ to: "/acompanhamento" })} className="text-xs font-bold text-[var(--tema)] mt-1 hover:underline flex items-center gap-1">
                     + ver todas as {agendaHoje.length} doses <ChevronRight className="h-3 w-3" />
                   </button>
                 )}
@@ -103,13 +102,20 @@ function Hoje() {
             <div className="h-px bg-[var(--tema)]/20 my-1"></div>
 
             {compromissosHoje.length === 0 ? (
-               <p className="text-xs text-muted-foreground italic text-center">Nenhum compromisso agendado.</p>
+               <p className="text-xs text-muted-foreground italic text-center">Nenhum compromisso para hoje.</p>
             ) : (
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)] mb-2">Próximos Compromissos</p>
+                {/* ✅ "Próximos Compromissos" virou apenas "Compromissos" */}
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)] mb-2">Compromissos</p>
                 <div className="space-y-2">
+                  {/* ✅ Compromissos sem opção de editar/excluir (simplificado) */}
                   {compromissosHoje.slice(0, 2).map((i) => (
-                    <CompromissoCard key={i.id} item={i} compacto />
+                    <div key={i.id} className="flex items-center justify-between bg-white/80 p-3 rounded-xl shadow-sm border border-white/50">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm text-foreground">{i.titulo}</span>
+                        <span className="text-xs text-muted-foreground">{i.hora || "Horário a definir"}</span>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -118,15 +124,17 @@ function Hoje() {
         </div>
       </div>
 
-      {/* GRID DE BOTÕES */}
+      {/* ✅ GRID DE BOTÕES MAIS CONVIDATIVOS */}
       <div className="grid grid-cols-2 gap-4 px-4 mt-6">
-        <button onClick={() => navigate({ to: "/acompanhamento" })} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
-          <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
+        <button onClick={() => routerNavigate({ to: "/acompanhamento" })} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10 group">
+          <div className="grid h-10 w-10 place-items-center rounded-full group-hover:scale-110 transition-transform" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
           <span className="font-display text-sm font-semibold italic text-center">Acompanhamento</span>
+          <span className="text-[10px] text-muted-foreground">Toque para abrir</span>
         </button>
-        <button onClick={() => navigate({ to: "/criar" })} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
-          <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><PillIcon className="h-5 w-5" /></div>
+        <button onClick={() => routerNavigate({ to: "/criar" })} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10 group">
+          <div className="grid h-10 w-10 place-items-center rounded-full group-hover:scale-110 transition-transform" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><PillIcon className="h-5 w-5" /></div>
           <span className="font-display text-sm font-semibold italic text-center">Novo Registro</span>
+          <span className="text-[10px] text-muted-foreground">Toque para abrir</span>
         </button>
       </div>
     </div>
