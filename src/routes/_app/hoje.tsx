@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Clock, Stethoscope, Pill as PillIcon, Thermometer, Heart, ChevronRight } from "lucide-react";
+import { Clock, Stethoscope, Pill as PillIcon, ChevronRight } from "lucide-react";
 import { useApp } from "@/lib/app-store";
-import { hojeYMD, medicacaoEmUso, doseRegistrada, nowLocalISO, uid, type Cuidado, type Dados } from "@/lib/cuidados";
-import { SeletorTesouro, Skeleton } from "@/components/ui-kit";
+import { hojeYMD, medicacaoEmUso, doseRegistrada, nowLocalISO, uid, type Dados } from "@/lib/cuidados";
+import { SeletorTesouro } from "@/components/ui-kit";
 import { CompromissoCard } from "@/components/compromisso-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/hoje")({
@@ -14,9 +15,8 @@ export const Route = createFileRoute("/_app/hoje")({
 });
 
 function Hoje() {
-  const { itens, logs, carregando, salvarRegistros, ativa } = useApp();
+  const { itens, logs, carregando, salvarRegistros } = useApp();
   const navigate = useNavigate();
-  const [atrasoModal, setAtrasoModal] = useState<any>(null);
   const hoje = hojeYMD();
 
   // Lógica para calcular o que tem para hoje
