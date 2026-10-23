@@ -15,10 +15,9 @@ export const Route = createFileRoute("/")({
     // Pega o ?ref= da URL, se existir
     const ref = new URLSearchParams(window.location.search).get("ref");
     
-    // Vai para o acompanhamento se logado, senão vai para o login bonito.
-    // O search: (prev) => prev garante que o ?ref= não se perca!
+    // ✅ Redireciona para /hoje se logado, senão para /login
     throw redirect({ 
-      to: data.session ? "/acompanhamento" : "/login", 
+      to: data.session ? "/hoje" : "/login", 
       search: (prev) => ({ ...prev, ...(ref ? { ref } : {}) }),
       replace: true 
     });
