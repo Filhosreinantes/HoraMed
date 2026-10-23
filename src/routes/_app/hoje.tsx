@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Clock, Stethoscope, Pill as PillIcon, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Clock, Stethoscope, Pill as PillIcon, ChevronRight, ChevronDown } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import { hojeYMD, medicacaoEmUso, doseRegistrada, nowLocalISO, uid, type Dados } from "@/lib/cuidados";
 import { SeletorTesouro } from "@/components/ui-kit";
+import { CompromissoCard } from "@/components/compromisso-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -16,6 +18,9 @@ function Hoje() {
   const { itens, logs, carregando, salvarRegistros } = useApp();
   const navigate = useNavigate();
   const hoje = hojeYMD();
+  
+  // ✅ Estado para controlar se a lista de doses está expandida
+  const [listaDosesExpandida, setListaDosesExpandida] = useState(false);
 
   const emUso = itens.filter((i) => i.cuidado === "Medicação" && medicacaoEmUso(i));
   
@@ -51,6 +56,9 @@ function Hoje() {
 
   if (carregando) return <div className="p-4 space-y-3"><Skeleton className="h-60 rounded-3xl bg-muted" /></div>;
 
+  // ✅ Define quantas doses mostrar com base no estado
+  const dosesVisiveis = listaDosesExpandida ? agendaHoje : agendaHoje.slice(0, 3);
+
   return (
     <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
       <header className="text-center px-4 mb-2 flex flex-col items-center">
@@ -78,9 +86,10 @@ function Hoje() {
               </div>
             ) : (
               <div className="space-y-2">
-                {/* ✅ Texto ajustado */}
                 <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)]">Medicações para tomar</p>
-                {agendaHoje.slice(0, 3).map((a, idx) => (
+                
+                {/* ✅ Lista de doses (mesmo padrão dos 3 primeiros) */}
+                {dosesVisiveis.map((a: any, idx: number) => (
                   <div key={idx} className="flex items-center justify-between bg-white/80 p-2 rounded-xl shadow-sm border border-white/50">
                     <span className="font-bold text-sm text-foreground truncate mr-2">{a.med.medicamento}</span>
                     <div className="flex items-center gap-2 shrink-0">
@@ -89,9 +98,18 @@ function Hoje() {
                     </div>
                   </div>
                 ))}
+                
+                {/* ✅ Botão que expande/recolhe a lista no mesmo lugar */}
                 {agendaHoje.length > 3 && (
-                  <button onClick={() => navigate({ to: "/acompanhamento" })} className="text-xs font-bold text-[var(--tema)] mt-1 hover:underline flex items-center gap-1">
-                    + ver todas as {agendaHoje.length} doses <ChevronRight className="h-3 w-3" />
+                  <button 
+                    onClick={() => setListaDosesExpandida(!listaDosesExpandida)} 
+                    className="text-xs font-bold text-[var(--tema)] mt-1 hover:underline flex items-center gap-1 w-full justify-center"
+                  >
+                    {listaDosesExpandida ? (
+                      <>Mostrar menos <ChevronDown className="h-3 w-3 rotate-180" /></>
+                    ) : (
+                      <>+ ver todas as {agendaHoje.length} doses <ChevronRight className="h-3 w-3" /></>
+                    )}
                   </button>
                 )}
               </div>
@@ -103,16 +121,11 @@ function Hoje() {
                <p className="text-xs text-muted-foreground italic text-center">Nenhum compromisso para hoje.</p>
             ) : (
               <div>
-                {/* ✅ Texto ajustado */}
                 <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)] mb-2">Compromissos</p>
                 <div className="space-y-2">
-                  {compromissosHoje.slice(0, 2).map((i) => (
-                    <div key={i.id} className="flex items-center justify-between bg-white/80 p-3 rounded-xl shadow-sm border border-white/50">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-sm text-foreground">{i.titulo}</span>
-                        <span className="text-xs text-muted-foreground">{i.hora || "Horário a definir"}</span>
-                      </div>
-                    </div>
+                  {/* ✅ Usando o CompromissoCard original (que já tem o clique para abrir os detalhes) */}
+                  {compromissosHoje.map((i) => (
+                    <CompromissoCard key={i.id} item={i} compacto />
                   ))}
                 </div>
               </div>
