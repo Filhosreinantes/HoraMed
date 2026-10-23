@@ -46,10 +46,13 @@ function Acompanhamento() {
   const [viagemFim, setViagemFim] = useState(hojeYMD());
 
   const [tratamentoSelecionado, setTratamentoSelecionado] = useState<string | null>(null);
+  // ✅ Novos campos para Sintomas Inteligentes
   const [sintomasTexto, setSintomasTexto] = useState("");
+  const [pressao, setPressao] = useState("");
+  const [glicose, setGlicose] = useState("");
   
   const [bemEstarAba, setBemEstarAba] = useState<"tesouro" | "atividades">("tesouro");
-  const [tesouroForm, setTesouroForm] = useState({ sentimento: "", gratidao: "" });
+  const [tesouroForm, setTesouroForm] = useState({ atividade: "", duracao: "", sentimento: "" });
   const [atividadeForm, setAtividadeForm] = useState({ atividade: "", duracao: "", sentimento: "", gratidao: "" });
 
   const hoje = hojeYMD();
@@ -94,6 +97,10 @@ function Acompanhamento() {
     if (!tratamentoSelecionado) return null;
     return meds.find(m => m.tratamento === tratamentoSelecionado);
   }, [meds, tratamentoSelecionado]);
+
+  // ✅ Verifica se o tratamento é de Hipertensão ou Diabetes para mostrar os campos
+  const isHipertensao = tratamentoSelecionado?.toLowerCase().includes("hipertensão");
+  const isDiabetes = tratamentoSelecionado?.toLowerCase().includes("diabetes");
 
   const proximos = useMemo(() => {
     let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação" && (i.cuidado as string) !== "Sintoma" && (i.cuidado as string) !== "BemEstar" && (i.cuidado as string) !== "Tesouro"));
@@ -207,12 +214,16 @@ function Acompanhamento() {
     const dados: Dados = {
       id: uid(), pessoaId: ativa.id, criadoEm: nowLocalISO(), titulo: `Sintoma: ${tratamentoSelecionado}`, cuidado: "Sintoma" as any, data: hoje, situacao: "feito",
       tratamento: tratamentoSelecionado,
-      sintomas: sintomasTexto
+      sintomas: sintomasTexto,
+      pressao: isHipertensao ? pressao : undefined,
+      glicose: isDiabetes ? glicose : undefined,
     } as any;
     const ok = await salvarRegistros([dados]);
     if (ok) {
       toast.success("Sintomas registrados!");
       setSintomasTexto("");
+      setPressao("");
+      setGlicose("");
     }
   };
 
@@ -238,6 +249,8 @@ function Acompanhamento() {
     const htmlSintomas = historicoTratamento.map(h => `
       <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
         <p style="font-weight: bold; margin: 0 0 4px 0; color: #333;">Dia ${h.data.split('-').reverse().join('/')}</p>
+        ${(h as any).pressao ? `<p style="margin: 0; color: #1a5276; font-weight: bold;">Pressão: ${(h as any).pressao}</p>` : ''}
+        ${(h as any).glicose ? `<p style="margin: 0; color: #1a5276; font-weight: bold;">Glicose: ${(h as any).glicose}</p>` : ''}
         <p style="margin: 0; font-style: italic; color: #555;">"${(h as any).sintomas}"</p>
       </div>
     `).join('');
@@ -288,13 +301,13 @@ function Acompanhamento() {
   const salvarTesouro = async () => {
     if (!ativa) return;
     const dados: Dados = {
-      id: uid(), pessoaId: ativa.id, criadoEm: nowLocalISO(), titulo: "Registro do Tesouro", cuidado: "Tesouro" as any, data: hoje, situacao: "feito",
+      id: uid(), pessoaId: ativa.id, criadoEm: nowLocalISO(), titulo: "Atividade do Tesouro", cuidado: "Tesouro" as any, data: hoje, situacao: "feito",
       ...tesouroForm
     } as any;
     const ok = await salvarRegistros([dados]);
     if (ok) {
-      toast.success("Tesouro registrado!");
-      setTesouroForm({ sentimento: "", gratidao: "" });
+      toast.success("Atividade registrada!");
+      setTesouroForm({ atividade: "", duracao: "", sentimento: "" });
     }
   };
 
@@ -378,6 +391,25 @@ function Acompanhamento() {
                 <Printer className="h-3 w-3" /> Imprimir
               </button>
             </div>
+
+            {/* ✅ Campos Inteligentes de Pressão e Glicose */}
+            {(isHipertensao || isDiabetes) && (
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                {isHipertensao && (
+                  <label className="block space-y-1">
+                    <span className="text-xs font-semibold text-muted-foreground">Pressão Arterial</span>
+                    <input type="text" className="field text-sm" placeholder="Ex: 120/80" value={pressao} onChange={(e) => setPressao(e.target.value)} />
+                  </label>
+                )}
+                {isDiabetes && (
+                  <label className="block space-y-1">
+                    <span className="text-xs font-semibold text-muted-foreground">Glicose (mg/dL)</span>
+                    <input type="text" className="field text-sm" placeholder="Ex: 90" value={glicose} onChange={(e) => setGlicose(e.target.value)} />
+                  </label>
+                )}
+              </div>
+            )}
+
             <VozInput 
               className="field text-sm min-h-24" 
               placeholder="Escreva aqui o que sente e acompanhe os efeitos do remédio." 
@@ -398,7 +430,10 @@ function Acompanhamento() {
                   <span>{l.data.split('-').reverse().join('/')}</span>
                   <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
                 </div>
-                <p className="text-muted-foreground italic">"{(l as any).sintomas}"</p>
+                {/* ✅ Mostra as taxas salvas se existirem */}
+                {(l as any).pressao && <p className="text-[var(--tema-escuro)] font-semibold text-xs">Pressão: {(l as any).pressao}</p>}
+                {(l as any).glicose && <p className="text-[var(--tema-escuro)] font-semibold text-xs">Glicose: {(l as any).glicose}</p>}
+                <p className="text-muted-foreground italic mt-1">"{(l as any).sintomas}"</p>
               </div>
             ))}
           </section>
@@ -439,38 +474,43 @@ function Acompanhamento() {
     return (
       <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Bem-estar</h1></header>
+        <header>
+          <h1 className="font-display text-3xl font-semibold italic text-foreground">Bem-estar</h1>
+          {/* ✅ Subtítulo adicionado */}
+          <p className="text-xs font-sans italic text-muted-foreground mt-1">Cuidando do corpo e da mente.</p>
+        </header>
         <SeletorTesouro />
 
         <div className="flex gap-2 justify-center mb-4">
-          <Pill ativo={bemEstarAba === "tesouro"} onClick={() => setBemEstarAba("tesouro")}>Registro do Tesouro</Pill>
-          <Pill ativo={bemEstarAba === "atividades"} onClick={() => setBemEstarAba("atividades")}>Minhas Atividades</Pill>
+          <Pill ativo={bemEstarAba === "tesouro"} onClick={() => setBemEstarAba("tesouro")}>Atividades do Tesouro</Pill>
+          <Pill ativo={bemEstarAba === "atividades"} onClick={() => setBemEstarAba("atividades")}>Minhas atividades</Pill>
         </div>
 
         {bemEstarAba === "tesouro" && (
           <>
             <section className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
               <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
-                <Smile className="h-4 w-4" style={{ color: "var(--tema)" }} /> Registro do Tesouro
+                <Smile className="h-4 w-4" style={{ color: "var(--tema)" }} /> Atividades do Tesouro
               </h2>
               
-              <label className="block space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground">Como está se sentindo hoje?</span>
-                <VozInput 
-                  className="field text-sm min-h-20" 
-                  placeholder="Ex: Hoje acordou mais animado..." 
-                  value={tesouroForm.sentimento} 
-                  onChange={(v) => setTesouroForm(p => ({...p, sentimento: v}))} 
-                />
-              </label>
+              <div className="grid grid-cols-[2fr_1fr] gap-3">
+                <label className="block space-y-1">
+                  <span className="text-xs font-semibold text-muted-foreground">Atividade</span>
+                  <input type="text" className="field text-sm" placeholder="Ex: Brincadeira, Leitura..." value={tesouroForm.atividade} onChange={(e) => setTesouroForm(p => ({...p, atividade: e.target.value}))} />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-xs font-semibold text-muted-foreground">Duração (min)</span>
+                  <input type="number" className="field text-sm" placeholder="Ex: 30" value={tesouroForm.duracao} onChange={(e) => setTesouroForm(p => ({...p, duracao: e.target.value}))} />
+                </label>
+              </div>
 
               <label className="block space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground">Gratidão / Coisas boas</span>
+                <span className="text-xs font-semibold text-muted-foreground">Como está se sentindo?</span>
                 <VozInput 
                   className="field text-sm min-h-20" 
-                  placeholder="Escreva algo pelo que você é grata hoje." 
-                  value={tesouroForm.gratidao} 
-                  onChange={(v) => setTesouroForm(p => ({...p, gratidao: v}))} 
+                  placeholder="Ex: Mais animado..." 
+                  value={tesouroForm.sentimento} 
+                  onChange={(v) => setTesouroForm(p => ({...p, sentimento: v}))} 
                 />
               </label>
 
@@ -482,11 +522,11 @@ function Acompanhamento() {
               {logsTesouro.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum registro ainda.</p> : logsTesouro.map(l => (
                 <div key={l.id} className="notebook p-4 space-y-1 bg-white text-sm">
                   <div className="flex justify-between font-bold text-foreground">
-                    <span>Registro</span>
+                    <span>{(l as any).atividade || "Atividade"}</span>
                     <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(0, 10).split('-').reverse().join('/')} {l.criadoEm?.slice(11, 16)}</span>
                   </div>
+                  {(l as any).duracao && <p className="text-muted-foreground"><span className="font-semibold text-foreground">Duração:</span> {(l as any).duracao} min</p>}
                   {(l as any).sentimento && <p className="text-muted-foreground mt-2 italic">"{(l as any).sentimento}"</p>}
-                  {(l as any).gratidao && <p className="text-muted-foreground mt-1 italic">Gratidão: "{(l as any).gratidao}"</p>}
                 </div>
               ))}
             </section>
@@ -497,7 +537,7 @@ function Acompanhamento() {
           <>
             <section className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
               <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
-                <Trophy className="h-4 w-4" style={{ color: "var(--tema)" }} /> Minhas Atividades
+                <Trophy className="h-4 w-4" style={{ color: "var(--tema)" }} /> Minhas atividades
               </h2>
               
               <div className="grid grid-cols-[2fr_1fr] gap-3">
@@ -563,6 +603,10 @@ function Acompanhamento() {
           </h1>
           <p className="text-sm font-semibold tracking-widest uppercase mt-1" style={{ color: "var(--tema)" }}>
             Acompanhamento
+          </p>
+          {/* ✅ Subtítulo adicionado no Menu Inicial */}
+          <p className="text-xs font-sans italic text-muted-foreground mt-2">
+            Cuidando do corpo e da mente.
           </p>
         </header>
 
