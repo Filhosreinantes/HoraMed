@@ -140,8 +140,53 @@ function Acompanhamento() {
     if (!ativa || !remedioDoTratamento) return;
     const janela = window.open('', '', 'height=800,width=600');
     if (!janela) return toast.error("Bloqueador de pop-ups ativo.");
-    janela.document.write(`<html><head><title>Relatório</title><style>body{font-family:sans-serif;padding:20px;color:#333}h1{color:#1a5276;font-size:22px}h2{color:#1a5276;font-size:16px;border-bottom:2px solid #1a5276;padding-bottom:4px}.dado{margin-bottom:6px;font-size:14px}.label{font-weight:bold}</style></head><body><h1>Relatório de Acompanhamento</h1><div class="dado"><span class="label">Tesouro:</span> ${ativa.nome}</div><h2>Dados do Tratamento</h2><div class="dado"><span class="label">Tratamento:</span> ${tratamentoSelecionado}</div><div class="dado"><span class="label">Remédio:</span> ${remedioDoTratamento.medicamento}</div><div class="dado"><span class="label">Dosagem:</span> ${remedioDoTratamento.dosagem}</div><div class="dado"><span class="label">Início:</span> ${remedioDoTratamento.inicio ? remedioDoTratamento.inicio.split('-').reverse().join('/') : '-'}</div><h2>Sintomas Registrados</h2>${historicoTratamento.map(h => `<div style="margin-bottom:12px;border-bottom:1px solid #eee"><p style="font-weight:bold;margin:0 0 4px 0">Dia ${h.data.split('-').reverse().join('/')}</p>${(h as any).pressao ? `<p style="margin:0;color:#1a5276;font-weight:bold">Pressão: ${(h as any).pressao}</p>` : ''}${(h as any).glicose ? `<p style="margin:0;color:#1a5276;font-weight:bold">Glicose: ${(h as any).glicose}</p>` : ''}<p style="margin:0;font-style:italic;color:#555">"${(h as any).sintomas}"</p></div>`).join('')}<div style="margin-top:30px;font-size:11px;color:#999;text-align:center">Gerado pelo Rotina Azul em ${new Date().toLocaleDateString('pt-BR')}</div></body></html>`);
-    janela.document.close(); janela.focus(); setTimeout(() => janela.print(), 500);
+
+    const inicioFmt = remedioDoTratamento.inicio
+      ? remedioDoTratamento.inicio.split('-').reverse().join('/')
+      : '-';
+
+    const sintomasHtml = historicoTratamento.map((h: any) => {
+      const pressaoHtml = h.pressao
+        ? '<p style="margin:0;color:#1a5276;font-weight:bold">Pressão: ' + h.pressao + '</p>'
+        : '';
+      const glicoseHtml = h.glicose
+        ? '<p style="margin:0;color:#1a5276;font-weight:bold">Glicose: ' + h.glicose + '</p>'
+        : '';
+      return (
+        '<div style="margin-bottom:12px;border-bottom:1px solid #eee">' +
+          '<p style="font-weight:bold;margin:0 0 4px 0">Dia ' + h.data.split('-').reverse().join('/') + '</p>' +
+          pressaoHtml +
+          glicoseHtml +
+          '<p style="margin:0;font-style:italic;color:#555">"' + h.sintomas + '"</p>' +
+        '</div>'
+      );
+    }).join('');
+
+    const html =
+      '<html><head><title>Relatório</title>' +
+      '<style>' +
+        'body{font-family:sans-serif;padding:20px;color:#333}' +
+        'h1{color:#1a5276;font-size:22px}' +
+        'h2{color:#1a5276;font-size:16px;border-bottom:2px solid #1a5276;padding-bottom:4px}' +
+        '.dado{margin-bottom:6px;font-size:14px}' +
+        '.label{font-weight:bold}' +
+      '</style></head><body>' +
+      '<h1>Relatório de Acompanhamento</h1>' +
+      '<div class="dado"><span class="label">Tesouro:</span> ' + ativa.nome + '</div>' +
+      '<h2>Dados do Tratamento</h2>' +
+      '<div class="dado"><span class="label">Tratamento:</span> ' + tratamentoSelecionado + '</div>' +
+      '<div class="dado"><span class="label">Remédio:</span> ' + remedioDoTratamento.medicamento + '</div>' +
+      '<div class="dado"><span class="label">Dosagem:</span> ' + remedioDoTratamento.dosagem + '</div>' +
+      '<div class="dado"><span class="label">Início:</span> ' + inicioFmt + '</div>' +
+      '<h2>Sintomas Registrados</h2>' +
+      sintomasHtml +
+      '<div style="margin-top:30px;font-size:11px;color:#999;text-align:center">Gerado pelo Rotina Azul em ' + new Date().toLocaleDateString('pt-BR') + '</div>' +
+      '</body></html>';
+
+    janela.document.write(html);
+    janela.document.close();
+    janela.focus();
+    setTimeout(() => janela.print(), 500);
   };
   const salvarTesouro = async () => {
     if (!ativa) return;
