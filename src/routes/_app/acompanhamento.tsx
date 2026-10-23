@@ -38,7 +38,6 @@ function Acompanhamento() {
   const [buscaProximos, setBuscaProximos] = useState("");
   const [filtroRemedios, setFiltroRemedios] = useState<"uso" | "encerrados">("uso");
 
-  const [atrasoModal, setAtrasoModal] = useState<any>(null);
   const [filtroMed, setFiltroMed] = useState("");
   const [dataHistorico, setDataHistorico] = useState(hojeYMD());
   const [viagemInicio, setViagemInicio] = useState(hojeYMD());
@@ -165,7 +164,7 @@ function Acompanhamento() {
     <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2"><Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao><header><h1 className="font-display text-3xl font-semibold italic text-foreground">{titulo}</h1></header><div className="notebook p-8 mt-10 flex flex-col items-center gap-4 text-center" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}><Lock className="h-12 w-12 text-amber-500" /><h2 className="font-display text-2xl font-bold italic text-foreground">Recurso Premium</h2><p className="text-sm text-muted-foreground">O diário de {titulo} está disponível apenas para assinantes do Rotina Azul Premium.</p><Botao className="mt-4 w-full" style={{ backgroundColor: "var(--tema)", color: "white" }}>Conhecer o Premium</Botao></div></div>
   );
 
-  // ✅ MENU INICIAL (AGORA APENAS COM OS 4 BOTÕES, SEM O CARD "PARA HOJE")
+  // ✅ MENU INICIAL (APENAS OS 4 BOTÕES, SEM O CARD "PARA HOJE")
   if (view === "menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
@@ -201,7 +200,7 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELAS INTERNAS DE MEDICAÇÃO
+  // ✅ MENU DE MEDICAÇÕES
   if (view === "medicacoes_menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -344,10 +343,291 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELAS DE TRATAMENTO, BEM-ESTAR E COMPROMISSOS (mantidas)
-  if (view === "tratamento") { /* ... código interno igual ao anterior ... */ return null; }
-  if (view === "bemestar") { /* ... código interno igual ao anterior ... */ return null; }
-  if (view === "compromissos") { /* ... código interno igual ao anterior ... */ return null; }
+  // ✅ TELA: TRATAMENTO (seleção)
+  if (view === "tratamento" && !tratamentoSelecionado) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Tratamentos</h1></header>
+        <SeletorTesouro />
+        <div className="notebook p-5 mt-4 space-y-3">
+          <h2 className="font-display text-xl font-semibold italic text-foreground mb-4">Selecione o tratamento</h2>
+          {tratamentosUnicos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum tratamento cadastrado nos remédios ainda.</p>
+          ) : (
+            tratamentosUnicos.map(t => (
+              <button key={t} onClick={() => setTratamentoSelecionado(t)} className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition">
+                <span className="font-bold text-sm text-foreground">{t}</span>
+                <ChevronLeft className="h-4 w-4 text-muted-foreground rotate-180" />
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ TELA: TRATAMENTO (detalhes)
+  if (view === "tratamento" && tratamentoSelecionado) {
+    return (
+      <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
+        <Botao variant="ghost" onClick={() => setTratamentoSelecionado(null)} className="mb-2 flex items-center gap-1 text-sm font-semibold"><ChevronLeft className="h-4 w-4" /> Voltar aos Tratamentos</Botao>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">{tratamentoSelecionado}</h1></header>
+        <SeletorTesouro />
+
+        {remedioDoTratamento && (
+          <div className="notebook p-5 space-y-2 bg-slate-50 border-slate-200">
+            <div className="flex items-center gap-2 border-b border-border/50 pb-2 mb-2">
+              <PillIcon className="h-5 w-5" style={{ color: "var(--tema)" }} />
+              <h2 className="font-display text-lg font-bold italic" style={{ color: "var(--tema-escuro)" }}>Remédio: {remedioDoTratamento.medicamento}</h2>
+            </div>
+            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Dosagem:</span> {remedioDoTratamento.dosagem}</p>
+            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Início:</span> {remedioDoTratamento.inicio ? remedioDoTratamento.inicio.split('-').reverse().join('/') : '-'}</p>
+          </div>
+        )}
+
+        <section className="notebook p-5 space-y-4 relative" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
+          <div className="flex justify-between items-center">
+            <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
+              <Activity className="h-4 w-4" style={{ color: "var(--tema)" }} /> Sintomas Diários
+            </h2>
+            <button onClick={imprimirRelatorio} className="text-xs font-bold text-[var(--tema)] flex items-center gap-1 bg-[var(--tema-claro)] px-2 py-1 rounded-md">
+              <Printer className="h-3 w-3" /> Imprimir
+            </button>
+          </div>
+
+          {(isHipertensao || isDiabetes) && (
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              {isHipertensao && (
+                <label className="block space-y-1">
+                  <span className="text-xs font-semibold text-muted-foreground">Pressão Arterial</span>
+                  <input type="text" className="field text-sm" placeholder="Ex: 120/80" value={pressao} onChange={(e) => setPressao(e.target.value)} />
+                </label>
+              )}
+              {isDiabetes && (
+                <label className="block space-y-1">
+                  <span className="text-xs font-semibold text-muted-foreground">Glicose (mg/dL)</span>
+                  <input type="text" className="field text-sm" placeholder="Ex: 90" value={glicose} onChange={(e) => setGlicose(e.target.value)} />
+                </label>
+              )}
+            </div>
+          )}
+
+          <VozInput className="field text-sm min-h-24" placeholder="Escreva aqui o que sente e acompanhe os efeitos do remédio." value={sintomasTexto} onChange={setSintomasTexto} />
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Botao onClick={salvarSintomaTratamento} className="flex-1" style={{ backgroundColor: "var(--tema)", color: "white" }}>Salvar Sintoma</Botao>
+            <Botao onClick={encerrarTratamento} variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50">Tratamento encerrado</Botao>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="font-sans text-base font-semibold text-foreground">Histórico de Sintomas</h2>
+          {historicoTratamento.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum sintoma registrado ainda.</p> : historicoTratamento.map(l => (
+            <div key={l.id} className="notebook p-4 space-y-1 bg-white text-sm">
+              <div className="flex justify-between font-bold text-foreground">
+                <span>{l.data.split('-').reverse().join('/')}</span>
+                <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
+              </div>
+              {(l as any).pressao && <p className="text-[var(--tema-escuro)] font-semibold text-xs">Pressão: {(l as any).pressao}</p>}
+              {(l as any).glicose && <p className="text-[var(--tema-escuro)] font-semibold text-xs">Glicose: {(l as any).glicose}</p>}
+              <p className="text-muted-foreground italic mt-1">"{(l as any).sintomas}"</p>
+            </div>
+          ))}
+        </section>
+      </div>
+    );
+  }
+
+  // ✅ TELA: BEM-ESTAR
+  if (view === "bemestar") {
+    if (assinaturaAtiva === false) return <RenderPremiumLock titulo="Bem-estar" />;
+    
+    return (
+      <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
+        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        <header>
+          <h1 className="font-display text-3xl font-semibold italic text-foreground">Bem-estar</h1>
+          <p className="text-xs font-sans italic text-muted-foreground mt-1">Cuidando do corpo e da mente.</p>
+        </header>
+        <SeletorTesouro />
+
+        <div className="flex gap-2 justify-center mb-4">
+          <Pill ativo={bemEstarAba === "tesouro"} onClick={() => setBemEstarAba("tesouro")}>Atividades do Tesouro</Pill>
+          <Pill ativo={bemEstarAba === "atividades"} onClick={() => setBemEstarAba("atividades")}>Minhas atividades</Pill>
+        </div>
+
+        {bemEstarAba === "tesouro" && (
+          <>
+            <section className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
+              <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
+                <Smile className="h-4 w-4" style={{ color: "var(--tema)" }} /> Atividades do Tesouro
+              </h2>
+              <div className="grid grid-cols-[2fr_1fr] gap-3">
+                <label className="block space-y-1">
+                  <span className="text-xs font-semibold text-muted-foreground">Atividade</span>
+                  <input type="text" className="field text-sm" placeholder="Ex: Brincadeira, Leitura..." value={tesouroForm.atividade} onChange={(e) => setTesouroForm(p => ({...p, atividade: e.target.value}))} />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-xs font-semibold text-muted-foreground">Duração (min)</span>
+                  <input type="number" className="field text-sm" placeholder="Ex: 30" value={tesouroForm.duracao} onChange={(e) => setTesouroForm(p => ({...p, duracao: e.target.value}))} />
+                </label>
+              </div>
+              <label className="block space-y-1">
+                <span className="text-xs font-semibold text-muted-foreground">Como está se sentindo?</span>
+                <VozInput className="field text-sm min-h-20" placeholder="Ex: Mais animado..." value={tesouroForm.sentimento} onChange={(v) => setTesouroForm(p => ({...p, sentimento: v}))} />
+              </label>
+              <Botao onClick={salvarTesouro} className="w-full" style={{ backgroundColor: "var(--tema)", color: "white" }}>Salvar Registro</Botao>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="font-sans text-base font-semibold text-foreground">Histórico do Tesouro</h2>
+              {logsTesouro.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum registro ainda.</p> : logsTesouro.map(l => (
+                <div key={l.id} className="notebook p-4 space-y-1 bg-white text-sm">
+                  <div className="flex justify-between font-bold text-foreground">
+                    <span>{(l as any).atividade || "Atividade"}</span>
+                    <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(0, 10).split('-').reverse().join('/')} {l.criadoEm?.slice(11, 16)}</span>
+                  </div>
+                  {(l as any).duracao && <p className="text-muted-foreground"><span className="font-semibold text-foreground">Duração:</span> {(l as any).duracao} min</p>}
+                  {(l as any).sentimento && <p className="text-muted-foreground mt-2 italic">"{(l as any).sentimento}"</p>}
+                </div>
+              ))}
+            </section>
+          </>
+        )}
+
+        {bemEstarAba === "atividades" && (
+          <>
+            <section className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
+              <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
+                <Trophy className="h-4 w-4" style={{ color: "var(--tema)" }} /> Minhas atividades
+              </h2>
+              <div className="grid grid-cols-[2fr_1fr] gap-3">
+                <label className="block space-y-1">
+                  <span className="text-xs font-semibold text-muted-foreground">Atividade</span>
+                  <input type="text" className="field text-sm" placeholder="Ex: Caminhada, Yoga..." value={atividadeForm.atividade} onChange={(e) => setAtividadeForm(p => ({...p, atividade: e.target.value}))} />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-xs font-semibold text-muted-foreground">Duração (min)</span>
+                  <input type="number" className="field text-sm" placeholder="Ex: 30" value={atividadeForm.duracao} onChange={(e) => setAtividadeForm(p => ({...p, duracao: e.target.value}))} />
+                </label>
+              </div>
+              <label className="block space-y-1">
+                <span className="text-xs font-semibold text-muted-foreground">Como está se sentindo?</span>
+                <VozInput className="field text-sm min-h-20" placeholder="Ex: Mais disposto..." value={atividadeForm.sentimento} onChange={(v) => setAtividadeForm(p => ({...p, sentimento: v}))} />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-semibold text-muted-foreground">Gratidão / Coisas boas</span>
+                <VozInput className="field text-sm min-h-20" placeholder="Escreva algo pelo que você é grata hoje." value={atividadeForm.gratidao} onChange={(v) => setAtividadeForm(p => ({...p, gratidao: v}))} />
+              </label>
+              <Botao onClick={salvarAtividade} className="w-full" style={{ backgroundColor: "var(--tema)", color: "white" }}>Salvar Registro</Botao>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="font-sans text-base font-semibold text-foreground">Histórico de Atividades</h2>
+              {logsAtividade.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum registro ainda.</p> : logsAtividade.map(l => (
+                <div key={l.id} className="notebook p-4 space-y-1 bg-white text-sm">
+                  <div className="flex justify-between font-bold text-foreground">
+                    <span>{(l as any).atividade || "Atividade"}</span>
+                    <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(0, 10).split('-').reverse().join('/')} {l.criadoEm?.slice(11, 16)}</span>
+                  </div>
+                  {(l as any).duracao && <p className="text-muted-foreground"><span className="font-semibold text-foreground">Duração:</span> {(l as any).duracao} min</p>}
+                  {(l as any).sentimento && <p className="text-muted-foreground mt-2 italic">"{(l as any).sentimento}"</p>}
+                  {(l as any).gratidao && <p className="text-muted-foreground mt-1 italic">Gratidão: "{(l as any).gratidao}"</p>}
+                </div>
+              ))}
+            </section>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ✅ TELA: COMPROMISSOS
+  if (view === "compromissos") {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Compromissos</h1></header>
+        <SeletorTesouro />
+        
+        <div className="notebook p-5 mt-4" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
+          <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2 mb-1">
+            <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} /> Panorama dos cuidados
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">Toque em um dos blocos para ver os detalhes.</p>
+          
+          <div className="flex gap-2 mb-4">
+            <Pill ativo={periodo === "mes"} onClick={() => setPeriodo("mes")}>Este mês</Pill>
+            <Pill ativo={periodo === "ano"} onClick={() => setPeriodo("ano")}>Este ano</Pill>
+            <Pill ativo={periodo === "tudo"} onClick={() => setPeriodo("tudo")}>Tudo</Pill>
+          </div>
+
+          <div className="grid gap-3">
+            {(["Consulta", "Terapia", "Exame"] as Cuidado[]).map((c) => {
+              const doTipo = filtrados.filter((i) => i.cuidado === c);
+              return (
+                <div key={c} className="bg-muted/30 rounded-xl p-4 border border-border/50">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-display text-lg font-semibold italic" style={{ color: "var(--tema-escuro)" }}>
+                      {c === "Consulta" && <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />}
+                      {c === "Terapia" && <Leaf className="h-5 w-5" style={{ color: "var(--tema)" }} />}
+                      {c === "Exame" && <FileText className="h-5 w-5" style={{ color: "var(--tema)" }} />}
+                      <span>{c}</span>
+                    </div>
+                    <span className="font-display text-2xl font-bold" style={{ color: "var(--tema)" }}>{doTipo.length}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {LINHAS.map(({ s, label }) => {
+                      const n = doTipo.filter((i) => (i.situacao ?? "proximo") === s).length;
+                      const ativo = drill && drill.cuidado === c && drill.situacao === s;
+                      return (
+                        <Botao variant="ghost" key={s} onClick={() => setDrill({ cuidado: c, situacao: s })} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${ativo ? "bg-primary text-primary-foreground" : "bg-white border border-border/50 shadow-sm"}`}>
+                          <span>{label}</span><strong>{n}</strong>
+                        </Botao>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {drill && (
+          <section className="notebook space-y-3 p-4 mt-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">{drill.cuidado} · {LINHAS.find((l) => l.s === drill.situacao)?.label}</h3>
+              <Botao variant="ghost" onClick={() => setDrill(null)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-semibold"><X className="h-4 w-4" /> Fechar</Botao>
+            </div>
+            {filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao).length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nada por aqui.</p>
+            ) : (
+              ordenarPorDataHora(filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)).map((i) => <CompromissoCard key={i.id} item={i} compacto />)
+            )}
+          </section>
+        )}
+
+        <Divisor />
+        
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">Todos os próximos</h2>
+          <select className="field text-sm p-2 w-full border-gold/30 bg-card mb-2" value={buscaProximos} onChange={(e) => setBuscaProximos(e.target.value)}>
+            <option value="">Todos os tipos</option>
+            <option value="Consulta">Consulta</option>
+            <option value="Terapia">Terapia</option>
+            <option value="Exame">Exame</option>
+          </select>
+          {proximos.length === 0 ? (
+            <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso agendado.</p>
+          ) : (
+            <div className="max-h-[400px] space-y-2 overflow-y-auto pr-1">
+              {proximos.map((i) => <CompromissoCard key={i.id} item={i} compacto />)}
+            </div>
+          )}
+        </section>
+      </div>
+    );
+  }
 
   return null;
 }
