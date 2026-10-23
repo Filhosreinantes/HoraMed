@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_app/criar")({
 type K = "data"|"hora"|"local"|"profissional"|"especialidade"|"tipoTerapia"|"tipoExame"|"recomendacoes"|"medicamento"|"frequencia"|"inicio"|"fim"|"programacao"|"meses"|"diaSemana"|"prazoDias";
 type F = Partial<Record<K, string>>;
 
-function Criar() {
+export function Criar() {
   const { duplicar } = Route.useSearch() as { duplicar?: string };
   const { ativa, salvarRegistros, itens } = useApp(); 
   const navigate = useNavigate();
@@ -613,4 +613,3 @@ function Criar() {
     </div>
   );
 }
-export { Criar };
