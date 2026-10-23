@@ -3,10 +3,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Clock, Stethoscope, Pill as PillIcon, ChevronRight, X, Leaf, FileText } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useApp } from "@/lib/app-store";
-import { hojeYMD, medicacaoEmUso, doseRegistrada, nowLocalISO, uid, type Dados, type Cuidado } from "@/lib/cuidados";
+import { hojeYMD, medicacaoEmUso, doseRegistrada, nowLocalISO, uid, type Dados } from "@/lib/cuidados";
 import { SeletorTesouro } from "@/components/ui-kit";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+
+import { Criar } from "./criar"; 
 
 export const Route = createFileRoute("/_app/hoje")({
   head: () => ({ meta: [{ title: "Hoje · Rotina Azul" }] }),
@@ -21,6 +23,9 @@ function Hoje() {
   const [modalDosesAberto, setModalDosesAberto] = useState(false);
   const [modalCompromissosAberto, setModalCompromissosAberto] = useState(false);
   const [detalheAberto, setDetalheAberto] = useState<any>(null);
+
+  const [modalCriarAberto, setModalCriarAberto] = useState(false);
+  const [tipoSelecionado, setTipoSelecionado] = useState<any>(null);
 
   // --- Lógica de Medicações ---
   const emUso = itens.filter((i) => i.cuidado === "Medicação" && medicacaoEmUso(i));
@@ -74,23 +79,43 @@ function Hoje() {
     if (ok) toast.success("Status atualizado!");
   };
 
+  const abrirCriar = (tipo: string) => {
+    setTipoSelecionado(tipo);
+    setModalCriarAberto(true);
+  };
+
   if (carregando) return <div className="p-4 space-y-3"><Skeleton className="h-60 rounded-3xl bg-muted" /></div>;
 
   return (
     <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
       
+      {/* MODAL NOVO REGISTRO */}
+      {modalCriarAberto && (
+        <div className="fixed inset-0 z-50 bg-[#F8F9FA] overflow-y-auto">
+          <div className="sticky top-0 z-50 flex justify-between items-center p-4 bg-white/90 backdrop-blur-md border-b border-gray-200 max-w-lg mx-auto">
+             <h2 className="font-display text-xl font-bold italic text-gray-800">Novo Registro</h2>
+             <button onClick={() => setModalCriarAberto(false)} className="flex items-center gap-1 rounded-full bg-gray-100 px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-200 shadow-sm">
+               <X className="h-4 w-4" /> Fechar
+             </button>
+          </div>
+          <div className="p-4 pb-24 max-w-lg mx-auto">
+             <Criar tipoInicial={tipoSelecionado} onFechar={() => setModalCriarAberto(false)} />
+          </div>
+        </div>
+      )}
+
       {/* MODAL: TODAS AS DOSES */}
       {modalDosesAberto && (
-        <div className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-y-auto">
-          <div className="sticky top-0 z-50 flex justify-between items-center p-4 bg-white border-b border-gray-100 max-w-lg mx-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: `linear-gradient(135deg, var(--tema-claro) 0%, #F8F9FA 100%)` }}>
+          <div className="sticky top-0 z-50 flex justify-between items-center p-4 bg-white/80 backdrop-blur-md border-b border-[var(--tema)]/20 max-w-lg mx-auto">
              <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>Todas as doses de hoje</h2>
-             <button onClick={() => setModalDosesAberto(false)} className="flex items-center gap-1 rounded-full bg-gray-100 px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-200 shadow-sm">
+             <button onClick={() => setModalDosesAberto(false)} className="flex items-center gap-1 rounded-full bg-white/60 px-4 py-2 text-sm font-bold text-[var(--tema-escuro)] hover:bg-white shadow-sm border border-[var(--tema)]/30">
                <X className="h-4 w-4" /> Fechar
              </button>
           </div>
           <div className="p-4 space-y-2 max-w-lg mx-auto pb-24">
             {agendaHoje.map((a, idx) => (
-              <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+              <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-white/50">
                 <div className="flex flex-col">
                   <span className="font-bold text-sm text-foreground">
                     {a.med.medicamento} {a.med.dosagem && <span className="font-normal text-xs text-muted-foreground ml-1">{a.med.dosagem}</span>}
@@ -109,7 +134,7 @@ function Hoje() {
       {/* MODAL: TODOS OS COMPROMISSOS */}
       {modalCompromissosAberto && (
         <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: `linear-gradient(135deg, var(--tema-claro) 0%, #F8F9FA 100%)` }}>
-          <div className="sticky top-0 z-50 flex justify-between items-center p-4 border-b border-[var(--tema)]/20 max-w-lg mx-auto bg-white/80 backdrop-blur-md">
+          <div className="sticky top-0 z-50 flex justify-between items-center p-4 bg-white/80 backdrop-blur-md border-b border-[var(--tema)]/20 max-w-lg mx-auto">
              <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>Compromissos de hoje</h2>
              <button onClick={() => setModalCompromissosAberto(false)} className="flex items-center gap-1 rounded-full bg-white/60 px-4 py-2 text-sm font-bold text-[var(--tema-escuro)] hover:bg-white shadow-sm border border-[var(--tema)]/30">
                <X className="h-4 w-4" /> Fechar
@@ -251,7 +276,7 @@ function Hoje() {
 
       {/* NOVO TÍTULO E OS 4 BLOCOS DO CRIAR */}
       <div className="px-4 mt-8">
-        <h2 className="font-display text-2xl font-bold italic mb-4" style={{ color: "var(--tema-escuro)" }}>
+        <h2 className="font-display text-lg font-bold italic mb-4 whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: "var(--tema-escuro)" }}>
           Adicione aqui os novos registros
         </h2>
         
@@ -264,7 +289,7 @@ function Hoje() {
           ].map(({ tipo: c, icone: Icone }) => (
             <button
               key={c}
-              onClick={() => navigate({ to: "/criar", search: { tipo: c } as any })}
+              onClick={() => abrirCriar(c)}
               className="notebook flex flex-col items-center justify-center p-4 transition hover:bg-muted/10 border-[#B8933F]/60"
               style={{ boxShadow: "0 4px 12px -4px rgba(0,0,0,0.05)" }}
             >
