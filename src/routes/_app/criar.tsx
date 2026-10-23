@@ -613,3 +613,4 @@ function Criar() {
     </div>
   );
 }
+export { Criar };
