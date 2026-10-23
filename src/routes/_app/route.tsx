@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Calendar, Plus, User } from "lucide-react";
+import { Calendar, Plus, User, Sun, FileText } from "lucide-react"; // ✅ Adicionei Sun e FileText
 import { supabase } from "@/lib/supabase";
 import { AppProvider, useApp } from "@/lib/app-store";
 import { desconectarUsuaria } from "@/lib/notificacoes";
@@ -37,7 +37,6 @@ function Layout() {
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((ev) => {
       if (ev === "SIGNED_OUT") {
-        // Este aparelho deixa de receber os lembretes da conta que saiu.
         desconectarUsuaria();
         limparAlarmes();
         navigate({ to: "/login", replace: true });
@@ -60,7 +59,6 @@ function Shell() {
 
   const tab = "flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold";
 
-  // 1. Enquanto o Supabase está checando a tabela rotina_assinaturas
   if (assinaturaAtiva === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#FDFBF7]">
@@ -83,7 +81,6 @@ function Shell() {
     );
   }
 
-  // 2. Se a pessoa não pagou (ou expirou)
   if (assinaturaAtiva === false) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#FDFBF7] p-6 text-center">
@@ -92,7 +89,6 @@ function Shell() {
           <h2 className="mt-4 font-display text-2xl font-bold italic text-[#2C4A6B]">
             Assine o Rotina Azul
           </h2>
-          {/* No app Android não há venda: a Play Store só aceita pagamento pelo Google Play. */}
           {ehAppAndroid() ? (
             <p className="mt-2 text-sm text-[#7A8A9A]">
               Sua assinatura não está ativa nesta conta.
@@ -134,7 +130,6 @@ function Shell() {
     );
   }
 
-  // 3. Se a assinatura está ativa, mostra o app normalmente
   return (
     <div
       style={
@@ -151,17 +146,22 @@ function Shell() {
       {ehAppAndroid() ? <ConfiabilidadePrompt /> : <NotificationPrompt />}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/40 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
         <div className="mx-auto flex max-w-lg">
-          <Link to="/acompanhamento" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>
-            <Calendar className="h-6 w-6" /> Acompanhamento
+          {/* ✅ ABA HOJE (Primeira posição) */}
+          <Link to="/hoje" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>
+            <Sun className="h-6 w-6" /> Hoje
           </Link>
+          
+          {/* ABA CRIAR */}
           <Link to="/criar" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>
             <span className="-mt-6 grid h-12 w-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-soft">
               <Plus className="h-6 w-6" />
             </span>
             Criar
           </Link>
-          <Link to="/perfil" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>
-            <User className="h-6 w-6" /> Perfil
+          
+          {/* ✅ ABA ACOMPANHAMENTO (Segunda posição) */}
+          <Link to="/acompanhamento" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>
+            <FileText className="h-6 w-6" /> Acompanhamento
           </Link>
         </div>
       </nav>
