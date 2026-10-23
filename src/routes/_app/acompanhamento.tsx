@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, Clock, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, RefreshCw, Thermometer, Heart, Lock, Activity, Smile, Printer, Trophy, CalendarCheck, PillBottle } from "lucide-react";
+import { X, ChevronLeft, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, RefreshCw, Thermometer, Heart, Lock, Activity, Smile, Printer, Trophy, CalendarCheck, PillBottle } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
@@ -14,11 +14,10 @@ import { VozInput } from "@/components/voz-input";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/acompanhamento")({
-  head: () => ({ meta: [{ title: "Rotina Azul 💙" }] }),
+  head: () => ({ meta: [{ title: "Acompanhamento · Rotina Azul" }] }),
   component: Acompanhamento,
 });
 
-// ✅ Adicionado as novas views para a página de Medicações
 type View = "menu" | "compromissos" | "medicacoes_menu" | "medicacoes_historico" | "medicacoes_proximos" | "medicacoes_estoque" | "medicacoes_viagem" | "tratamento" | "bemestar";
 type Periodo = "mes" | "ano" | "tudo";
 type Drill = { cuidado: Cuidado; situacao: Situacao } | null;
@@ -39,10 +38,8 @@ function Acompanhamento() {
   const [buscaProximos, setBuscaProximos] = useState("");
   const [filtroRemedios, setFiltroRemedios] = useState<"uso" | "encerrados">("uso");
 
-  const [atrasoModal, setAtrasoModal] = useState<any>(null);
   const [filtroMed, setFiltroMed] = useState("");
   const [dataHistorico, setDataHistorico] = useState(hojeYMD());
-
   const [viagemInicio, setViagemInicio] = useState(hojeYMD());
   const [viagemFim, setViagemFim] = useState(hojeYMD());
 
@@ -130,36 +127,6 @@ function Acompanhamento() {
     return lista;
   }, [itens, buscaProximos]);
 
-  const agendaHoje = useMemo(() => {
-    const arr: any[] = [];
-    emUso.forEach((m) => {
-      const dataInicio = m.inicio;
-      const dataFim = m.fim;
-      if (dataInicio && hoje < dataInicio) return;
-      if (dataFim && hoje > dataFim) return;
-
-      const diasDaSemana = m.diasSemana || [0, 1, 2, 3, 4, 5, 6];
-      const hojeIndex = new Date().getDay(); 
-      if (!diasDaSemana.includes(hojeIndex)) return;
-
-      const horarios = m.horarios || [];
-      let horariosValidos = horarios;
-      if (m.inicio === hoje && horarios.length > 0) {
-        const horaInicio = horarios[0] ?? "";
-        horariosValidos = horarios.filter((h: string) => h >= horaInicio);
-      }
-
-      const dosesPendentes = horariosValidos.filter((h: string) => {
-        return !doseRegistrada(logs, m.id, hoje, h.trim());
-      });
-
-      dosesPendentes.forEach((hora: string) => {
-        arr.push({ med: m, data: hoje, horario: hora, log: null });
-      });
-    });
-    return arr.sort((a, b) => a.horario.localeCompare(b.horario));
-  }, [emUso, logs, hoje]);
-
   const proximosAgendamentos = useMemo(() => {
     const arr: any[] = [];
     const dataLimite = new Date();
@@ -210,26 +177,6 @@ function Acompanhamento() {
       .filter((i: any) => i.data === dataHistorico)
       .sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
   }, [logs, filtroMed, dataHistorico]);
-
-  const registrarMedicacao = async (item: any, data: string, horario: string, novoHorario?: string) => {
-    const titulo = novoHorario ? `Atrasou: ${item.medicamento} (${horario} -> ${novoHorario})` : `Tomou: ${item.medicamento} (${horario})`;
-    const dados: Dados = { id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo, cuidado: "Medicação_Log" as any, evento: true, parentId: item.id, data: data, horario };
-
-    let ok = await salvarRegistros([dados], "medicacao_logs");
-
-    if (ok && item.estoqueAtual !== undefined) {
-      const qtdTomada = Number(item.dosagemValor || 1);
-      const novoEstoque = Math.max(0, item.estoqueAtual - qtdTomada);
-      ok = await salvarRegistros([{
-        id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo: "Atualização de estoque", cuidado: item.cuidado, evento: true, parentId: item.id, acao: "editar", alteracoes: { estoqueAtual: novoEstoque }
-      }], "acontecimentos");
-    }
-
-    if (ok) {
-      toast.success(novoHorario ? "Atraso registrado!" : "Medicação registrada!");
-      setAtrasoModal(null);
-    }
-  };
 
   const salvarSintomaTratamento = async () => {
     if (!ativa || !tratamentoSelecionado || !sintomasTexto.trim()) return;
@@ -613,7 +560,7 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ NOVO MENU INICIAL COM CARD MODERNO E GRID DE BOTÕES
+  // ✅ MENU INICIAL (APENAS OS 4 BOTÕES, SEM O CARD "PARA HOJE")
   if (view === "menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
@@ -631,59 +578,6 @@ function Acompanhamento() {
 
         <div className="px-4"><SeletorTesouro /></div>
 
-        {/* ✅ O CARD "PARA HOJE" MODERNO */}
-        <div className="px-4 mt-6">
-          <div className="relative overflow-hidden rounded-[2rem] p-6 shadow-xl" style={{ background: `linear-gradient(135deg, var(--tema-claro) 0%, white 100%)`, border: `2px solid var(--tema)` }}>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/40 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
-            
-            <h2 className="font-display text-2xl font-bold italic mb-4 flex items-center gap-2" style={{ color: "var(--tema-escuro)" }}>
-              <Clock className="h-6 w-6" style={{ color: "var(--tema)" }} /> Para Hoje
-            </h2>
-
-            <div className="space-y-4 relative z-10">
-              {agendaHoje.length === 0 ? (
-                <div className="bg-white/60 rounded-xl p-3 text-center border border-white/50 shadow-sm">
-                  <p className="text-sm font-medium text-muted-foreground">Tudo em dia por aqui! ✨</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)]">Medicações Pendentes ({agendaHoje.length})</p>
-                  {agendaHoje.slice(0, 3).map((a, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-white/80 p-2 rounded-xl shadow-sm border border-white/50">
-                      <span className="font-bold text-sm text-foreground truncate mr-2">{a.med.medicamento}</span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-display font-bold text-sm" style={{ color: "var(--tema-escuro)" }}>{a.horario}</span>
-                        <button onClick={() => registrarMedicacao(a.med, hoje, a.horario)} className="text-[10px] font-bold text-white px-2 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Tomei</button>
-                      </div>
-                    </div>
-                  ))}
-                  {agendaHoje.length > 3 && (
-                    <button onClick={() => setView("medicacoes_proximos")} className="text-xs font-bold text-[var(--tema)] mt-1 hover:underline">
-                      + ver todas as {agendaHoje.length} doses...
-                    </button>
-                  )}
-                </div>
-              )}
-
-              <div className="h-px bg-[var(--tema)]/20 my-1"></div>
-
-              {proximos.filter(i => i.data === hoje).length === 0 ? (
-                 <p className="text-xs text-muted-foreground italic text-center">Nenhum compromisso agendado.</p>
-              ) : (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)] mb-2">Próximos Compromissos</p>
-                  <div className="space-y-2">
-                    {proximos.filter(i => i.data === hoje).slice(0, 2).map((i) => (
-                      <CompromissoCard key={i.id} item={i} compacto />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ✅ GRID DE BOTÕES MELHORADA */}
         <div className="grid grid-cols-2 gap-4 px-4 mt-6">
           <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
             <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
@@ -706,7 +600,7 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ NOVO MENU DE MEDICAÇÕES (Substitui a lista longa)
+  // ✅ MENU DE MEDICAÇÕES
   if (view === "medicacoes_menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -947,7 +841,7 @@ function Acompanhamento() {
     );
   }
 
-  // Restante das telas (Compromissos)
+  // ✅ TELA: COMPROMISSOS
   if (view === "compromissos") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -1034,6 +928,5 @@ function Acompanhamento() {
     );
   }
 
-  // Se cair em algum lugar não mapeado, volta pro menu
   return null;
 }
