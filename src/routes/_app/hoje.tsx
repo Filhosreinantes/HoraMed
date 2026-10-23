@@ -6,7 +6,6 @@ import { useApp } from "@/lib/app-store";
 import { hojeYMD, medicacaoEmUso, doseRegistrada, nowLocalISO, uid, type Dados } from "@/lib/cuidados";
 import { SeletorTesouro } from "@/components/ui-kit";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CompromissoCard } from "@/components/compromisso-card";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/hoje")({
@@ -68,6 +67,14 @@ function Hoje() {
     }
   };
 
+  // Função auxiliar para atualizar situação do compromisso rapidamente
+  const atualizarSituacao = async (id: string, pessoaId: string, cuidado: string, situacao: string) => {
+    const ok = await salvarRegistros([{ 
+      id: uid(), pessoaId, criadoEm: nowLocalISO(), titulo: `Status: ${situacao}`, cuidado, evento: true, parentId: id, acao: "editar", alteracoes: { situacao } 
+    }], "acontecimentos");
+    if (ok) toast.success("Status atualizado!");
+  };
+
   if (carregando) return <div className="p-4 space-y-3"><Skeleton className="h-60 rounded-3xl bg-muted" /></div>;
 
   return (
@@ -100,7 +107,7 @@ function Hoje() {
         </div>
       )}
 
-      {/* MODAL: TODOS OS COMPROMISSOS */}
+      {/* MODAL: TODOS OS COMPROMISSOS (COM OS BOTÕES VERDES E DISCRETOS) */}
       {modalCompromissosAberto && (
         <div className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-y-auto">
           <div className="sticky top-0 z-50 flex justify-between items-center p-4 bg-white border-b border-gray-100 max-w-lg mx-auto">
@@ -111,22 +118,20 @@ function Hoje() {
           </div>
           <div className="p-4 space-y-3 max-w-lg mx-auto pb-24">
             {compromissosHoje.map((i) => (
-              <div key={i.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
-                      <Stethoscope className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-sm text-foreground">{i.titulo}</h3>
-                      <p className="text-xs text-muted-foreground">{i.hora || "Horário a definir"}</p>
-                    </div>
+              <div key={i.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 flex flex-col gap-3">
+                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setDetalheAberto(i)}>
+                  <div className="grid h-10 w-10 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
+                    <Stethoscope className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-sm text-foreground">{i.titulo}</h3>
+                    <p className="text-xs text-muted-foreground">{i.hora || "Horário a definir"} · {i.data.split('-').reverse().join('/')}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => salvarRegistros([{ id: uid(), pessoaId: i.pessoaId, criadoEm: nowLocalISO(), titulo: "Compareceu", cuidado: i.cuidado, evento: true, parentId: i.id, acao: "editar", alteracoes: { situacao: "feito" } }], "acontecimentos")} className="flex-1 bg-green-100 text-green-700 font-bold text-xs py-2 rounded-lg">Compareceu</button>
-                  <button onClick={() => salvarRegistros([{ id: uid(), pessoaId: i.pessoaId, criadoEm: nowLocalISO(), titulo: "Faltou", cuidado: i.cuidado, evento: true, parentId: i.id, acao: "editar", alteracoes: { situacao: "faltou" } }], "acontecimentos")} className="flex-1 bg-red-100 text-red-700 font-bold text-xs py-2 rounded-lg">Faltou</button>
-                  <button onClick={() => salvarRegistros([{ id: uid(), pessoaId: i.pessoaId, criadoEm: nowLocalISO(), titulo: "Cancelou", cuidado: i.cuidado, evento: true, parentId: i.id, acao: "editar", alteracoes: { situacao: "cancelado" } }], "acontecimentos")} className="flex-1 bg-gray-100 text-gray-700 font-bold text-xs py-2 rounded-lg">Cancelou</button>
+                  <button onClick={() => atualizarSituacao(i.id, i.pessoaId, i.cuidado as string, "feito")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[10px] py-1.5 rounded-md opacity-90 hover:opacity-100">Compareceu</button>
+                  <button onClick={() => atualizarSituacao(i.id, i.pessoaId, i.cuidado as string, "faltou")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[10px] py-1.5 rounded-md opacity-90 hover:opacity-100">Faltou</button>
+                  <button onClick={() => atualizarSituacao(i.id, i.pessoaId, i.cuidado as string, "cancelado")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[10px] py-1.5 rounded-md opacity-90 hover:opacity-100">Cancelou</button>
                 </div>
               </div>
             ))}
@@ -147,6 +152,7 @@ function Hoje() {
               <p><strong>Horário:</strong> {detalheAberto.hora || "A definir"}</p>
               {detalheAberto.local && <p><strong>Local:</strong> {detalheAberto.local}</p>}
               {detalheAberto.profissional && <p><strong>Profissional:</strong> {detalheAberto.profissional}</p>}
+              {detalheAberto.situacao && <p><strong>Status atual:</strong> {detalheAberto.situacao}</p>}
             </div>
             <button onClick={() => setDetalheAberto(null)} className="w-full bg-[var(--tema)] text-white font-bold py-2 rounded-xl mt-2">Fechar</button>
           </div>
@@ -210,18 +216,23 @@ function Hoje() {
               <div className="space-y-2">
                 <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)]">Compromissos</p>
                 
-                {/* Mostra só 1 compromisso enxuto, mas com botões */}
+                {/* Mostra só 1 compromisso visível, com os botões verdes */}
                 <div className="flex flex-col bg-white/80 rounded-xl shadow-sm border border-white/50 overflow-hidden">
-                  <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-white transition" onClick={() => setDetalheAberto(compromissosHoje[0])}>
+                  <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white transition" onClick={() => setDetalheAberto(compromissosHoje[0])}>
+                    <div className="grid h-8 w-8 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
+                      <Stethoscope className="h-4 w-4" />
+                    </div>
                     <div className="flex flex-col">
                       <span className="font-bold text-sm text-foreground">{compromissosHoje[0].titulo}</span>
                       <span className="text-xs text-muted-foreground">{compromissosHoje[0].hora || "Horário a definir"}</span>
                     </div>
                   </div>
-                  <div className="flex border-t border-gray-100 bg-gray-50/50 p-1.5 gap-1.5">
-                    <button onClick={() => salvarRegistros([{ id: uid(), pessoaId: compromissosHoje[0].pessoaId, criadoEm: nowLocalISO(), titulo: "Compareceu", cuidado: compromissosHoje[0].cuidado, evento: true, parentId: compromissosHoje[0].id, acao: "editar", alteracoes: { situacao: "feito" } }], "acontecimentos")} className="flex-1 bg-green-100 text-green-700 font-bold text-[10px] py-1.5 rounded-md">Compareceu</button>
-                    <button onClick={() => salvarRegistros([{ id: uid(), pessoaId: compromissosHoje[0].pessoaId, criadoEm: nowLocalISO(), titulo: "Faltou", cuidado: compromissosHoje[0].cuidado, evento: true, parentId: compromissosHoje[0].id, acao: "editar", alteracoes: { situacao: "faltou" } }], "acontecimentos")} className="flex-1 bg-red-100 text-red-700 font-bold text-[10px] py-1.5 rounded-md">Faltou</button>
-                    <button onClick={() => salvarRegistros([{ id: uid(), pessoaId: compromissosHoje[0].pessoaId, criadoEm: nowLocalISO(), titulo: "Cancelou", cuidado: compromissosHoje[0].cuidado, evento: true, parentId: compromissosHoje[0].id, acao: "editar", alteracoes: { situacao: "cancelado" } }], "acontecimentos")} className="flex-1 bg-gray-200 text-gray-700 font-bold text-[10px] py-1.5 rounded-md">Cancelou</button>
+                  
+                  {/* Os 3 botões pequenos, discretos e verdes */}
+                  <div className="flex border-t border-gray-100 p-1.5 gap-1.5">
+                    <button onClick={() => atualizarSituacao(compromissosHoje[0].id, compromissosHoje[0].pessoaId, compromissosHoje[0].cuidado as string, "feito")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[9px] py-1 rounded-md opacity-90 hover:opacity-100">Compareceu</button>
+                    <button onClick={() => atualizarSituacao(compromissosHoje[0].id, compromissosHoje[0].pessoaId, compromissosHoje[0].cuidado as string, "faltou")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[9px] py-1 rounded-md opacity-90 hover:opacity-100">Faltou</button>
+                    <button onClick={() => atualizarSituacao(compromissosHoje[0].id, compromissosHoje[0].pessoaId, compromissosHoje[0].cuidado as string, "cancelado")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[9px] py-1 rounded-md opacity-90 hover:opacity-100">Cancelou</button>
                   </div>
                 </div>
 
