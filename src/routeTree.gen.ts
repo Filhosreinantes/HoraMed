@@ -18,6 +18,7 @@ import { Route as AppAssinaturaRouteImport } from './routes/_app/assinatura'
 import { Route as AppConfiabilidadeRouteImport } from './routes/_app/confiabilidade'
 import { Route as AppConfiguracoesRouteImport } from './routes/_app/configuracoes'
 import { Route as AppCriarRouteImport } from './routes/_app/criar'
+import { Route as AppHojeRouteImport } from './routes/_app/hoje'
 import { Route as AppPerfilRouteImport } from './routes/_app/perfil'
 import { Route as AppPlanosRouteImport } from './routes/_app/planos'
 
@@ -65,6 +66,11 @@ const AppCriarRoute = AppCriarRouteImport.update({
   path: '/criar',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppHojeRoute = AppHojeRouteImport.update({
+  id: '/hoje',
+  path: '/hoje',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppPerfilRoute = AppPerfilRouteImport.update({
   id: '/perfil',
   path: '/perfil',
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/confiabilidade': typeof AppConfiabilidadeRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/criar': typeof AppCriarRoute
+  '/hoje': typeof AppHojeRoute
   '/perfil': typeof AppPerfilRoute
   '/planos': typeof AppPlanosRoute
 }
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/confiabilidade': typeof AppConfiabilidadeRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/criar': typeof AppCriarRoute
+  '/hoje': typeof AppHojeRoute
   '/perfil': typeof AppPerfilRoute
   '/planos': typeof AppPlanosRoute
 }
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/_app/confiabilidade': typeof AppConfiabilidadeRoute
   '/_app/configuracoes': typeof AppConfiguracoesRoute
   '/_app/criar': typeof AppCriarRoute
+  '/_app/hoje': typeof AppHojeRoute
   '/_app/perfil': typeof AppPerfilRoute
   '/_app/planos': typeof AppPlanosRoute
 }
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/confiabilidade'
     | '/configuracoes'
     | '/criar'
+    | '/hoje'
     | '/perfil'
     | '/planos'
   fileRoutesByTo: FileRoutesByTo
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/confiabilidade'
     | '/configuracoes'
     | '/criar'
+    | '/hoje'
     | '/perfil'
     | '/planos'
   id:
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/_app/confiabilidade'
     | '/_app/configuracoes'
     | '/_app/criar'
+    | '/_app/hoje'
     | '/_app/perfil'
     | '/_app/planos'
   fileRoutesById: FileRoutesById
@@ -226,6 +238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCriarRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/_app/hoje': {
+      id: '/_app/hoje'
+      path: '/hoje'
+      fullPath: '/hoje'
+      preLoaderRoute: typeof AppHojeRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/_app/perfil': {
       id: '/_app/perfil'
       path: '/perfil'
@@ -249,6 +268,7 @@ interface AppRouteRouteChildren {
   AppConfiabilidadeRoute: typeof AppConfiabilidadeRoute
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
   AppCriarRoute: typeof AppCriarRoute
+  AppHojeRoute: typeof AppHojeRoute
   AppPerfilRoute: typeof AppPerfilRoute
   AppPlanosRoute: typeof AppPlanosRoute
 }
@@ -259,6 +279,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppConfiabilidadeRoute: AppConfiabilidadeRoute,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
   AppCriarRoute: AppCriarRoute,
+  AppHojeRoute: AppHojeRoute,
   AppPerfilRoute: AppPerfilRoute,
   AppPlanosRoute: AppPlanosRoute,
 }

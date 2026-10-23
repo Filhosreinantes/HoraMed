@@ -78,16 +78,6 @@ function Perfil() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-semibold">Perfil</h1>
-        {/* Plano atual; toca para ver a assinatura */}
-        <Link
-          to="/assinatura"
-          aria-label="Minha assinatura"
-          className={`rounded-full px-3.5 py-1.5 text-xs font-bold tracking-wider ${
-            assinaturaAtiva === true ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"
-          }`}
-        >
-          {assinaturaAtiva === true ? "PRO" : "FREE"}
-        </Link>
       </div>
       <SeletorTesouro prefixo="Tesouro Ativo" />
 

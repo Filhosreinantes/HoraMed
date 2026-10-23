@@ -1,14 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Clock, Stethoscope, Pill as PillIcon, ChevronRight, X, Leaf, FileText } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Clock, Stethoscope, ChevronRight, X, Pill } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useApp } from "@/lib/app-store";
 import { hojeYMD, medicacaoEmUso, doseRegistrada, nowLocalISO, uid, type Dados } from "@/lib/cuidados";
 import { SeletorTesouro } from "@/components/ui-kit";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
-
-import { Criar } from "./criar"; 
+import { toast } from "sonner"; 
 
 export const Route = createFileRoute("/_app/hoje")({
   head: () => ({ meta: [{ title: "Hoje · Rotina Azul" }] }),
@@ -17,15 +15,11 @@ export const Route = createFileRoute("/_app/hoje")({
 
 function Hoje() {
   const { itens, logs, carregando, salvarRegistros } = useApp();
-  const navigate = useNavigate();
   const hoje = hojeYMD();
 
   const [modalDosesAberto, setModalDosesAberto] = useState(false);
   const [modalCompromissosAberto, setModalCompromissosAberto] = useState(false);
   const [detalheAberto, setDetalheAberto] = useState<any>(null);
-
-  const [modalCriarAberto, setModalCriarAberto] = useState(false);
-  const [tipoSelecionado, setTipoSelecionado] = useState<any>(null);
 
   // --- Lógica de Medicações ---
   const emUso = itens.filter((i) => i.cuidado === "Medicação" && medicacaoEmUso(i));
@@ -79,31 +73,10 @@ function Hoje() {
     if (ok) toast.success("Status atualizado!");
   };
 
-  const abrirCriar = (tipo: string) => {
-    setTipoSelecionado(tipo);
-    setModalCriarAberto(true);
-  };
-
   if (carregando) return <div className="p-4 space-y-3"><Skeleton className="h-60 rounded-3xl bg-muted" /></div>;
 
   return (
     <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
-      
-      {/* MODAL NOVO REGISTRO */}
-      {modalCriarAberto && (
-        <div className="fixed inset-0 z-50 bg-[#F8F9FA] overflow-y-auto">
-          <div className="sticky top-0 z-50 flex justify-between items-center p-4 bg-white/90 backdrop-blur-md border-b border-gray-200 max-w-lg mx-auto">
-             <h2 className="font-display text-xl font-bold italic text-gray-800">Novo Registro</h2>
-             <button onClick={() => setModalCriarAberto(false)} className="flex items-center gap-1 rounded-full bg-gray-100 px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-200 shadow-sm">
-               <X className="h-4 w-4" /> Fechar
-             </button>
-          </div>
-          <div className="p-4 pb-24 max-w-lg mx-auto">
-             <Criar tipoInicial={tipoSelecionado} onFechar={() => setModalCriarAberto(false)} />
-          </div>
-        </div>
-      )}
-
       {/* MODAL: TODAS AS DOSES */}
       {modalDosesAberto && (
         <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: `linear-gradient(135deg, var(--tema-claro) 0%, #F8F9FA 100%)` }}>
@@ -115,11 +88,25 @@ function Hoje() {
           </div>
           <div className="p-4 space-y-2 max-w-lg mx-auto pb-24">
             {agendaHoje.map((a, idx) => (
-              <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-white/50">
-                <div className="flex flex-col">
-                  <span className="font-bold text-sm text-foreground">
-                    {a.med.medicamento} {a.med.dosagem && <span className="font-normal text-xs text-muted-foreground ml-1">{a.med.dosagem}</span>}
-                  </span>
+              <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-white/50 gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="grid h-8 w-8 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
+                    <Pill className="h-4 w-4" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-bold text-sm text-foreground truncate">
+                      {a.med.medicamento}
+                    </span>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
+                      {a.med.dosagem && <span>{a.med.dosagem}</span>}
+                      {a.med.dosagem && a.med.estoqueAtual !== undefined && <span>·</span>}
+                      {a.med.estoqueAtual !== undefined && (
+                        <span>
+                          {a.med.estoqueAtual === 1 ? "Resta 1 unid." : `Restam ${a.med.estoqueAtual} unid.`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="font-display font-bold text-sm" style={{ color: "var(--tema-escuro)" }}>{a.horario}</span>
@@ -144,14 +131,26 @@ function Hoje() {
           <div className="p-4 space-y-3 max-w-lg mx-auto pb-24">
             {compromissosHoje.map((i) => (
               <div key={i.id} className="bg-white rounded-2xl shadow-sm border border-white p-3 flex flex-col gap-3">
-                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setDetalheAberto(i)}>
-                  <div className="grid h-10 w-10 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
-                    <Stethoscope className="h-5 w-5" />
+                <div className="flex items-center justify-between gap-3 cursor-pointer" onClick={() => setDetalheAberto(i)}>
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="grid h-10 w-10 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
+                      <Stethoscope className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-sm text-foreground truncate">{i.titulo}</h3>
+                      <p className="text-xs text-muted-foreground truncate">{i.hora || "Horário a definir"}{i.local ? ` · ${i.local}` : ""} · {i.data.split('-').reverse().join('/')}</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-sm text-foreground">{i.titulo}</h3>
-                    <p className="text-xs text-muted-foreground">{i.hora || "Horário a definir"} · {i.data.split('-').reverse().join('/')}</p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDetalheAberto(i);
+                    }}
+                    className="shrink-0 rounded-lg border border-[var(--tema)]/30 bg-white/90 px-2.5 py-1 text-xs font-bold text-[var(--tema-escuro)] shadow-xs transition hover:bg-white hover:border-[var(--tema)] active:scale-95"
+                  >
+                    Detalhes
+                  </button>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => atualizarSituacao(i.id, i.pessoaId, i.cuidado as string, "feito")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[10px] py-1.5 rounded-md opacity-90 hover:opacity-100">Compareceu</button>
@@ -179,9 +178,8 @@ function Hoje() {
             <div className="space-y-2 text-sm text-muted-foreground">
               <p><strong className="text-foreground">Data:</strong> {detalheAberto.data.split('-').reverse().join('/')}</p>
               <p><strong className="text-foreground">Horário:</strong> {detalheAberto.hora || "A definir"}</p>
-              {detalheAberto.local && <p><strong className="text-foreground">Local:</strong> {detalheAberto.local}</p>}
+              <p><strong className="text-foreground">Local:</strong> {detalheAberto.local || "A definir"}</p>
               {detalheAberto.profissional && <p><strong className="text-foreground">Profissional:</strong> {detalheAberto.profissional}</p>}
-              {detalheAberto.situacao && <p><strong className="text-foreground">Status atual:</strong> <span className="uppercase text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded">{detalheAberto.situacao}</span></p>}
             </div>
             <button onClick={() => setDetalheAberto(null)} className="w-full bg-[var(--tema)] text-white font-bold py-2 rounded-xl mt-2">Fechar</button>
           </div>
@@ -193,8 +191,7 @@ function Hoje() {
         <h1 className="font-display text-4xl font-bold italic text-[var(--tema-escuro)] flex items-center justify-center gap-2">
           Rotina Azul <span className="text-3xl not-italic">💙</span>
         </h1>
-        <p className="text-sm font-semibold tracking-widest uppercase mt-1" style={{ color: "var(--tema)" }}>Hoje</p>
-        <p className="text-xs font-sans italic text-muted-foreground mt-2">Cuidando do corpo e da mente.</p>
+        <p className="text-xs font-sans italic text-muted-foreground mt-2">Organização que acalma, cuidado que transforma.</p>
       </header>
 
       <div className="px-4"><SeletorTesouro /></div>
@@ -216,21 +213,45 @@ function Hoje() {
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)]">Medicações para tomar</p>
+                <div className="flex items-center gap-2">
+                  <span className="h-3.5 w-1.5 rounded-full bg-[var(--tema)] shrink-0" />
+                  <p className="text-sm font-bold uppercase tracking-wider text-[var(--tema-escuro)]">Medicações para tomar</p>
+                </div>
                 {agendaHoje.slice(0, 3).map((a, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-white/80 p-2 rounded-xl shadow-sm border border-white/50">
-                    <span className="font-bold text-sm text-foreground truncate mr-2">
-                      {a.med.medicamento} {a.med.dosagem && <span className="font-normal text-xs text-muted-foreground ml-1">{a.med.dosagem}</span>}
-                    </span>
+                  <div key={idx} className="flex items-center justify-between bg-white/80 p-2.5 rounded-xl shadow-sm border border-white/50 gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="grid h-8 w-8 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
+                        <Pill className="h-4 w-4" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-bold text-sm text-foreground truncate">
+                          {a.med.medicamento}
+                        </span>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
+                          {a.med.dosagem && <span>{a.med.dosagem}</span>}
+                          {a.med.dosagem && a.med.estoqueAtual !== undefined && <span>·</span>}
+                          {a.med.estoqueAtual !== undefined && (
+                            <span>
+                              {a.med.estoqueAtual === 1 ? "Resta 1 comprimido" : `Restam ${a.med.estoqueAtual} comprimidos`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="font-display font-bold text-sm" style={{ color: "var(--tema-escuro)" }}>{a.horario}</span>
-                      <button onClick={() => registrarMedicacao(a.med, hoje, a.horario)} className="text-[10px] font-bold text-white px-2 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Tomei</button>
+                      <button onClick={() => registrarMedicacao(a.med, hoje, a.horario)} className="text-[14px] font-bold text-white px-2.5 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Tomei</button>
                     </div>
                   </div>
                 ))}
                 {agendaHoje.length > 3 && (
-                  <button onClick={() => setModalDosesAberto(true)} className="text-xs font-bold text-[var(--tema)] mt-1 hover:underline flex items-center gap-1">
-                    + ver todas as {agendaHoje.length} doses <ChevronRight className="h-3 w-3" />
+                  <button
+                    type="button"
+                    onClick={() => setModalDosesAberto(true)}
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:opacity-95 active:scale-[0.99]"
+                  >
+                    <span>Ver todas as {agendaHoje.length} doses</span>
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -243,29 +264,51 @@ function Hoje() {
                <p className="text-xs text-muted-foreground italic text-center">Nenhum compromisso para hoje.</p>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-[var(--tema)]">Compromissos</p>
-                
-                <div className="flex flex-col bg-white/80 rounded-xl shadow-sm border border-white/50 overflow-hidden">
-                  <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white transition" onClick={() => setDetalheAberto(compromissosHoje[0])}>
-                    <div className="grid h-8 w-8 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
-                      <Stethoscope className="h-4 w-4" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-sm text-foreground">{compromissosHoje[0].titulo}</span>
-                      <span className="text-xs text-muted-foreground">{compromissosHoje[0].hora || "Horário a definir"}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex border-t border-gray-100 p-1.5 gap-1.5">
-                    <button onClick={() => atualizarSituacao(compromissosHoje[0].id, compromissosHoje[0].pessoaId, compromissosHoje[0].cuidado as string, "feito")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[9px] py-1 rounded-md opacity-90 hover:opacity-100">Compareceu</button>
-                    <button onClick={() => atualizarSituacao(compromissosHoje[0].id, compromissosHoje[0].pessoaId, compromissosHoje[0].cuidado as string, "faltou")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[9px] py-1 rounded-md opacity-90 hover:opacity-100">Faltou</button>
-                    <button onClick={() => atualizarSituacao(compromissosHoje[0].id, compromissosHoje[0].pessoaId, compromissosHoje[0].cuidado as string, "cancelado")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[9px] py-1 rounded-md opacity-90 hover:opacity-100">Cancelou</button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span className="h-3.5 w-1.5 rounded-full bg-[var(--tema)] shrink-0" />
+                  <p className="text-sm font-bold uppercase tracking-wider text-[var(--tema-escuro)]">Compromissos</p>
                 </div>
+                
+                {compromissosHoje.slice(0, 3).map((comp) => (
+                  <div key={comp.id} className="flex flex-col bg-white/80 rounded-xl shadow-sm border border-white/50 overflow-hidden">
+                    <div className="flex items-center justify-between gap-3 p-3 cursor-pointer hover:bg-white transition" onClick={() => setDetalheAberto(comp)}>
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="grid h-8 w-8 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
+                          <Stethoscope className="h-4 w-4" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold text-sm text-foreground truncate">{comp.titulo}</span>
+                          <span className="text-xs text-muted-foreground truncate">{comp.hora || "Horário a definir"}{comp.local ? ` · ${comp.local}` : ""}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDetalheAberto(comp);
+                        }}
+                        className="shrink-0 rounded-lg border border-[var(--tema)]/30 bg-white/90 px-2.5 py-1 text-xs font-bold text-[var(--tema-escuro)] shadow-xs transition hover:bg-white hover:border-[var(--tema)] active:scale-95"
+                      >
+                        Detalhes
+                      </button>
+                    </div>
+                    
+                    <div className="flex border-t border-gray-100 p-1.5 gap-1.5">
+                      <button onClick={() => atualizarSituacao(comp.id, comp.pessoaId, comp.cuidado as string, "feito")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[12px] py-1 rounded-md opacity-90 hover:opacity-100">Compareceu</button>
+                      <button onClick={() => atualizarSituacao(comp.id, comp.pessoaId, comp.cuidado as string, "faltou")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[12px] py-1 rounded-md opacity-90 hover:opacity-100">Faltou</button>
+                      <button onClick={() => atualizarSituacao(comp.id, comp.pessoaId, comp.cuidado as string, "cancelado")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[12px] py-1 rounded-md opacity-90 hover:opacity-100">Cancelou</button>
+                    </div>
+                  </div>
+                ))}
 
-                {compromissosHoje.length > 1 && (
-                  <button onClick={() => setModalCompromissosAberto(true)} className="text-xs font-bold text-[var(--tema)] mt-1 hover:underline flex items-center gap-1">
-                    + ver todos os {compromissosHoje.length} compromissos <ChevronRight className="h-3 w-3" />
+                {compromissosHoje.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setModalCompromissosAberto(true)}
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:opacity-95 active:scale-[0.99]"
+                  >
+                    <span>Ver todos os {compromissosHoje.length} compromissos</span>
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -273,37 +316,6 @@ function Hoje() {
           </div>
         </div>
       </div>
-
-      {/* NOVO TÍTULO E OS 4 BLOCOS DO CRIAR */}
-      <div className="px-4 mt-8">
-        <h2 className="font-display text-lg font-bold italic mb-4 whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: "var(--tema-escuro)" }}>
-          Adicione aqui os novos registros
-        </h2>
-        
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { tipo: "Consulta", icone: Stethoscope },
-            { tipo: "Terapia", icone: Leaf },
-            { tipo: "Exame", icone: FileText },
-            { tipo: "Medicação", icone: PillIcon },
-          ].map(({ tipo: c, icone: Icone }) => (
-            <button
-              key={c}
-              onClick={() => abrirCriar(c)}
-              className="notebook flex flex-col items-center justify-center p-4 transition hover:bg-muted/10 border-[#B8933F]/60"
-              style={{ boxShadow: "0 4px 12px -4px rgba(0,0,0,0.05)" }}
-            >
-              <div className="grid h-10 w-10 place-items-center rounded-full transition-colors mb-2" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
-                <Icone className="h-5 w-5" />
-              </div>
-              <span className="font-display text-sm font-bold italic transition-colors text-[#4A4A4A]">
-                {c}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
     </div>
   );
 }

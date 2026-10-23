@@ -13,6 +13,10 @@ import {
   Settings,
   Star,
   Users,
+  FileText,
+  Layers,
+  Megaphone,
+  Sparkles,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
@@ -26,16 +30,19 @@ export const Route = createFileRoute("/_app/assinatura")({
 });
 
 const GRATIS: { icone: ReactNode; texto: string; cor: string }[] = [
-  { icone: <AlarmClock className="h-4 w-4" />, texto: "2 alarmes", cor: "bg-muted text-muted-foreground" },
-  { icone: <Ban className="h-4 w-4" />, texto: "Alarme simples", cor: "bg-red-100 text-red-500" },
-  { icone: <History className="h-4 w-4" />, texto: "Histórico limitado", cor: "bg-muted text-muted-foreground" },
+  { icone: <Layers className="h-4 w-4" />, texto: "Alarmes ilimitados", cor: "bg-muted text-muted-foreground" },
+  { icone: <Layers className="h-4 w-4" />, texto: "1 Perfil", cor: "bg-muted text-muted-foreground" },
+  { icone: <Layers className="h-4 w-4" />, texto: "Até 2 cadastros por tipo", cor: "bg-muted text-muted-foreground" },
+  { icone: <FileText className="h-4 w-4" />, texto: "1 Relatório por mês", cor: "bg-muted text-muted-foreground" },
+  { icone: <Megaphone className="h-4 w-4" />, texto: "Com anúncios", cor: "bg-amber-100 text-amber-700" },
 ];
 
 const PREMIUM: { icone: ReactNode; texto: string }[] = [
-  { icone: <AlarmClock className="h-4 w-4" />, texto: "Alarmes ilimitados" },
-  { icone: <Ban className="h-4 w-4" />, texto: "Alarme com tela cheia" },
-  { icone: <Users className="h-4 w-4" />, texto: "Vários Tesouros" },
-  { icone: <History className="h-4 w-4" />, texto: "Histórico completo" },
+  { icone: <Layers className="h-4 w-4" />, texto: "Alarmes ilimitados" },
+  { icone: <Layers className="h-4 w-4" />, texto: "Perfis ilimitados" },
+  { icone: <Layers className="h-4 w-4" />, texto: "Cadastros ilimitados" },
+  { icone: <FileText className="h-4 w-4" />, texto: "Relatórios ilimitados" },
+  { icone: <Sparkles className="h-4 w-4" />, texto: "Sem anúncios" },
 ];
 
 function formatarData(iso: string) {

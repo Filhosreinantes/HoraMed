@@ -61,13 +61,14 @@ function Configuracoes() {
   return (
     <div className="space-y-4">
       <header className="flex items-center gap-3">
-        <Link
-          to="/perfil"
+        <button
+          type="button"
+          onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign("/hoje")}
           aria-label="Voltar"
-          className="rounded-full bg-muted p-2.5 text-accent"
+          className="rounded-full bg-muted p-2.5 text-accent hover:opacity-80 active:scale-95 transition"
         >
           <ArrowLeft className="h-5 w-5" />
-        </Link>
+        </button>
         <h1 className="font-display text-2xl font-semibold italic">Ajuda e configurações</h1>
       </header>
 

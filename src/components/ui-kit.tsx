@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useApp } from "@/lib/app-store";
 import { SITUACAO_LABEL, type Situacao } from "@/lib/cuidados";
 import { cn } from "@/lib/utils";
@@ -20,16 +21,18 @@ export function Divisor() {
 export function SeletorTesouro({
   prefixo = "Cuidando de",
   somenteLeitura = false,
+  permitirCriar = false,
 }: {
   prefixo?: string;
   somenteLeitura?: boolean;
+  permitirCriar?: boolean;
 }) {
   const { pessoas, ativa, setAtivaId } = useApp();
   const [aberto, setAberto] = useState(false);
 
   if (!ativa) return null;
 
-  const interativo = !somenteLeitura && pessoas.length > 1;
+  const interativo = !somenteLeitura && (pessoas.length > 1 || permitirCriar);
 
   return (
     <div className="relative">
@@ -87,6 +90,17 @@ export function SeletorTesouro({
                 </li>
               );
             })}
+            {permitirCriar && (
+              <li className="border-t border-gold/30">
+                <Link
+                  to="/perfil"
+                  onClick={() => setAberto(false)}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-bold text-accent transition hover:bg-muted"
+                >
+                  <Plus className="h-4 w-4" /> Criar novo Tesouro
+                </Link>
+              </li>
+            )}
           </ul>
         </>
       )}

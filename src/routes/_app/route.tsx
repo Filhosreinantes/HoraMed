@@ -1,6 +1,6 @@
-import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Calendar, Plus, User, Sun, FileText } from "lucide-react"; // ✅ Adicionei Sun e FileText
+import { Calendar, Plus, User, Sun, FileText, Settings, Gem } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { AppProvider, useApp } from "@/lib/app-store";
 import { desconectarUsuaria } from "@/lib/notificacoes";
@@ -55,6 +55,8 @@ function Layout() {
 function Shell() {
   const { ativa, user, assinaturaAtiva, checarAssinatura } = useApp();
   const [comprando, setComprando] = useState(false);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const ehConfiguracoes = pathname.startsWith("/configuracoes");
   const tema = CORES[ativa?.tema || "azul"] ?? AZUL;
 
   const tab = "flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold";
@@ -140,7 +142,38 @@ function Shell() {
         } as React.CSSProperties
       }
     >
-      <div className="mx-auto min-h-screen max-w-lg px-4 pb-28 pt-6">
+      <div className="relative mx-auto min-h-screen max-w-lg px-4 pb-28 pt-6">
+        <div className="absolute right-4 top-5 z-30 flex items-center gap-2">
+          {/* Badge de assinatura (PRO / FREE) visível em todas as telas à esquerda da engrenagem */}
+          <Link
+            to="/assinatura"
+            aria-label="Minha assinatura"
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold tracking-wider shadow-xs transition hover:opacity-90 active:scale-95 ${
+              assinaturaAtiva === true
+                ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+                : "bg-white/90 text-muted-foreground border border-gray-200"
+            }`}
+          >
+            {assinaturaAtiva === true ? (
+              <>
+                <Gem className="h-3.5 w-3.5 fill-emerald-500 text-emerald-600" />
+                <span>PRO</span>
+              </>
+            ) : (
+              "FREE"
+            )}
+          </Link>
+
+          {!ehConfiguracoes && (
+            <Link
+              to="/configuracoes"
+              aria-label="Configurações"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-[var(--tema-escuro)] shadow-sm border border-[var(--tema)]/30 backdrop-blur-sm transition hover:bg-white hover:shadow hover:scale-105 active:scale-95"
+            >
+              <Settings className="h-5 w-5" />
+            </Link>
+          )}
+        </div>
         <Outlet />
       </div>
       {ehAppAndroid() ? <ConfiabilidadePrompt /> : <NotificationPrompt />}

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { AlarmClock, Award, Ban, Check, History, Lock, RefreshCw, Users, X } from "lucide-react";
+import { AlarmClock, Award, Ban, Check, History, Lock, RefreshCw, Users, X, FileText, Layers, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -15,8 +15,9 @@ export const Route = createFileRoute("/_app/planos")({
 
 // Cada linha compara o mesmo recurso nos dois planos; o grátis é só ilustrativo.
 const LINHAS: { gratis?: string; premium: string; icone: ReactNode }[] = [
-  { gratis: "2 alarmes", premium: "Alarmes ilimitados", icone: <AlarmClock className="h-4 w-4" /> },
-  { premium: "Alarme com tela cheia", icone: <Ban className="h-4 w-4" /> },
+  { gratis: "Até 2 por tipo", premium: "Cadastros ilimitados", icone: <Layers className="h-4 w-4" /> },
+  { gratis: "1 por mês", premium: "Relatórios ilimitados", icone: <FileText className="h-4 w-4" /> },
+  { gratis: "Com anúncios", premium: "Sem anúncios", icone: <Sparkles className="h-4 w-4" /> },
   { premium: "Vários Tesouros", icone: <Users className="h-4 w-4" /> },
   { premium: "Histórico completo", icone: <History className="h-4 w-4" /> },
 ];
@@ -25,7 +26,7 @@ function Planos() {
   const { user, checarAssinatura } = useApp();
   const navigate = useNavigate();
   const [comprando, setComprando] = useState(false);
-  const [escolhido, setEscolhido] = useState<PlanoId>("mensal");
+  const [escolhido, setEscolhido] = useState<PlanoId>("anual");
 
   // Na Play Store, assinatura dentro do app só pode ser vendida pelo Google Play.
   if (ehAppAndroid()) {
@@ -47,8 +48,8 @@ function Planos() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
-        <Link to="/assinatura" aria-label="Fechar" className="rounded-full p-2 text-foreground">
+      <header className="flex items-center gap-3">
+        <Link to="/assinatura" aria-label="Fechar" className="rounded-full p-2 text-foreground hover:bg-muted transition">
           <X className="h-6 w-6" />
         </Link>
         <button
@@ -56,7 +57,7 @@ function Planos() {
             await checarAssinatura();
             toast.success("Compras restauradas.");
           }}
-          className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground"
+          className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground transition"
         >
           <RefreshCw className="h-4 w-4" /> Restaurar
         </button>
@@ -120,8 +121,8 @@ function Planos() {
                 ativo ? "border-emerald-500 bg-emerald-50" : "border-border bg-white"
               }`}
             >
-              {id === "mensal" && (
-                <span className="absolute -top-3 right-4 rounded-full bg-yellow-400 px-3 py-0.5 text-[11px] font-bold uppercase text-yellow-950">
+              {id === "anual" && (
+                <span className="absolute -top-3 right-4 rounded-full bg-yellow-400 px-3 py-0.5 text-[11px] font-bold uppercase text-yellow-950 shadow-xs">
                   Melhor escolha
                 </span>
               )}

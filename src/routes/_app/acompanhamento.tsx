@@ -560,6 +560,8 @@ function Acompanhamento() {
     );
   }
 
+
+
   // ✅ MENU INICIAL (APENAS OS 4 BOTÕES, SEM O CARD "PARA HOJE")
   if (view === "menu") {
     return (
@@ -568,16 +570,15 @@ function Acompanhamento() {
           <h1 className="font-display text-4xl font-bold italic text-[var(--tema-escuro)] flex items-center justify-center gap-2">
             Rotina Azul <span className="text-3xl not-italic">💙</span>
           </h1>
-          <p className="text-sm font-semibold tracking-widest uppercase mt-1" style={{ color: "var(--tema)" }}>
-            Acompanhamento
-          </p>
           <p className="text-xs font-sans italic text-muted-foreground mt-2">
-            Cuidando do corpo e da mente.
+            Organização que acalma, cuidado que transforma.
           </p>
         </header>
 
         <div className="px-4"><SeletorTesouro /></div>
-
+        <p className="font-display text-xl up font-bold text-[var(--tema)] text-center mb-2">
+          Acompanhamento
+        </p>
         <div className="grid grid-cols-2 gap-4 px-4 mt-6">
           <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
             <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>

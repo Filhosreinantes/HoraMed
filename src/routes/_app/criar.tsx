@@ -34,7 +34,7 @@ export function Criar({ tipoInicial, onFechar }: { tipoInicial?: any, onFechar?:
   const { duplicar } = Route.useSearch() as { duplicar?: string };
   const { ativa, salvarRegistros, itens } = useApp(); 
   const navigate = useNavigate();
-  const [tipo, setTipo] = useState<Cuidado | null>(null);
+  const [tipo, setTipo] = useState<Cuidado | null>(tipoInicial || "Consulta");
   const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1", inicio: hojeYMD() });
 useEffect(() => {
   if (tipoInicial) {
@@ -215,18 +215,25 @@ useEffect(() => {
   };
 
   return (
-    <div className="space-y-5">
-      <header className="text-center px-4 mb-2 pt-6 flex flex-col items-center">
+    <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
+      <header className="text-center px-4 mb-2 flex flex-col items-center">
         <h1 className="font-display text-4xl font-bold italic text-[var(--tema-escuro)] flex items-center justify-center gap-2">
           Rotina Azul <span className="text-3xl not-italic">💙</span>
         </h1>
-        <p className="text-sm font-semibold tracking-widest uppercase mt-1" style={{ color: "var(--tema)" }}>
-          {duplicar ? "Renovar Programação" : "Novo compromisso"}
+        <p className="text-xs font-sans italic text-muted-foreground mt-2">
+          {duplicar ? "Renovar Programação" : "Organização que acalma, cuidado que transforma."}
         </p>
       </header>
-      <SeletorTesouro prefixo="Para" />
+      
+      <div className="px-4">
+        <SeletorTesouro prefixo="Para" permitirCriar />
+      </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <p className="font-display text-xl up font-bold text-[var(--tema)] text-center mb-2">
+        Adicione aqui os novos registros
+      </p>
+
+      <div className="grid grid-cols-2 gap-4 px-4 mt-6">
         {[
           { tipo: "Consulta", icone: Stethoscope },
           { tipo: "Terapia", icone: Leaf },
@@ -280,7 +287,7 @@ useEffect(() => {
           >
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>
-                {tipo === "Medicação" ? (duplicar ? "Renovar Medicação" : "Nova Medicação") : `Novo(a) ${tipo}`}
+                {tipo === "Medicação" ? (duplicar ? "Renovar Medicação" : "Nova Medicação") : `Nova ${tipo}`}
               </h2>
               <button
                 type="button"
@@ -290,7 +297,8 @@ useEffect(() => {
                 <X className="h-3 w-3" /> Fechar
               </button>
             </div>
-
+           
+            
             <style>{`
               form input.field, form select.field, form textarea.field {
                 border-radius: 1rem;
