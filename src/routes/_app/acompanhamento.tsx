@@ -1,16 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronLeft, History, Stethoscope, FileText, Pill as PillIcon, Plane, RefreshCw, Activity, Droplet, CalendarCheck, PillBottle, X } from "lucide-react";
+import { 
+  ChevronLeft, History, Stethoscope, FileText, Pill as PillIcon, Plane, 
+  RefreshCw, Activity, Droplet, CalendarCheck, PillBottle, X, 
+  ClipboardList, HeartPulse 
+} from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
-  nowLocalISO, uid, type Cuidado, type Situacao, type Item, parseYMD
+  nowLocalISO, uid, type Cuidado, type Situacao, type Item, parseYMD, formatData
 } from "@/lib/cuidados";
 import { Botao, Divisor, Pill, SeletorTesouro } from "@/components/ui-kit";
 import { CompromissoCard } from "@/components/compromisso-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, History, Stethoscope, FileText, Pill as PillIcon, Plane, RefreshCw, Activity, Droplet, CalendarCheck, PillBottle, X, ClipboardList, Pill, HeartPulse } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/acompanhamento")({
@@ -18,10 +21,19 @@ export const Route = createFileRoute("/_app/acompanhamento")({
   component: Acompanhamento,
 });
 
-type View = "menu" | "compromissos" | "medicacoes_menu" | "medicacoes_historico" | "medicacoes_proximos" | "medicacoes_estoque" | "medicacoes_viagem" | "sinais_vitais";
+type View = 
+  | "menu" 
+  | "compromissos" 
+  | "medicacoes_menu" 
+  | "medicacoes_historico" 
+  | "medicacoes_proximos" 
+  | "medicacoes_estoque" 
+  | "medicacoes_viagem" 
+  | "sinais_vitais" 
+  | "tratamentos";
+
 type Periodo = "mes" | "ano" | "tudo";
 type Drill = { cuidado: Cuidado; situacao: Situacao } | null;
-type View = "menu" | "compromissos" | "medicacoes_menu" | "medicacoes_historico" | "medicacoes_proximos" | "medicacoes_estoque" | "medicacoes_viagem" | "sinais_vitais" | "tratamentos" | "relatorios";
 
 const LINHAS: { s: Situacao; label: string }[] = [
   { s: "feito", label: "Compareceu" },
@@ -31,7 +43,7 @@ const LINHAS: { s: Situacao; label: string }[] = [
 ];
 
 function Acompanhamento() {
-  const { itens, logs, carregando, salvarRegistros, ativa } = useApp();
+  const { itens, logs, carregando, salvarRegistros } = useApp();
   const navigate = useNavigate();
   const [view, setView] = useState<View>("menu");
   const [periodo, setPeriodo] = useState<Periodo>("mes");
@@ -93,22 +105,26 @@ function Acompanhamento() {
     return Object.values(mapa);
   }, [meds, logs]);
 
-  // NOVO: Filtro de Sinais Vitais (Pressão e Glicose)
   const sinaisVitais = useMemo(() => {
     return itens
       .filter(i => i.cuidado === "Pressão" || i.cuidado === "Glicose")
       .sort((a, b) => (b.data || "").localeCompare(a.data || "") || (b.hora || "").localeCompare(a.hora || ""));
   }, [itens]);
 
+  const tratamentos = useMemo(() => {
+    return Array.from(new Set(
+      itens.filter(i => i.cuidado === "Medicação" && i.tratamento).map(i => i.tratamento)
+    )) as string[];
+  }, [itens]);
+
   const proximos = useMemo(() => {
-  // ✅ FILTRO EXPLÍCITO: Apenas Consulta e Exame entram como "próximos compromissos"
-  let lista = ordenarPorDataHora(itens.filter((i) => 
-    compromissoPendente(i) && 
-    (i.cuidado === "Consulta" || i.cuidado === "Exame")
-  ));
-  if (buscaProximos) lista = lista.filter((i) => i.cuidado === buscaProximos);
-  return lista;
-}, [itens, buscaProximos]);
+    let lista = ordenarPorDataHora(itens.filter((i) => 
+      compromissoPendente(i) && 
+      (i.cuidado === "Consulta" || i.cuidado === "Exame")
+    ));
+    if (buscaProximos) lista = lista.filter((i) => i.cuidado === buscaProximos);
+    return lista;
+  }, [itens, buscaProximos]);
 
   const proximosAgendamentos = useMemo(() => {
     const arr: any[] = [];
@@ -184,12 +200,17 @@ function Acompanhamento() {
 
   if (carregando) return <div className="space-y-3 p-4"><Skeleton className="h-40 rounded-3xl bg-muted" /><Skeleton className="h-40 rounded-3xl bg-muted" /></div>;
 
-  // ✅ TELA: SINAIS VITAIS (Pressão e Glicose)
+  // ✅ TELA: SINAIS VITAIS
   if (view === "sinais_vitais") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Pressão & Glicose</h1></header>
+        <div className="flex justify-between items-center">
+          <h1 className="font-display text-3xl font-semibold italic text-foreground">Pressão & Glicose</h1>
+          <Link to="/relatorios" search={{ tipo: "sinais" }} className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden">
+            <FileText className="h-3.5 w-3.5" /> Relatório
+          </Link>
+        </div>
         <SeletorTesouro />
 
         <div className="space-y-3 mt-4">
@@ -209,9 +230,9 @@ function Acompanhamento() {
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
                       <span className="font-bold text-lg text-foreground">{s.titulo}</span>
-                      <span className="text-xs text-muted-foreground">{s.data?.split('-').reverse().join('/')} {s.hora && `às ${s.hora}`}</span>
+                      <span className="text-xs text-muted-foreground">{formatData(s.data)} {s.hora && `às ${s.hora}`}</span>
                     </div>
-                    {(s as any).detalhes && <p className="text-sm text-muted-foreground">{ (s as any).detalhes }</p>}
+                    {s.detalhes && <p className="text-sm text-muted-foreground">{s.detalhes}</p>}
                   </div>
                 </div>
               );
@@ -222,7 +243,46 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ MENU INICIAL (Simplificado para 3 Blocos)
+  // ✅ TELA: TRATAMENTOS
+  if (view === "tratamentos") {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        <div className="flex justify-between items-center">
+          <h1 className="font-display text-3xl font-semibold italic text-foreground">Tratamentos</h1>
+          <Link to="/relatorios" search={{ tipo: "tratamentos" }} className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden">
+            <FileText className="h-3.5 w-3.5" /> Relatório
+          </Link>
+        </div>
+        <SeletorTesouro />
+
+        <div className="space-y-3 mt-4">
+          {tratamentos.length === 0 ? (
+            <p className="notebook p-4 text-sm text-muted-foreground italic">Nenhum tratamento registrado. Ao criar uma medicação, preencha o campo "Tratamento".</p>
+          ) : (
+            tratamentos.map(tratamento => {
+              const medsDoTratamento = itens.filter(i => i.cuidado === "Medicação" && i.tratamento === tratamento);
+              return (
+                <div key={tratamento} className="notebook p-4 space-y-2 border-l-4" style={{ borderLeftColor: "var(--tema)" }}>
+                  <h3 className="font-bold text-lg text-foreground">{tratamento}</h3>
+                  <ul className="space-y-1">
+                    {medsDoTratamento.map(m => (
+                      <li key={m.id} className="text-sm text-muted-foreground flex justify-between">
+                        <span>{m.medicamento} ({m.dosagem})</span>
+                        <span className="text-xs">{formatData(m.inicio)} {m.fim ? `- ${formatData(m.fim)}` : "(contínuo)"}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ MENU INICIAL (Com novos botões)
   if (view === "menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
@@ -251,10 +311,20 @@ function Acompanhamento() {
             <span className="font-display text-sm font-semibold italic text-center">Consultas e Exames</span>
           </button>
 
-          <button onClick={() => setView("sinais_vitais")} className="col-span-2 notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+          <button onClick={() => setView("sinais_vitais")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
             <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Activity className="h-5 w-5" /></div>
             <span className="font-display text-sm font-semibold italic text-center">Pressão & Glicose</span>
           </button>
+
+          <button onClick={() => setView("tratamentos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><HeartPulse className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Tratamentos</span>
+          </button>
+
+          <Link to="/relatorios" search={{ tipo: "tudo" }} className="col-span-2 notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><ClipboardList className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Relatório Geral (PDF)</span>
+          </Link>
 
         </div>
       </div>
@@ -409,12 +479,17 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: MEUS REMÉDIOS (Estoque)
+  // ✅ TELA: MEUS REMÉDIOS (Estoque com Alerta)
   if (view === "medicacoes_estoque") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
         <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Meus Remédios</h1></header>
+        <div className="flex justify-between items-center">
+          <h1 className="font-display text-3xl font-semibold italic text-foreground">Meus Remédios</h1>
+          <Link to="/relatorios" search={{ tipo: "medicamentos" }} className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden">
+            <FileText className="h-3.5 w-3.5" /> Relatório
+          </Link>
+        </div>
         <SeletorTesouro />
 
         <div className="notebook p-5 space-y-4">
@@ -423,25 +498,29 @@ function Acompanhamento() {
             <Pill ativo={filtroRemedios === "encerrados"} onClick={() => setFiltroRemedios("encerrados")}>Encerrados ({encerradas.length})</Pill>
           </div>
           <div className="space-y-2 mt-2">
-            {remediosAgrupados.filter(r => filtroRemedios === "uso" ? medicacaoEmUso(r.med) : !medicacaoEmUso(r.med)).map(r => (
-              <div key={r.med.id} className="notebook p-4 space-y-1 bg-white text-sm">
-                <div className="flex justify-between font-bold text-foreground">
-                  <span>{r.med.medicamento}</span>
-                  <span className="text-xs text-muted-foreground">{r.med.dosagem}</span>
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  <span className="font-semibold text-foreground">Estoque atual:</span> {r.med.estoqueAtual || 0} {r.med.dosagemUnidade || "un"}
-                </p>
-                <div className="flex gap-4 mt-2 pt-2 border-t border-border/50">
-                  <p className="text-xs text-[var(--tema-escuro)] font-semibold">
-                    {r.dosesTomadas} doses tomadas
+            {remediosAgrupados.filter(r => filtroRemedios === "uso" ? medicacaoEmUso(r.med) : !medicacaoEmUso(r.med)).map(r => {
+              const estoqueBaixo = (r.med.estoqueAtual || 0) <= 5;
+              return (
+                <div key={r.med.id} className="notebook p-4 space-y-1 bg-white text-sm">
+                  <div className="flex justify-between font-bold text-foreground">
+                    <span>{r.med.medicamento}</span>
+                    <span className="text-xs text-muted-foreground">{r.med.dosagem}</span>
+                  </div>
+                  <p className={`text-xs ${estoqueBaixo ? "text-red-600 font-bold" : "text-muted-foreground"}`}>
+                    <span className="font-semibold">Estoque atual:</span> {r.med.estoqueAtual || 0} {r.med.dosagemUnidade || "un"}
+                    {estoqueBaixo && " ⚠️ Estoque baixo!"}
                   </p>
-                  <p className="text-xs text-[var(--tema-escuro)] font-semibold">
-                    {r.caixasTomadas} {r.caixasTomadas === 1 ? 'ciclo' : 'ciclos'} registrados
-                  </p>
+                  <div className="flex gap-4 mt-2 pt-2 border-t border-border/50">
+                    <p className="text-xs text-[var(--tema-escuro)] font-semibold">
+                      {r.dosesTomadas} doses tomadas
+                    </p>
+                    <p className="text-xs text-[var(--tema-escuro)] font-semibold">
+                      {r.caixasTomadas} {r.caixasTomadas === 1 ? 'ciclo' : 'ciclos'} registrados
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -502,12 +581,17 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: CONSULTAS E EXAMES (Antigo Compromissos)
+  // ✅ TELA: CONSULTAS E EXAMES
   if (view === "compromissos") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Consultas e Exames</h1></header>
+        <div className="flex justify-between items-center">
+          <h1 className="font-display text-3xl font-semibold italic text-foreground">Consultas e Exames</h1>
+          <Link to="/relatorios" search={{ tipo: "compromissos" }} className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden">
+            <FileText className="h-3.5 w-3.5" /> Relatório
+          </Link>
+        </div>
         <SeletorTesouro />
         
         <div className="notebook p-5 mt-4" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
