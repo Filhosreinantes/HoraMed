@@ -20,7 +20,20 @@ export const Route = createFileRoute("/_app")({
 });
 
 type Cores = { cor: string; claro: string; escuro: string };
-const AZUL: Cores = { cor: "#5B92C7", claro: "#E8F1F9", escuro: "#2C4A6B" };
+
+// ✅ DICIONÁRIO DE CORES EXPANDIDO
+const CORES: Record<string, Cores> = {
+  azul: { cor: "#5B92C7", claro: "#E8F1F9", escuro: "#2C4A6B" },
+  rosa: { cor: "#D18CA0", claro: "#FBE5EC", escuro: "#8B3E58" },
+  verde: { cor: "#6FB89A", claro: "#DCF0E7", escuro: "#3D8064" },
+  amarelo: { cor: "#E5B84B", claro: "#FBF1D6", escuro: "#7A5A12" },
+  "lilás": { cor: "#9B8FC7", claro: "#EDE7F5", escuro: "#524880" },
+  vermelho: { cor: "#E57373", claro: "#FFEBEE", escuro: "#C62828" },
+  laranja: { cor: "#FFB74D", claro: "#FFF3E0", escuro: "#EF6C00" },
+  marrom: { cor: "#A1887F", claro: "#EFEBE9", escuro: "#5D4037" },
+  cinza: { cor: "#90A4AE", claro: "#ECEFF1", escuro: "#455A64" },
+  menta: { cor: "#4DB6AC", claro: "#E0F2F1", escuro: "#00695C" },
+};
 
 function Layout() {
   const { user } = Route.useRouteContext();
@@ -44,15 +57,16 @@ function Layout() {
 }
 
 function Shell() {
-  const { user, assinaturaAtiva, checarAssinatura } = useApp();
+  const { user, ativa, assinaturaAtiva, checarAssinatura } = useApp();
   const [comprando, setComprando] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const ehConfiguracoes = pathname.startsWith("/configuracoes");
   
-  const tema = AZUL;
+  // ✅ LÊ A COR DINAMICAMENTE DO PERFIL ATIVO
+  const tema = CORES[ativa?.tema || "azul"] ?? CORES.azul;
+  
   const tab = "flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold";
 
-  // 1. TELA DE CARREGAMENTO DA ASSINATURA
   if (assinaturaAtiva === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#FDFBF7]">
@@ -61,7 +75,6 @@ function Shell() {
     );
   }
 
-  // 2. ERRO NA VERIFICAÇÃO
   if (assinaturaAtiva === "erro") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#FDFBF7] p-6 text-center">
@@ -73,56 +86,36 @@ function Shell() {
     );
   }
 
-  // 3. TELA DE VENDAS (PAYWALL)
   if (assinaturaAtiva === false) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#FDFBF7] p-6 text-center">
         <div className="w-full max-w-sm rounded-3xl border border-[#B8933F]/40 bg-white p-8 shadow-xl">
           <span className="text-5xl">🩺</span>
           <h2 className="mt-4 font-display text-2xl font-bold italic text-[#2C4A6B]">
-            Bem-vindo(a) ao horaMed
+            Bem-vindo(a) ao HoraMed
           </h2>
           
           {ehAppAndroid() ? (
-            <p className="mt-2 text-sm text-[#7A8A9A]">
-              Sua assinatura não está ativa nesta conta.
-            </p>
+            <p className="mt-2 text-sm text-[#7A8A9A]">Sua assinatura não está ativa nesta conta.</p>
           ) : (
             <>
-              <p className="mt-2 text-sm text-[#7A8A9A]">
-                Organize seus medicamentos, consultas e exames de forma simples e segura.
-              </p>
-              <button
-                onClick={() => setComprando(true)}
-                className="mt-6 block w-full rounded-2xl bg-[#5B92C7] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#4a7eb3]"
-              >
+              <p className="mt-2 text-sm text-[#7A8A9A]">Organize seus medicamentos, consultas e exames de forma simples e segura.</p>
+              <button onClick={() => setComprando(true)} className="mt-6 block w-full rounded-2xl bg-[#5B92C7] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#4a7eb3]">
                 Liberar acesso por {reais(PLANOS.mensal.centavos)}/mês
               </button>
             </>
           )}
           
-          <button onClick={checarAssinatura} className="mt-3 block w-full text-xs font-semibold text-[#5B92C7]">
-            Já paguei · verificar de novo
-          </button>
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="mt-4 text-xs font-semibold text-[#7A8A9A] underline-offset-4 hover:underline"
-          >
-            Sair da conta
-          </button>
+          <button onClick={checarAssinatura} className="mt-3 block w-full text-xs font-semibold text-[#5B92C7]">Já paguei · verificar de novo</button>
+          <button onClick={() => supabase.auth.signOut()} className="mt-4 text-xs font-semibold text-[#7A8A9A] underline-offset-4 hover:underline">Sair da conta</button>
         </div>
         {comprando && (
-          <CheckoutPix
-            emailInicial={user.email ?? ""}
-            onFechar={() => setComprando(false)}
-            onPago={checarAssinatura}
-          />
+          <CheckoutPix emailInicial={user.email ?? ""} onFechar={() => setComprando(false)} onPago={checarAssinatura} />
         )}
       </div>
     );
   }
 
-  // 4. APP LIBERADO (ASSINATURA OK)
   return (
     <div
       style={{
@@ -133,11 +126,14 @@ function Shell() {
     >
       <div className="relative mx-auto min-h-screen max-w-lg px-4 pb-28 pt-6">
         <div className="absolute right-4 top-5 z-30 flex items-center gap-2">
-          {/* Badge indicando que a conta é paga */}
-          <div className="flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-xs font-bold tracking-wider text-emerald-700 shadow-sm">
+          {/* ✅ Botão ATIVO agora leva para a tela de assinatura */}
+          <Link
+            to="/assinatura"
+            className="flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-xs font-bold tracking-wider text-emerald-700 shadow-sm transition hover:bg-emerald-200 active:scale-95"
+          >
             <ShieldCheck className="h-3.5 w-3.5" />
             <span>ATIVO</span>
-          </div>
+          </Link>
 
           {!ehConfiguracoes && (
             <Link
@@ -153,7 +149,6 @@ function Shell() {
         <Outlet />
       </div>
 
-      {/* Manter os avisos de permissão para os alarmes de medicação funcionarem perfeitamente */}
       {ehAppAndroid() ? <ConfiabilidadePrompt /> : <NotificationPrompt />}
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/40 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
