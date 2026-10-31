@@ -99,10 +99,14 @@ function Acompanhamento() {
   }, [itens]);
 
   const proximos = useMemo(() => {
-    let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação" && (i.cuidado as string) !== "Pressão" && (i.cuidado as string) !== "Glicose"));
-    if (buscaProximos) lista = lista.filter((i) => i.cuidado === buscaProximos);
-    return lista;
-  }, [itens, buscaProximos]);
+  // ✅ FILTRO EXPLÍCITO: Apenas Consulta e Exame entram como "próximos compromissos"
+  let lista = ordenarPorDataHora(itens.filter((i) => 
+    compromissoPendente(i) && 
+    (i.cuidado === "Consulta" || i.cuidado === "Exame")
+  ));
+  if (buscaProximos) lista = lista.filter((i) => i.cuidado === buscaProximos);
+  return lista;
+}, [itens, buscaProximos]);
 
   const proximosAgendamentos = useMemo(() => {
     const arr: any[] = [];
