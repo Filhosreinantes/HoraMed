@@ -5,8 +5,8 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Rotina Azul" },
-      { name: "description", content: "Sua agenda de cuidados num só lugar." },
+      { title: "horaMed" },
+      { name: "description", content: "Sua saúde organizada de forma simples." },
     ],
   }),
   beforeLoad: async () => {
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/")({
     // Pega o ?ref= da URL, se existir
     const ref = new URLSearchParams(window.location.search).get("ref");
     
-    // ✅ Redireciona para /hoje se logado, senão para /login
+    // Redireciona para /hoje se logado, senão para /login
     throw redirect({ 
       to: data.session ? "/hoje" : "/login", 
       search: (prev) => ({ ...prev, ...(ref ? { ref } : {}) }),
