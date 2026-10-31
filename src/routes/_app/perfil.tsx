@@ -52,12 +52,12 @@ function Perfil() {
     };
 
     if (form.id) {
-      const { error } = await supabase.from("pedacinho_pessoas").update(campos).eq("id", form.id).eq("user_id", user.id);
+      const { error } = await supabase.from("horamed_pessoas").update(campos).eq("id", form.id).eq("user_id", user.id);
       if (error) { toast.error("Não foi possível salvar."); return; }
       toast.success("Perfil atualizado!");
     } else {
       const id = uid();
-      const { error } = await supabase.from("pedacinho_pessoas").insert({ ...campos, id, user_id: user.id, criado_em: agora });
+      const { error } = await supabase.from("horamed_pessoas").insert({ ...campos, id, user_id: user.id, criado_em: agora });
       if (error) { toast.error("Não foi possível adicionar."); return; }
       setAtivaId(id);
       toast.success("Novo perfil adicionado!");
@@ -68,9 +68,9 @@ function Perfil() {
 
   const excluirPerfil = async () => {
     if (!form?.id) return;
-    const { error: e1 } = await supabase.from("pedacinho_registros").delete().eq("pessoa_id", form.id).eq("user_id", user.id);
+    const { error: e1 } = await supabase.from("horamed_registros").delete().eq("pessoa_id", form.id).eq("user_id", user.id);
     if (e1) { toast.error("Não foi possível excluir os registros deste perfil."); return; }
-    const { error: e2 } = await supabase.from("pedacinho_pessoas").delete().eq("id", form.id).eq("user_id", user.id);
+    const { error: e2 } = await supabase.from("horamed_pessoas").delete().eq("id", form.id).eq("user_id", user.id);
     if (e2) { toast.error("Não foi possível excluir o perfil."); return; }
     toast.success("Perfil excluído.");
     setExcluir(false);
