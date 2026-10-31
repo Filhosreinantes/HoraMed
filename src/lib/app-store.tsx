@@ -116,12 +116,22 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     });
 
     const { data: rs } = await supabase
-      .from("pedacinho_registros")
-      .select("dados, tipo")
-      .eq("user_id", user.id);
+  .from("pedacinho_registros")
+  .select("dados, tipo")
+  .eq("user_id", user.id);
 
-    setRegistros(((rs ?? []) as { dados: Dados; tipo: string }[]).map(r => ({ ...r.dados, tipo: r.tipo })));
-    setCarregando(false);
+// ✅ FILTRO DE SEGURANÇA: O horaMed só aceita os seus próprios tipos
+const TIPOS_HORAMED = ["Consulta", "Exame", "Medicação", "Pressão", "Glicose", "Medicação_Log"];
+
+const dadosFiltrados = ((rs ?? []) as { dados: Dados; tipo: string }[])
+  .map(r => ({ ...r.dados, tipo: r.tipo }))
+  .filter(r => {
+    // Permite os tipos do horaMed ou registros de log de medicação
+    return TIPOS_HORAMED.includes(r.cuidado as string) || r.tipo === "medicacao_logs";
+  });
+
+setRegistros(dadosFiltrados);
+setCarregando(false);
   }, [user.id]);
 
   useEffect(() => {
