@@ -17,8 +17,8 @@ export function iniciarNotificacoes() {
     persistNotification: true,
     // A boas-vindas padrão do OneSignal vem em inglês ("Thanks for subscribing!").
     welcomeNotification: {
-      title: "Rotina Azul",
-      message: "Pronto! Os lembretes dos remédios vão chegar aqui. 💙",
+      title: "horaMed",
+      message: "Pronto! Os lembretes das suas medicações vão chegar aqui. 🩺",
     },
   })
     .then(() => true)
@@ -29,7 +29,7 @@ export function iniciarNotificacoes() {
   return pronto;
 }
 
-/** Liga este aparelho à conta, para os lembretes chegarem à usuária certa. */
+/** Liga este aparelho à conta, para os lembretes chegarem ao usuário certo. */
 export async function conectarUsuaria(userId: string) {
   if (await iniciarNotificacoes()) await OneSignal.login(userId).catch(() => undefined);
 }
@@ -69,7 +69,7 @@ export async function estadoNotificacoes(): Promise<EstadoNotificacoes> {
 
 export const MENSAGEM: Record<Exclude<EstadoNotificacoes, "ativas" | "pendente">, string> = {
   "instalar-ios":
-    'No iPhone, primeiro instale o app: toque em Compartilhar e depois em "Adicionar à Tela de Início". Abra o Rotina Azul pelo ícone e ative os lembretes.',
+    'No iPhone, primeiro instale o app: toque em Compartilhar e depois em "Adicionar à Tela de Início". Abra o horaMed pelo ícone e ative os lembretes.',
   bloqueadas:
     "As notificações estão bloqueadas para este site. Libere nas configurações do navegador.",
   "nao-carregou":
