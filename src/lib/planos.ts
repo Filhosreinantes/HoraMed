@@ -1,4 +1,4 @@
-// Planos do Rotina Azul. Arquivo sem dependências: o app usa para mostrar os planos e as
+// Planos do horaMed. Arquivo sem dependências: o app usa para mostrar os planos e as
 // Edge Functions (supabase/functions/_shared/pagbank.ts) usam para cobrar. O preço e o
 // prazo que valem são sempre os do servidor; o app só informa o id do plano.
 export type PlanoId = "mensal" | "anual" | "vitalicio";
@@ -9,21 +9,21 @@ export const PLANOS: Record<
 > = {
   anual: {
     nome: "Plano Anual",
-    descricao: "O melhor custo-benefício (50% de desconto)",
+    descricao: "O melhor custo-benefício para cuidar da saúde (50% de desconto)",
     centavos: 5999,
     cobranca: "Cobrado anualmente",
     dias: 365,
   },
   mensal: {
     nome: "Plano Mensal",
-    descricao: "Acesso completo",
+    descricao: "Acesso completo aos seus medicamentos e exames",
     centavos: 999,
     cobranca: "Cobrado mensalmente",
     dias: 30,
   },
   vitalicio: {
     nome: "Acesso Vitalício",
-    descricao: "Pague uma vez, use para sempre",
+    descricao: "Pague uma vez, cuide da saúde para sempre",
     centavos: 14999,
     cobranca: "Pagamento único",
     // Cem anos: a assinatura guarda uma data de fim, então "para sempre" é uma data distante.
