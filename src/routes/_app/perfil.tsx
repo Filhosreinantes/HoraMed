@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Pencil, Plus, LogOut, Trash2, Phone, Check } from "lucide-react";
+import { Pencil, Plus, LogOut, Trash2, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
 import { supabase } from "@/lib/supabase";
@@ -12,8 +12,27 @@ export const Route = createFileRoute("/_app/perfil")({
   component: Perfil,
 });
 
-const EMOJIS_PESSOAS = ["🧑", "👩", "👨", "👧", "👦", "👵", "👴", "🧒", "👶", "👩‍🦱", "👨‍🦱", "🧔"];
-const CORES_TEMA = ["azul", "rosa", "verde", "amarelo", "lilás"];
+// ✅ LISTA EXPANDIDA DE EMOJIS
+const EMOJIS_PESSOAS = [
+  "🧑", "👩", "👨", "👧", "👦", "👵", "👴", "🧒", "👶",
+  "👩‍⚕️", "👨‍⚕️", "🧑‍⚕️", "👱‍♀️", "👱", "🧔",
+  "👩‍🦰", "👨‍🦰", "👩‍🦱", "👨‍🦱", "👩‍🦳", "👨‍🦳",
+  "👩🏾", "👨🏿", "👩🏼", "🦸‍♀️", "🦸‍♂️", "🧚‍♀️", "🧚‍♂️"
+];
+
+// ✅ LISTA EXPANDIDA DE TEMAS
+const CORES_TEMA = [
+  { chave: "azul", nome: "Azul" },
+  { chave: "rosa", nome: "Rosa" },
+  { chave: "verde", nome: "Verde" },
+  { chave: "amarelo", nome: "Amarelo" },
+  { chave: "lilás", nome: "Lilás" },
+  { chave: "vermelho", nome: "Vermelho" },
+  { chave: "laranja", nome: "Laranja" },
+  { chave: "marrom", nome: "Marrom" },
+  { chave: "cinza", nome: "Cinza" },
+  { chave: "menta", nome: "Menta" },
+];
 
 function Perfil() {
   const { ativa, pessoas, user, recarregar, setAtivaId } = useApp();
@@ -119,10 +138,11 @@ function Perfil() {
 
             <div>
               <p className="mb-1.5 text-sm font-semibold">Emoji</p>
-              <div className="flex flex-wrap gap-2">
+              {/* ✅ Scroll para não estourar a tela do celular */}
+              <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1 border rounded-xl bg-slate-50">
                 {EMOJIS_PESSOAS.map((em) => (
                   <button type="button" key={em} onClick={() => setForm({ ...form, emoji: em })}
-                    className={`grid h-11 w-11 place-items-center rounded-full text-2xl ${form.emoji === em ? "bg-sky ring-2 ring-accent" : "bg-muted"}`}>
+                    className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-2xl transition ${form.emoji === em ? "bg-sky ring-2 ring-accent shadow-md" : "bg-white hover:bg-slate-100"}`}>
                     {em}
                   </button>
                 ))}
@@ -131,7 +151,7 @@ function Perfil() {
 
             <Campo label="Tema">
               <select className="field" value={form.tema ?? "azul"} onChange={(e) => setForm({ ...form, tema: e.target.value })}>
-                {CORES_TEMA.map((t) => <option key={t} value={t}>{t}</option>)}
+                {CORES_TEMA.map((t) => <option key={t.chave} value={t.chave}>{t.nome}</option>)}
               </select>
             </Campo>
 
@@ -148,20 +168,20 @@ function Perfil() {
         </div>
       )}
 
-      {/* Modais de exclusão e sair permanecem iguais */}
+      {/* Modais de exclusão e sair */}
       {excluir && form?.id && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/40 p-4" onClick={() => setExcluir(false)}>
           <div onClick={(e) => e.stopPropagation()} className="notebook w-full max-w-sm p-6 text-center">
             {pessoas.length <= 1 ? (
               <>
                 <h2 className="text-xl font-semibold">Não dá para excluir</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Você precisa ter pelo menos um Perfil. Adicione outro antes de excluir este.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Você precisa ter pelo menos um Perfil.</p>
                 <Botao className="mt-5 w-full" onClick={() => setExcluir(false)}>Entendi</Botao>
               </>
             ) : (
               <>
                 <h2 className="text-xl font-semibold">Excluir {form.nome}?</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Todas as consultas, exames e medicações registradas para este perfil serão apagadas. Isso não pode ser desfeito.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Isso apagará todos os registros deste perfil.</p>
                 <div className="mt-5 flex gap-2">
                   <Botao variant="outline" className="flex-1" onClick={() => setExcluir(false)}>Cancelar</Botao>
                   <Botao variant="danger" className="flex-1" onClick={excluirPerfil}>Excluir</Botao>
@@ -176,7 +196,7 @@ function Perfil() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4" onClick={() => setSair(false)}>
           <div onClick={(e) => e.stopPropagation()} className="notebook w-full max-w-sm p-6 text-center">
             <h2 className="text-xl font-semibold">Sair da conta?</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Você precisará entrar novamente com seu e-mail e senha.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Você precisará entrar novamente.</p>
             <div className="mt-5 flex gap-2">
               <Botao variant="outline" className="flex-1" onClick={() => setSair(false)}>Ficar</Botao>
               <Botao variant="laranja" className="flex-1" onClick={async () => { await supabase.auth.signOut(); toast.success("Até logo!"); }}>Sair</Botao>
