@@ -10,5 +10,6 @@ export function ehAppAndroid() {
  * No app a origem é https://localhost, que não abre fora dele.
  */
 export function urlDoSite() {
-  return ehAppAndroid() ? "https://rotinaazul.vercel.app" : window.location.origin;
+  // ⚠️ TROQUE PARA A URL DO SEU PROJETO HORAMED NO VERCEL
+  return ehAppAndroid() ? "https://horamed.vercel.app" : window.location.origin;
 }
