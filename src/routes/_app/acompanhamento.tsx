@@ -1,24 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { X, ChevronLeft, History, Stethoscope, Leaf, FileText, Pill as PillIcon, Plane, Trash2, RefreshCw, Thermometer, Heart, Lock, Activity, Smile, Printer, Trophy, CalendarCheck, PillBottle } from "lucide-react";
+import { ChevronLeft, History, Stethoscope, FileText, Pill as PillIcon, Plane, RefreshCw, Activity, Droplet, CalendarCheck, PillBottle, X } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
   doseRegistrada, hojeYMD, medicacaoEmUso, ordenarPorDataHora, compromissoPendente,
-  nowLocalISO, uid, type Cuidado, type Situacao, type Dados, parseYMD, type Item
+  nowLocalISO, uid, type Cuidado, type Situacao, type Item, parseYMD
 } from "@/lib/cuidados";
 import { Botao, Divisor, Pill, SeletorTesouro } from "@/components/ui-kit";
 import { CompromissoCard } from "@/components/compromisso-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { VozInput } from "@/components/voz-input";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/acompanhamento")({
-  head: () => ({ meta: [{ title: "Acompanhamento · Rotina Azul" }] }),
+  head: () => ({ meta: [{ title: "Acompanhamento · horaMed" }] }),
   component: Acompanhamento,
 });
 
-type View = "menu" | "compromissos" | "medicacoes_menu" | "medicacoes_historico" | "medicacoes_proximos" | "medicacoes_estoque" | "medicacoes_viagem" | "tratamento" | "bemestar";
+type View = "menu" | "compromissos" | "medicacoes_menu" | "medicacoes_historico" | "medicacoes_proximos" | "medicacoes_estoque" | "medicacoes_viagem" | "sinais_vitais";
 type Periodo = "mes" | "ano" | "tudo";
 type Drill = { cuidado: Cuidado; situacao: Situacao } | null;
 
@@ -30,27 +29,18 @@ const LINHAS: { s: Situacao; label: string }[] = [
 ];
 
 function Acompanhamento() {
-  const { itens, logs, carregando, salvarRegistros, ativa, assinaturaAtiva } = useApp();
+  const { itens, logs, carregando, salvarRegistros, ativa } = useApp();
   const navigate = useNavigate();
   const [view, setView] = useState<View>("menu");
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [drill, setDrill] = useState<Drill>(null);
   const [buscaProximos, setBuscaProximos] = useState("");
-  const [filtroRemedios, setFiltroRemedios] = useState<"uso" | "encerrados">("uso");
 
+  const [filtroRemedios, setFiltroRemedios] = useState<"uso" | "encerrados">("uso");
   const [filtroMed, setFiltroMed] = useState("");
   const [dataHistorico, setDataHistorico] = useState(hojeYMD());
   const [viagemInicio, setViagemInicio] = useState(hojeYMD());
   const [viagemFim, setViagemFim] = useState(hojeYMD());
-
-  const [tratamentoSelecionado, setTratamentoSelecionado] = useState<string | null>(null);
-  const [sintomasTexto, setSintomasTexto] = useState("");
-  const [pressao, setPressao] = useState("");
-  const [glicose, setGlicose] = useState("");
-  
-  const [bemEstarAba, setBemEstarAba] = useState<"tesouro" | "atividades">("tesouro");
-  const [tesouroForm, setTesouroForm] = useState({ atividade: "", duracao: "", sentimento: "" });
-  const [atividadeForm, setAtividadeForm] = useState({ atividade: "", duracao: "", sentimento: "", gratidao: "" });
 
   const hoje = hojeYMD();
 
@@ -101,28 +91,15 @@ function Acompanhamento() {
     return Object.values(mapa);
   }, [meds, logs]);
 
-  const tratamentosUnicos = useMemo(() => {
-    const arr = meds.map(m => m.tratamento).filter(Boolean);
-    return Array.from(new Set(arr)) as string[];
-  }, [meds]);
-
-  const historicoTratamento = useMemo(() => {
-    if (!tratamentoSelecionado) return [];
+  // NOVO: Filtro de Sinais Vitais (Pressão e Glicose)
+  const sinaisVitais = useMemo(() => {
     return itens
-      .filter(i => (i.cuidado as string) === "Sintoma" && (i as any).tratamento === tratamentoSelecionado)
-      .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
-  }, [itens, tratamentoSelecionado]);
-
-  const remedioDoTratamento = useMemo(() => {
-    if (!tratamentoSelecionado) return null;
-    return meds.find(m => m.tratamento === tratamentoSelecionado);
-  }, [meds, tratamentoSelecionado]);
-
-  const isHipertensao = tratamentoSelecionado?.toLowerCase().includes("hipertensão");
-  const isDiabetes = tratamentoSelecionado?.toLowerCase().includes("diabetes");
+      .filter(i => i.cuidado === "Pressão" || i.cuidado === "Glicose")
+      .sort((a, b) => (b.data || "").localeCompare(a.data || "") || (b.hora || "").localeCompare(a.hora || ""));
+  }, [itens]);
 
   const proximos = useMemo(() => {
-    let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação" && (i.cuidado as string) !== "Sintoma" && (i.cuidado as string) !== "BemEstar" && (i.cuidado as string) !== "Tesouro"));
+    let lista = ordenarPorDataHora(itens.filter((i) => compromissoPendente(i) && i.cuidado !== "Medicação" && (i.cuidado as string) !== "Pressão" && (i.cuidado as string) !== "Glicose"));
     if (buscaProximos) lista = lista.filter((i) => i.cuidado === buscaProximos);
     return lista;
   }, [itens, buscaProximos]);
@@ -168,130 +145,12 @@ function Acompanhamento() {
     return arr.sort((a, b) => a.data.localeCompare(b.data) || a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
-  const logsTesouro = useMemo(() => itens.filter(i => (i.cuidado as string) === "Tesouro").sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || "")), [itens]);
-  const logsAtividade = useMemo(() => itens.filter(i => (i.cuidado as string) === "BemEstar").sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || "")), [itens]);
-
   const logsFiltrados = useMemo(() => {
     return logs
       .filter((i: any) => !filtroMed || i.titulo.toLowerCase().includes(filtroMed.toLowerCase()))
       .filter((i: any) => i.data === dataHistorico)
       .sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
   }, [logs, filtroMed, dataHistorico]);
-
-  const salvarSintomaTratamento = async () => {
-    if (!ativa || !tratamentoSelecionado || !sintomasTexto.trim()) return;
-    const dados: Dados = {
-      id: uid(), pessoaId: ativa.id, criadoEm: nowLocalISO(), titulo: `Sintoma: ${tratamentoSelecionado}`, cuidado: "Sintoma" as any, data: hoje, situacao: "feito",
-      tratamento: tratamentoSelecionado,
-      sintomas: sintomasTexto,
-      pressao: isHipertensao ? pressao : undefined,
-      glicose: isDiabetes ? glicose : undefined,
-    } as any;
-    const ok = await salvarRegistros([dados]);
-    if (ok) {
-      toast.success("Sintomas registrados!");
-      setSintomasTexto("");
-      setPressao("");
-      setGlicose("");
-    }
-  };
-
-  const encerrarTratamento = async () => {
-    if (!remedioDoTratamento) return;
-    if (!confirm("Tem certeza que deseja encerrar este tratamento? Ele não aparecerá mais nos remédios em uso.")) return;
-    
-    const ok = await salvarRegistros([{
-      id: uid(), pessoaId: ativa.id, criadoEm: nowLocalISO(), titulo: "Tratamento encerrado", cuidado: remedioDoTratamento.cuidado, evento: true, parentId: remedioDoTratamento.id, acao: "editar", alteracoes: { fim: hoje }
-    }], "acontecimentos");
-    
-    if (ok) {
-      toast.success("Tratamento encerrado!");
-      setTratamentoSelecionado(null);
-    }
-  };
-
-  const imprimirRelatorio = () => {
-    if (!ativa || !remedioDoTratamento) return;
-    
-    const dataInicio = remedioDoTratamento.inicio ? remedioDoTratamento.inicio.split('-').reverse().join('/') : '-';
-    
-    const htmlSintomas = historicoTratamento.map(h => `
-      <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
-        <p style="font-weight: bold; margin: 0 0 4px 0; color: #333;">Dia ${h.data.split('-').reverse().join('/')}</p>
-        ${(h as any).pressao ? `<p style="margin: 0; color: #1a5276; font-weight: bold;">Pressão: ${(h as any).pressao}</p>` : ''}
-        ${(h as any).glicose ? `<p style="margin: 0; color: #1a5276; font-weight: bold;">Glicose: ${(h as any).glicose}</p>` : ''}
-        <p style="margin: 0; font-style: italic; color: #555;">"${(h as any).sintomas}"</p>
-      </div>
-    `).join('');
-
-    const janela = window.open('', '', 'height=800,width=600');
-    if (!janela) {
-      toast.error("Não foi possível abrir a janela de impressão. Verifique o bloqueador de pop-ups.");
-      return;
-    }
-
-    janela.document.write(`
-      <html>
-        <head>
-          <title>Relatório de Tratamento - ${tratamentoSelecionado}</title>
-          <style>
-            body { font-family: sans-serif; padding: 20px; color: #333; }
-            h1 { color: #1a5276; font-size: 22px; margin-bottom: 5px; }
-            h2 { color: #1a5276; font-size: 16px; margin-top: 20px; margin-bottom: 10px; border-bottom: 2px solid #1a5276; padding-bottom: 4px; }
-            .dado { margin-bottom: 6px; font-size: 14px; }
-            .label { font-weight: bold; }
-            .footer { margin-top: 30px; font-size: 11px; color: #999; text-align: center; }
-          </style>
-        </head>
-        <body>
-          <h1>Relatório de Acompanhamento</h1>
-          <div class="dado"><span class="label">Tesouro:</span> ${ativa.nome}</div>
-          
-          <h2>Dados do Tratamento</h2>
-          <div class="dado"><span class="label">Tratamento:</span> ${tratamentoSelecionado}</div>
-          <div class="dado"><span class="label">Remédio:</span> ${remedioDoTratamento.medicamento}</div>
-          <div class="dado"><span class="label">Dosagem:</span> ${remedioDoTratamento.dosagem}</div>
-          <div class="dado"><span class="label">Início do tratamento:</span> ${dataInicio}</div>
-          
-          <h2>Sintomas Registrados (${historicoTratamento.length} dias)</h2>
-          ${historicoTratamento.length === 0 ? '<p>Nenhum sintoma registrado ainda.</p>' : htmlSintomas}
-
-          <div class="footer">Relatório gerado pelo Rotina Azul em ${new Date().toLocaleDateString('pt-BR')}</div>
-        </body>
-      </html>
-    `);
-    janela.document.close();
-    janela.focus();
-    setTimeout(() => {
-      janela.print();
-    }, 500);
-  };
-
-  const salvarTesouro = async () => {
-    if (!ativa) return;
-    const dados: Dados = {
-      id: uid(), pessoaId: ativa.id, criadoEm: nowLocalISO(), titulo: "Atividade do Tesouro", cuidado: "Tesouro" as any, data: hoje, situacao: "feito",
-      ...tesouroForm
-    } as any;
-    const ok = await salvarRegistros([dados]);
-    if (ok) {
-      toast.success("Atividade registrada!");
-      setTesouroForm({ atividade: "", duracao: "", sentimento: "" });
-    }
-  };
-
-  const salvarAtividade = async () => {
-    if (!ativa) return;
-    const dados: Dados = {
-      id: uid(), pessoaId: ativa.id, criadoEm: nowLocalISO(), titulo: "Atividade", cuidado: "BemEstar" as any, data: hoje, situacao: "feito",
-      ...atividadeForm
-    } as any;
-    const ok = await salvarRegistros([dados]);
-    if (ok) {
-      toast.success("Atividade registrada!");
-      setAtividadeForm({ atividade: "", duracao: "", sentimento: "", gratidao: "" });
-    }
-  };
 
   const excluirLog = async (log: any) => {
     if (!confirm("Excluir este registro de dose?")) return;
@@ -319,259 +178,54 @@ function Acompanhamento() {
 
   if (carregando) return <div className="space-y-3 p-4"><Skeleton className="h-40 rounded-3xl bg-muted" /><Skeleton className="h-40 rounded-3xl bg-muted" /></div>;
 
-  const RenderPremiumLock = ({ titulo }: { titulo: string }) => (
-    <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
-      <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-      <header><h1 className="font-display text-3xl font-semibold italic text-foreground">{titulo}</h1></header>
-      <div className="notebook p-8 mt-10 flex flex-col items-center gap-4 text-center" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
-        <Lock className="h-12 w-12 text-amber-500" />
-        <h2 className="font-display text-2xl font-bold italic text-foreground">Recurso Premium</h2>
-        <p className="text-sm text-muted-foreground">O diário de {titulo} está disponível apenas para assinantes do Rotina Azul Premium.</p>
-        <Botao className="mt-4 w-full" style={{ backgroundColor: "var(--tema)", color: "white" }}>Conhecer o Premium</Botao>
-      </div>
-    </div>
-  );
-
-  if (view === "tratamento") {
-    if (tratamentoSelecionado) {
-      return (
-        <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
-          <Botao variant="ghost" onClick={() => setTratamentoSelecionado(null)} className="mb-2 flex items-center gap-1 text-sm font-semibold"><ChevronLeft className="h-4 w-4" /> Voltar aos Tratamentos</Botao>
-          <header><h1 className="font-display text-3xl font-semibold italic text-foreground">{tratamentoSelecionado}</h1></header>
-          <SeletorTesouro />
-
-          {remedioDoTratamento && (
-            <div className="notebook p-5 space-y-2 bg-slate-50 border-slate-200">
-              <div className="flex items-center gap-2 border-b border-border/50 pb-2 mb-2">
-                <PillIcon className="h-5 w-5" style={{ color: "var(--tema)" }} />
-                <h2 className="font-display text-lg font-bold italic" style={{ color: "var(--tema-escuro)" }}>Remédio: {remedioDoTratamento.medicamento}</h2>
-              </div>
-              <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Dosagem:</span> {remedioDoTratamento.dosagem}</p>
-              <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Início:</span> {remedioDoTratamento.inicio ? remedioDoTratamento.inicio.split('-').reverse().join('/') : '-'}</p>
-            </div>
-          )}
-
-          <section className="notebook p-5 space-y-4 relative" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
-            <div className="flex justify-between items-center">
-              <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
-                <Activity className="h-4 w-4" style={{ color: "var(--tema)" }} /> Sintomas Diários
-              </h2>
-              <button onClick={imprimirRelatorio} className="text-xs font-bold text-[var(--tema)] flex items-center gap-1 bg-[var(--tema-claro)] px-2 py-1 rounded-md">
-                <Printer className="h-3 w-3" /> Imprimir
-              </button>
-            </div>
-
-            {(isHipertensao || isDiabetes) && (
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                {isHipertensao && (
-                  <label className="block space-y-1">
-                    <span className="text-xs font-semibold text-muted-foreground">Pressão Arterial</span>
-                    <input type="text" className="field text-sm" placeholder="Ex: 120/80" value={pressao} onChange={(e) => setPressao(e.target.value)} />
-                  </label>
-                )}
-                {isDiabetes && (
-                  <label className="block space-y-1">
-                    <span className="text-xs font-semibold text-muted-foreground">Glicose (mg/dL)</span>
-                    <input type="text" className="field text-sm" placeholder="Ex: 90" value={glicose} onChange={(e) => setGlicose(e.target.value)} />
-                  </label>
-                )}
-              </div>
-            )}
-
-            <VozInput 
-              className="field text-sm min-h-24" 
-              placeholder="Escreva aqui o que sente e acompanhe os efeitos do remédio." 
-              value={sintomasTexto} 
-              onChange={setSintomasTexto} 
-            />
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Botao onClick={salvarSintomaTratamento} className="flex-1" style={{ backgroundColor: "var(--tema)", color: "white" }}>Salvar Sintoma</Botao>
-              <Botao onClick={encerrarTratamento} variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50">Tratamento encerrado</Botao>
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <h2 className="font-sans text-base font-semibold text-foreground">Histórico de Sintomas</h2>
-            {historicoTratamento.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum sintoma registrado ainda.</p> : historicoTratamento.map(l => (
-              <div key={l.id} className="notebook p-4 space-y-1 bg-white text-sm">
-                <div className="flex justify-between font-bold text-foreground">
-                  <span>{l.data.split('-').reverse().join('/')}</span>
-                  <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
-                </div>
-                {(l as any).pressao && <p className="text-[var(--tema-escuro)] font-semibold text-xs">Pressão: {(l as any).pressao}</p>}
-                {(l as any).glicose && <p className="text-[var(--tema-escuro)] font-semibold text-xs">Glicose: {(l as any).glicose}</p>}
-                <p className="text-muted-foreground italic mt-1">"{(l as any).sintomas}"</p>
-              </div>
-            ))}
-          </section>
-        </div>
-      );
-    }
-
+  // ✅ TELA: SINAIS VITAIS (Pressão e Glicose)
+  if (view === "sinais_vitais") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Tratamentos</h1></header>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Pressão & Glicose</h1></header>
         <SeletorTesouro />
-        
-        <div className="notebook p-5 mt-4 space-y-3">
-          <h2 className="font-display text-xl font-semibold italic text-foreground mb-4">Selecione o tratamento</h2>
-          {tratamentosUnicos.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum tratamento cadastrado nos remédios ainda.</p>
+
+        <div className="space-y-3 mt-4">
+          {sinaisVitais.length === 0 ? (
+             <div className="notebook p-6 text-center text-muted-foreground">
+               <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+               <p>Nenhuma medição registrada ainda.</p>
+             </div>
           ) : (
-            tratamentosUnicos.map(t => (
-              <button
-                key={t}
-                onClick={() => setTratamentoSelecionado(t)}
-                className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition"
-              >
-                <span className="font-bold text-sm text-foreground">{t}</span>
-                <ChevronLeft className="h-4 w-4 text-muted-foreground rotate-180" />
-              </button>
-            ))
+            sinaisVitais.map((s) => {
+              const isPressao = s.cuidado === "Pressão";
+              return (
+                <div key={s.id} className="notebook p-4 flex items-center gap-4 bg-white shadow-sm border border-border/50">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema)" }}>
+                    {isPressao ? <Activity className="h-5 w-5" /> : <Droplet className="h-5 w-5" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold text-lg text-foreground">{s.titulo}</span>
+                      <span className="text-xs text-muted-foreground">{s.data?.split('-').reverse().join('/')} {s.hora && `às ${s.hora}`}</span>
+                    </div>
+                    {(s as any).detalhes && <p className="text-sm text-muted-foreground">{ (s as any).detalhes }</p>}
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
     );
   }
 
-  if (view === "bemestar") {
-    if (assinaturaAtiva === false) return <RenderPremiumLock titulo="Bem-estar" />;
-    
-    return (
-      <div className="mx-auto max-w-lg space-y-5 pb-20 py-4">
-        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-2 flex items-center gap-1 text-sm font-semibold"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-        <header>
-          <h1 className="font-display text-3xl font-semibold italic text-foreground">Bem-estar</h1>
-          <p className="text-xs font-sans italic text-muted-foreground mt-1">Cuidando do corpo e da mente.</p>
-        </header>
-        <SeletorTesouro />
-
-        <div className="flex gap-2 justify-center mb-4">
-          <Pill ativo={bemEstarAba === "tesouro"} onClick={() => setBemEstarAba("tesouro")}>Atividades do Tesouro</Pill>
-          <Pill ativo={bemEstarAba === "atividades"} onClick={() => setBemEstarAba("atividades")}>Minhas atividades</Pill>
-        </div>
-
-        {bemEstarAba === "tesouro" && (
-          <>
-            <section className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
-              <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
-                <Smile className="h-4 w-4" style={{ color: "var(--tema)" }} /> Atividades do Tesouro
-              </h2>
-              
-              <div className="grid grid-cols-[2fr_1fr] gap-3">
-                <label className="block space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground">Atividade</span>
-                  <input type="text" className="field text-sm" placeholder="Ex: Brincadeira, Leitura..." value={tesouroForm.atividade} onChange={(e) => setTesouroForm(p => ({...p, atividade: e.target.value}))} />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground">Duração (min)</span>
-                  <input type="number" className="field text-sm" placeholder="Ex: 30" value={tesouroForm.duracao} onChange={(e) => setTesouroForm(p => ({...p, duracao: e.target.value}))} />
-                </label>
-              </div>
-
-              <label className="block space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground">Como está se sentindo?</span>
-                <VozInput 
-                  className="field text-sm min-h-20" 
-                  placeholder="Ex: Mais animado..." 
-                  value={tesouroForm.sentimento} 
-                  onChange={(v) => setTesouroForm(p => ({...p, sentimento: v}))} 
-                />
-              </label>
-
-              <Botao onClick={salvarTesouro} className="w-full" style={{ backgroundColor: "var(--tema)", color: "white" }}>Salvar Registro</Botao>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="font-sans text-base font-semibold text-foreground">Histórico do Tesouro</h2>
-              {logsTesouro.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum registro ainda.</p> : logsTesouro.map(l => (
-                <div key={l.id} className="notebook p-4 space-y-1 bg-white text-sm">
-                  <div className="flex justify-between font-bold text-foreground">
-                    <span>{(l as any).atividade || "Atividade"}</span>
-                    <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(0, 10).split('-').reverse().join('/')} {l.criadoEm?.slice(11, 16)}</span>
-                  </div>
-                  {(l as any).duracao && <p className="text-muted-foreground"><span className="font-semibold text-foreground">Duração:</span> {(l as any).duracao} min</p>}
-                  {(l as any).sentimento && <p className="text-muted-foreground mt-2 italic">"{(l as any).sentimento}"</p>}
-                </div>
-              ))}
-            </section>
-          </>
-        )}
-
-        {bemEstarAba === "atividades" && (
-          <>
-            <section className="notebook p-5 space-y-4" style={{ boxShadow: "0 0 40px 10px var(--tema-claro), 0 4px 12px -4px rgba(0,0,0,0.1)", border: "2px solid var(--tema)" }}>
-              <h2 className="font-sans text-base font-semibold text-foreground flex items-center gap-2">
-                <Trophy className="h-4 w-4" style={{ color: "var(--tema)" }} /> Minhas atividades
-              </h2>
-              
-              <div className="grid grid-cols-[2fr_1fr] gap-3">
-                <label className="block space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground">Atividade</span>
-                  <input type="text" className="field text-sm" placeholder="Ex: Caminhada, Yoga..." value={atividadeForm.atividade} onChange={(e) => setAtividadeForm(p => ({...p, atividade: e.target.value}))} />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground">Duração (min)</span>
-                  <input type="number" className="field text-sm" placeholder="Ex: 30" value={atividadeForm.duracao} onChange={(e) => setAtividadeForm(p => ({...p, duracao: e.target.value}))} />
-                </label>
-              </div>
-
-              <label className="block space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground">Como está se sentindo?</span>
-                <VozInput 
-                  className="field text-sm min-h-20" 
-                  placeholder="Ex: Mais disposto..." 
-                  value={atividadeForm.sentimento} 
-                  onChange={(v) => setAtividadeForm(p => ({...p, sentimento: v}))} 
-                />
-              </label>
-
-              <label className="block space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground">Gratidão / Coisas boas</span>
-                <VozInput 
-                  className="field text-sm min-h-20" 
-                  placeholder="Escreva algo pelo que você é grata hoje." 
-                  value={atividadeForm.gratidao} 
-                  onChange={(v) => setAtividadeForm(p => ({...p, gratidao: v}))} 
-                />
-              </label>
-
-              <Botao onClick={salvarAtividade} className="w-full" style={{ backgroundColor: "var(--tema)", color: "white" }}>Salvar Registro</Botao>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="font-sans text-base font-semibold text-foreground">Histórico de Atividades</h2>
-              {logsAtividade.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum registro ainda.</p> : logsAtividade.map(l => (
-                <div key={l.id} className="notebook p-4 space-y-1 bg-white text-sm">
-                  <div className="flex justify-between font-bold text-foreground">
-                    <span>{(l as any).atividade || "Atividade"}</span>
-                    <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(0, 10).split('-').reverse().join('/')} {l.criadoEm?.slice(11, 16)}</span>
-                  </div>
-                  {(l as any).duracao && <p className="text-muted-foreground"><span className="font-semibold text-foreground">Duração:</span> {(l as any).duracao} min</p>}
-                  {(l as any).sentimento && <p className="text-muted-foreground mt-2 italic">"{(l as any).sentimento}"</p>}
-                  {(l as any).gratidao && <p className="text-muted-foreground mt-1 italic">Gratidão: "{(l as any).gratidao}"</p>}
-                </div>
-              ))}
-            </section>
-          </>
-        )}
-      </div>
-    );
-  }
-
-
-
-  // ✅ MENU INICIAL (APENAS OS 4 BOTÕES, SEM O CARD "PARA HOJE")
+  // ✅ MENU INICIAL (Simplificado para 3 Blocos)
   if (view === "menu") {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
         <header className="text-center px-4 mb-2 flex flex-col items-center">
           <h1 className="font-display text-4xl font-bold italic text-[var(--tema-escuro)] flex items-center justify-center gap-2">
-            Rotina Azul <span className="text-3xl not-italic">💙</span>
+            horaMed <span className="text-3xl not-italic">🩺</span>
           </h1>
           <p className="text-xs font-sans italic text-muted-foreground mt-2">
-            Organização que acalma, cuidado que transforma.
+            Sua saúde organizada de forma simples.
           </p>
         </header>
 
@@ -580,22 +234,22 @@ function Acompanhamento() {
           Acompanhamento
         </p>
         <div className="grid grid-cols-2 gap-4 px-4 mt-6">
-          <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
-            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
-            <span className="font-display text-sm font-semibold italic text-center">Compromissos</span>
-          </button>
+          
           <button onClick={() => setView("medicacoes_menu")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
             <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><PillIcon className="h-5 w-5" /></div>
-            <span className="font-display text-sm font-semibold italic text-center">Medicação</span>
+            <span className="font-display text-sm font-semibold italic text-center">Medicamentos</span>
           </button>
-          <button onClick={() => setView("tratamento")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
-            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Thermometer className="h-5 w-5" /></div>
-            <span className="font-display text-sm font-semibold italic text-center">Tratamento</span>
+          
+          <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Consultas e Exames</span>
           </button>
-          <button onClick={() => setView("bemestar")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
-            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Heart className="h-5 w-5" /></div>
-            <span className="font-display text-sm font-semibold italic text-center">Bem-estar</span>
+
+          <button onClick={() => setView("sinais_vitais")} className="col-span-2 notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Activity className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Pressão & Glicose</span>
           </button>
+
         </div>
       </div>
     );
@@ -606,14 +260,14 @@ function Acompanhamento() {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Medicações</h1></header>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Medicamentos</h1></header>
         <SeletorTesouro />
         
         <div className="grid gap-3 mt-4">
           <button onClick={() => setView("medicacoes_proximos")} className="notebook flex items-center gap-4 p-5 border-[#B8933F]/60 hover:bg-muted/10 transition">
             <div className="grid h-12 w-12 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><CalendarCheck className="h-6 w-6" /></div>
             <div className="text-left">
-              <h3 className="font-display text-lg font-bold italic">Próximos Agendamentos</h3>
+              <h3 className="font-display text-lg font-bold italic">Próximas Doses</h3>
               <p className="text-xs text-muted-foreground">Veja as doses pendentes de hoje e renove tratamentos.</p>
             </div>
           </button>
@@ -646,12 +300,12 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: PRÓXIMOS AGENDAMENTOS
+  // ✅ TELA: PRÓXIMAS DOSES
   if (view === "medicacoes_proximos") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
         <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Próximos</h1></header>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Próximas Doses</h1></header>
         <SeletorTesouro />
 
         {continuos.length > 0 && (
@@ -842,12 +496,12 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: COMPROMISSOS
+  // ✅ TELA: CONSULTAS E EXAMES (Antigo Compromissos)
   if (view === "compromissos") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Compromissos</h1></header>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Consultas e Exames</h1></header>
         <SeletorTesouro />
         
         <div className="notebook p-5 mt-4" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
@@ -863,14 +517,13 @@ function Acompanhamento() {
           </div>
 
           <div className="grid gap-3">
-            {(["Consulta", "Terapia", "Exame"] as Cuidado[]).map((c) => {
+            {(["Consulta", "Exame"] as Cuidado[]).map((c) => {
               const doTipo = filtrados.filter((i) => i.cuidado === c);
               return (
                 <div key={c} className="bg-muted/30 rounded-xl p-4 border border-border/50">
                   <div className="mb-2 flex items-center justify-between">
                     <div className="flex items-center gap-2 font-display text-lg font-semibold italic" style={{ color: "var(--tema-escuro)" }}>
                       {c === "Consulta" && <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} />}
-                      {c === "Terapia" && <Leaf className="h-5 w-5" style={{ color: "var(--tema)" }} />}
                       {c === "Exame" && <FileText className="h-5 w-5" style={{ color: "var(--tema)" }} />}
                       <span>{c}</span>
                     </div>
@@ -914,7 +567,6 @@ function Acompanhamento() {
           <select className="field text-sm p-2 w-full border-gold/30 bg-card mb-2" value={buscaProximos} onChange={(e) => setBuscaProximos(e.target.value)}>
             <option value="">Todos os tipos</option>
             <option value="Consulta">Consulta</option>
-            <option value="Terapia">Terapia</option>
             <option value="Exame">Exame</option>
           </select>
           {proximos.length === 0 ? (
