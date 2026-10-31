@@ -1,13 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Printer, Activity, Pill, FileText, HeartPulse } from "lucide-react";
 import { useApp } from "@/lib/app-store";
-import { formatData, hojeYMD } from "@/lib/cuidados";
+import { formatData, hojeYMD, type Situacao } from "@/lib/cuidados";
 
 export const Route = createFileRoute("/_app/relatorios")({
   validateSearch: (search: Record<string, unknown>) => {
     return {
       tipo: (search.tipo as string) || "tudo",
-      q: (search.q as string) || "", // Filtro de busca
+      q: (search.q as string) || "",
+      dataInicio: (search.dataInicio as string) || "",
+      dataFim: (search.dataFim as string) || "",
+      status: (search.status as Situacao | "") || "",
     };
   },
   head: () => ({ meta: [{ title: "Relatórios · HoraMed" }] }),
@@ -15,22 +18,26 @@ export const Route = createFileRoute("/_app/relatorios")({
 });
 
 function Relatorios() {
-  const { tipo, q } = Route.useSearch();
+  const { tipo, q, dataInicio, dataFim, status } = Route.useSearch();
   const { itens, ativa } = useApp();
   const hoje = hojeYMD();
 
-  // Filtros básicos
   let medsEmUso = itens.filter(i => i.cuidado === "Medicação" && (!i.fim || i.fim >= hoje));
   let sinaisVitais = itens.filter(i => i.cuidado === "Pressão" || i.cuidado === "Glicose").sort((a, b) => (b.data || "").localeCompare(a.data || ""));
   let compromissos = itens.filter(i => i.cuidado === "Consulta" || i.cuidado === "Exame").sort((a, b) => (b.data || "").localeCompare(a.data || ""));
 
-  // ✅ Aplicar busca de texto, se houver
+  // ✅ Aplicar busca de texto
   if (q) {
     const termo = q.toLowerCase();
     medsEmUso = medsEmUso.filter(i => (i.medicamento || i.titulo || "").toLowerCase().includes(termo) || (i.tratamento || "").toLowerCase().includes(termo));
     sinaisVitais = sinaisVitais.filter(i => (i.titulo || "").toLowerCase().includes(termo) || (i.detalhes || "").toLowerCase().includes(termo));
     compromissos = compromissos.filter(i => (i.titulo || "").toLowerCase().includes(termo) || (i.local || "").toLowerCase().includes(termo));
   }
+
+  // ✅ Aplicar filtros de data e status nos compromissos
+  if (dataInicio) compromissos = compromissos.filter(i => i.data && i.data >= dataInicio);
+  if (dataFim) compromissos = compromissos.filter(i => i.data && i.data <= dataFim);
+  if (status) compromissos = compromissos.filter(i => (i.situacao ?? "proximo") === status);
   
   const tratamentosUnicos = Array.from(new Set(
     itens.filter(i => i.cuidado === "Medicação" && i.tratamento).map(i => i.tratamento)
@@ -45,6 +52,13 @@ function Relatorios() {
       <h2 className="text-lg font-bold text-[#2C4A6B] border-b pb-1 flex-1">{titulo}</h2>
     </div>
   );
+
+  const labelStatus = (s?: Situacao) => {
+    if (s === "feito") return "Compareceu";
+    if (s === "faltou") return "Faltou";
+    if (s === "cancelado") return "Cancelou";
+    return "Próximo";
+  };
 
   return (
     <div className="mx-auto w-full max-w-lg pb-20 pt-2">
@@ -62,6 +76,8 @@ function Relatorios() {
         <p className="text-sm text-muted-foreground">Paciente: {ativa?.nome}</p>
         <p className="text-xs text-muted-foreground">Gerado em {formatData(hoje)}</p>
         {q && <p className="text-xs text-muted-foreground">Filtro de busca: "{q}"</p>}
+        {status && <p className="text-xs text-muted-foreground">Status: {labelStatus(status as Situacao)}</p>}
+        {(dataInicio || dataFim) && <p className="text-xs text-muted-foreground">Período: {dataInicio ? formatData(dataInicio) : "início"} até {dataFim ? formatData(dataFim) : "hoje"}</p>}
       </div>
 
       <div className="px-4 print:px-0">
@@ -112,8 +128,10 @@ function Relatorios() {
                     <div>
                       <p className="font-bold text-foreground">{c.titulo}</p>
                       <p className="text-muted-foreground">{c.local || "Local não informado"} | {c.profissional || "Profissional não informado"}</p>
+                      {/* ✅ Mostra o status do compromisso no relatório */}
+                      <p className="text-xs font-bold mt-1 text-[#5B92C7]">{labelStatus(c.situacao)}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">{formatData(c.data)} {c.hora}</span>
+                                        <span className="text-xs text-muted-foreground whitespace-nowrap">{formatData(c.data)} {c.hora}</span>
                   </li>
                 ))}
               </ul>
