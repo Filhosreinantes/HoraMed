@@ -24,9 +24,7 @@ class ErroCheckout extends Error {
 }
 
 async function chamar<T>(body: Record<string, unknown>): Promise<T> {
-  // ⚠️ ATENÇÃO: Se você criou uma nova Edge Function chamada "horamed-checkout" no Supabase, 
-  // troque o nome abaixo. Se ainda está usando a mesma função do Rotina Azul, deixe como está.
-  const { data, error } = await supabase.functions.invoke("rotina-azul-checkout", { body });
+  const { data, error } = await supabase.functions.invoke("horamed-checkout", { body });
   if (error) {
     const msg = await error.context
       ?.json?.()
