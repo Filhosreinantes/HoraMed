@@ -5,7 +5,7 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "horaMed" },
+      { title: "HoraMed" },
       { name: "description", content: "Sua saúde organizada de forma simples." },
     ],
   }),
