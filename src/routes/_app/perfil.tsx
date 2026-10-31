@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Pencil, Plus, LogOut, Trash2, HeartPulse, AlertCircle } from "lucide-react";
+import { Pencil, Plus, LogOut, Trash2, Phone, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useApp } from "@/lib/app-store";
 import { supabase } from "@/lib/supabase";
@@ -8,14 +8,12 @@ import { formatData, nowLocalISO, uid, type Pessoa } from "@/lib/cuidados";
 import { Botao, Campo, Divisor } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/_app/perfil")({
-  head: () => ({
-    meta: [
-      { title: "Perfil · horaMed" },
-      { name: "description", content: "Gerencie os dados do paciente." },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "Perfil · HoraMed" }] }),
   component: Perfil,
 });
+
+const EMOJIS_PESSOAS = ["🧑", "👩", "👨", "👧", "👦", "👵", "👴", "🧒", "👶", "👩‍🦱", "👨‍🦱", "🧔"];
+const CORES_TEMA = ["azul", "rosa", "verde", "amarelo", "lilás"];
 
 function Perfil() {
   const { ativa, pessoas, user, recarregar, setAtivaId } = useApp();
@@ -23,32 +21,22 @@ function Perfil() {
   const [sair, setSair] = useState(false);
   const [excluir, setExcluir] = useState(false);
 
-  // Campos que não estão no tipo Pessoa padrão, mas podemos adicionar no objeto
-  const [tipoSanguineo, setTipoSanguineo] = useState("");
-  const [alergias, setAlergias] = useState("");
-  const [contatoEmergencia, setContatoEmergencia] = useState("");
-
   const abrirEdicao = (pessoa: Partial<Pessoa>) => {
     setForm(pessoa);
-    setTipoSanguineo((pessoa as any).tipo_sanguineo || "");
-    setAlergias((pessoa as any).alergias || "");
-    setContatoEmergencia((pessoa as any).contato_emergencia || "");
   };
 
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form?.nome) { toast.error("Informe o nome."); return; }
     const agora = nowLocalISO();
+    
     const campos = {
       nome: form.nome,
       nascimento: form.nascimento || null,
-      tipo_sanguineo: tipoSanguineo || null,
-      alergias: alergias || null,
-      contato_emergencia: contatoEmergencia || null,
+      responsavel: form.responsavel || null,
+      emoji: form.emoji || "🧑",
+      tema: form.tema || "azul",
       atualizado_em: agora,
-      // Mantemos o emoji e tema padrão para o banco não reclamar
-      emoji: "🧑",
-      tema: "azul",
     };
 
     if (form.id) {
@@ -86,23 +74,13 @@ function Perfil() {
 
       {ativa && (
         <div className="notebook flex items-center gap-4 p-5">
-          <span className="grid h-16 w-16 place-items-center rounded-full bg-gold-soft text-4xl">🧑</span>
+          <span className="grid h-16 w-16 place-items-center rounded-full bg-gold-soft text-4xl">{ativa.emoji || "🧑"}</span>
           <div className="min-w-0 flex-1">
             <p className="font-display text-2xl font-semibold italic">{ativa.nome}</p>
             {ativa.nascimento && <p className="text-sm text-muted-foreground">Nasceu em {formatData(ativa.nascimento)}</p>}
-            {(ativa as any).tipo_sanguineo && (
+            {ativa.responsavel && (
               <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                <HeartPulse className="h-3.5 w-3.5" /> Tipo Sanguíneo: {(ativa as any).tipo_sanguineo}
-              </p>
-            )}
-            {(ativa as any).alergias && (
-              <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
-                <AlertCircle className="h-3.5 w-3.5" /> Alergias: {(ativa as any).alergias}
-              </p>
-            )}
-            {(ativa as any).contato_emergencia && (
-              <p className="text-sm text-muted-foreground mt-1">
-                <strong>Emergência:</strong> {(ativa as any).contato_emergencia}
+                <Phone className="h-3.5 w-3.5" /> Emergência: {ativa.responsavel}
               </p>
             )}
           </div>
@@ -112,7 +90,7 @@ function Perfil() {
         </div>
       )}
 
-      <Botao variant="outline" className="flex w-full items-center justify-center gap-2" onClick={() => abrirEdicao({})}>
+      <Botao variant="outline" className="flex w-full items-center justify-center gap-2" onClick={() => abrirEdicao({ emoji: "🧑", tema: "azul" })}>
         <Plus className="h-5 w-5" /> Adicionar outro Perfil
       </Botao>
 
@@ -135,26 +113,26 @@ function Perfil() {
               <input className="field" type="date" value={form.nascimento ?? ""} onChange={(e) => setForm({ ...form, nascimento: e.target.value })} />
             </Campo>
 
-            <Campo label="Tipo Sanguíneo">
-              <select className="field" value={tipoSanguineo} onChange={(e) => setTipoSanguineo(e.target.value)}>
-                <option value="">Não informado</option>
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
+            <Campo label="Contato de Emergência (Nome e Telefone)">
+              <input className="field" placeholder="Ex: Maria (11) 99999-9999" value={form.responsavel ?? ""} onChange={(e) => setForm({ ...form, responsavel: e.target.value })} />
+            </Campo>
+
+            <div>
+              <p className="mb-1.5 text-sm font-semibold">Emoji</p>
+              <div className="flex flex-wrap gap-2">
+                {EMOJIS_PESSOAS.map((em) => (
+                  <button type="button" key={em} onClick={() => setForm({ ...form, emoji: em })}
+                    className={`grid h-11 w-11 place-items-center rounded-full text-2xl ${form.emoji === em ? "bg-sky ring-2 ring-accent" : "bg-muted"}`}>
+                    {em}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Campo label="Tema">
+              <select className="field" value={form.tema ?? "azul"} onChange={(e) => setForm({ ...form, tema: e.target.value })}>
+                {CORES_TEMA.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
-            </Campo>
-
-            <Campo label="Alergias (medicamentos, alimentos, etc)">
-              <input className="field" placeholder="Ex: Dipirona, Amendoim" value={alergias} onChange={(e) => setAlergias(e.target.value)} />
-            </Campo>
-
-            <Campo label="Contato de Emergência">
-              <input className="field" placeholder="Nome e telefone" value={contatoEmergencia} onChange={(e) => setContatoEmergencia(e.target.value)} />
             </Campo>
 
             <div className="flex gap-2 pt-2">
@@ -162,11 +140,7 @@ function Perfil() {
               <Botao type="submit" className="flex-1">Salvar</Botao>
             </div>
             {form.id && (
-              <button
-                type="button"
-                onClick={() => setExcluir(true)}
-                className="flex w-full items-center justify-center gap-2 pt-1 text-sm font-semibold text-destructive"
-              >
+              <button type="button" onClick={() => setExcluir(true)} className="flex w-full items-center justify-center gap-2 pt-1 text-sm font-semibold text-destructive">
                 <Trash2 className="h-4 w-4" /> Excluir este Perfil
               </button>
             )}
@@ -174,6 +148,7 @@ function Perfil() {
         </div>
       )}
 
+      {/* Modais de exclusão e sair permanecem iguais */}
       {excluir && form?.id && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/40 p-4" onClick={() => setExcluir(false)}>
           <div onClick={(e) => e.stopPropagation()} className="notebook w-full max-w-sm p-6 text-center">
@@ -186,9 +161,7 @@ function Perfil() {
             ) : (
               <>
                 <h2 className="text-xl font-semibold">Excluir {form.nome}?</h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Todas as consultas, exames e medicações registradas para este perfil serão apagadas. Isso não pode ser desfeito.
-                </p>
+                <p className="mt-2 text-sm text-muted-foreground">Todas as consultas, exames e medicações registradas para este perfil serão apagadas. Isso não pode ser desfeito.</p>
                 <div className="mt-5 flex gap-2">
                   <Botao variant="outline" className="flex-1" onClick={() => setExcluir(false)}>Cancelar</Botao>
                   <Botao variant="danger" className="flex-1" onClick={excluirPerfil}>Excluir</Botao>
