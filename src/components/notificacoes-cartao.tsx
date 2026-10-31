@@ -47,7 +47,7 @@ export function NotificacoesCartao() {
     executar(async () => {
       const final = await ativarNotificacoes(user.id);
       setEstado(final);
-      if (final === "ativas") toast.success("Lembretes ativados neste aparelho! 💙");
+      if (final === "ativas") toast.success("Lembretes ativados neste aparelho! 🩺");
       else if (final === "pendente")
         toast.error('Permissão não concedida. Toque em "Permitir" quando o navegador perguntar.');
     });
@@ -78,8 +78,7 @@ export function NotificacoesCartao() {
       {estado === "ativas" && (
         <>
           <p className="text-xs text-muted-foreground">
-            Você recebe um aviso no horário de cada remédio e outro 15 minutos depois, se a dose
-            ainda não tiver sido registrada.
+            Você receberá um aviso no horário de cada medicação e outro 15 minutos depois, caso a dose ainda não tenha sido registrada.
           </p>
         </>
       )}
@@ -87,8 +86,7 @@ export function NotificacoesCartao() {
       {estado === "pendente" && (
         <>
           <p className="text-xs text-muted-foreground">
-            Ative para ser avisada na hora de cada remédio. Se você disse "Agora não" antes, pode
-            ativar aqui a qualquer momento.
+            Ative para receber avisos na hora de cada medicação. Se você disse "Agora não" antes, pode ativar aqui a qualquer momento.
           </p>
           <button
             onClick={ativar}
