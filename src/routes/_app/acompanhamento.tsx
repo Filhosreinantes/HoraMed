@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { 
   ChevronLeft, History, Stethoscope, FileText, Pill as PillIcon, Plane, 
   RefreshCw, Activity, Droplet, CalendarCheck, PillBottle, X, 
-  ClipboardList, HeartPulse 
+  ClipboardList, HeartPulse, Trash2
 } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import {
