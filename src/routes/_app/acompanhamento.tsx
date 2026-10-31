@@ -444,40 +444,52 @@ function Acompanhamento() {
     );
   }
 
-  // ✅ TELA: HISTÓRICO DE DOSES
-  if (view === "medicacoes_historico") {
-    return (
-      <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
-        <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Histórico</h1></header>
-        <SeletorTesouro />
-
-        <div className="notebook p-5 space-y-4">
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <input type="date" className="field text-sm p-2" value={dataHistorico} onChange={(e) => setDataHistorico(e.target.value)} />
-            <select className="field text-sm p-2" value={filtroMed} onChange={(e) => setFiltroMed(e.target.value)}>
-              <option value="">Todos os remédios</option>
-              {emUso.map(m => <option key={m.id} value={m.medicamento}>{m.medicamento}</option>)}
-            </select>
-          </div>
-          {logsFiltrados.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum registro encontrado.</p>
-          ) : (
-            <ul className="space-y-2">
-              {logsFiltrados.map((l: any) => (
-                <li key={l.id} className="flex items-center gap-2 rounded-lg bg-muted/20 p-2 font-sans text-sm">
-                  <span className="text-green-600">✓</span>
-                  <span className="flex-1 text-foreground">{l.titulo}</span>
-                  <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
-                  <button onClick={() => excluirLog(l)} className="p-1 text-muted-foreground hover:text-red-500 transition" title="Excluir registro"><Trash2 className="h-4 w-4" /></button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+// ✅ TELA: HISTÓRICO DE DOSES
+if (view === "medicacoes_historico") {
+  return (
+    <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+      <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+      
+      {/* ✅ Título com botão de relatório filtrado pelo remédio selecionado */}
+      <div className="flex justify-between items-center">
+        <h1 className="font-display text-3xl font-semibold italic text-foreground">Histórico</h1>
+        <Link 
+          to="/relatorios" 
+          search={{ tipo: "medicamentos", q: filtroMed }} 
+          className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden"
+        >
+          <FileText className="h-3.5 w-3.5" /> Relatório
+        </Link>
       </div>
-    );
-  }
+      
+      <SeletorTesouro />
+
+      <div className="notebook p-5 space-y-4">
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <input type="date" className="field text-sm p-2" value={dataHistorico} onChange={(e) => setDataHistorico(e.target.value)} />
+          <select className="field text-sm p-2" value={filtroMed} onChange={(e) => setFiltroMed(e.target.value)}>
+            <option value="">Todos os remédios</option>
+            {emUso.map(m => <option key={m.id} value={m.medicamento}>{m.medicamento}</option>)}
+          </select>
+        </div>
+        {logsFiltrados.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum registro encontrado.</p>
+        ) : (
+          <ul className="space-y-2">
+            {logsFiltrados.map((l: any) => (
+              <li key={l.id} className="flex items-center gap-2 rounded-lg bg-muted/20 p-2 font-sans text-sm">
+                <span className="text-green-600">✓</span>
+                <span className="flex-1 text-foreground">{l.titulo}</span>
+                <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
+                <button onClick={() => excluirLog(l)} className="p-1 text-muted-foreground hover:text-red-500 transition" title="Excluir registro"><Trash2 className="h-4 w-4" /></button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
 
   // ✅ TELA: MEUS REMÉDIOS (Estoque com Alerta)
   if (view === "medicacoes_estoque") {
