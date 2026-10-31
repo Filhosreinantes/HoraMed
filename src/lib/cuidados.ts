@@ -1,4 +1,4 @@
-export type Cuidado = "Consulta" | "Terapia" | "Exame" | "Medicação";
+export type Cuidado = "Consulta" | "Exame" | "Medicação" | "Pressão" | "Glicose";
 export type Situacao = "proximo" | "feito" | "faltou" | "cancelado";
 
 export interface Pessoa {
@@ -24,7 +24,6 @@ export interface Dados {
   local?: string | undefined;
   profissional?: string | undefined;
   especialidade?: string | undefined;
-  tipoTerapia?: string | undefined;
   tipoExame?: string | undefined;
   recomendacoes?: string | undefined;
   medicamento?: string | undefined;
@@ -51,13 +50,17 @@ export interface Dados {
   dosagemValor?: string | undefined;
   dosagemUnidade?: string | undefined;
   estoqueAtual?: number | undefined;
+  
+  // Campos para Pressão e Glicose (salvos no 'detalhes' do banco)
+  detalhes?: string | undefined;
 }
 
 export const EMOJI: Record<Cuidado, string> = {
   Consulta: "🩺",
-  Terapia: "🌿",
   Exame: "📄",
   Medicação: "💊",
+  Pressão: "🩸",
+  Glicose: "🩸",
 };
 
 export const SITUACAO_LABEL: Record<Situacao, string> = {
@@ -113,6 +116,7 @@ export function addMonths(d: Date, n: number) {
 
 export type Programacao = "unica" | "semanal" | "quinzenal" | "mensal";
 
+// Mantido caso você queira usar no futuro, mas não é mais usado no criar.tsx
 export function gerarSessoes(
   primeira: string,
   programacao: Programacao,
@@ -137,7 +141,7 @@ export function gerarSessoes(
 }
 
 export function subtitulo(d: Dados) {
-  return [d.profissional, d.especialidade || d.tipoTerapia || d.tipoExame, d.local].filter(Boolean).join(" · ");
+  return [d.profissional, d.especialidade || d.tipoExame, d.local].filter(Boolean).join(" · ");
 }
 
 export function tituloComTipo(d: Dados) {
@@ -151,7 +155,7 @@ export function tituloEvento(original: Dados, situacao: Situacao) {
     return tituloComTipo({ ...original, titulo: original.medicamento || original.titulo });
   }
   if (original.profissional?.trim()) {
-    const especialidade = original.especialidade || original.tipoTerapia || original.tipoExame;
+    const especialidade = original.especialidade || original.tipoExame;
     return `${original.cuidado || "Compromisso"} com ${original.profissional.trim()}${especialidade ? ` (${especialidade})` : ""}`;
   }
   return tituloComTipo(original);
@@ -166,9 +170,6 @@ function aplicarEdicoes(original: Dados, edicoes: Dados[] = []) {
   return Object.assign(atual, fixos) as Dados;
 }
 
-/**
- * ✅ CORREÇÃO: Filtro robusto para garantir que itens excluídos não apareçam na tela.
- */
 export function resolverSituacoes(todos: Dados[]) {
   const eventos = todos.filter((d) => d.evento && d.parentId);
   const ultimo = new Map<string, Dados>();
@@ -178,7 +179,6 @@ export function resolverSituacoes(todos: Dados[]) {
   for (const e of eventos) {
     if (!e.parentId) continue;
     
-    // ✅ Se for exclusão, adiciona o ID pai na lista negra
     if (e.acao === "excluir") {
       excluidos.add(e.parentId);
       continue;
@@ -193,10 +193,9 @@ export function resolverSituacoes(todos: Dados[]) {
     if (!prev || e.criadoEm >= prev.criadoEm) ultimo.set(e.parentId, e);
   }
 
-  // ✅ Filtra os itens que estão na lista negra
   return todos
     .filter((d) => !d.evento)
-    .filter((d) => !excluidos.has(d.id)) // ✅ E aqui removemos os que foram marcados como excluídos
+    .filter((d) => !excluidos.has(d.id)) 
     .map((original) => {
       const d = aplicarEdicoes(original, edicoes.get(original.id));
       const ev = ultimo.get(d.id);
@@ -233,7 +232,6 @@ export function medicacoesComLembrete(todos: Dados[], hoje = hojeYMD()) {
       (d.horarios?.length ?? 0) > 0 &&
       (!d.inicio || d.inicio <= hoje) &&
       medicacaoEmUso(d, hoje) &&
-      // Dias da semana escolhidos (0 = domingo); sem escolha, todos os dias.
       (!d.diasSemana?.length || d.diasSemana.includes(parseYMD(hoje).getDay())) &&
       d.situacao !== "cancelado",
   );
@@ -244,7 +242,6 @@ export function horarioDoLog(d: Dados) {
 }
 
 export function doseRegistrada(todos: Dados[], medId: string, dia: string, horario: string) {
-  // Registros de dose excluídos pela usuária deixam de contar como "tomada".
   const excluidos = new Set(todos.filter((d) => d.acao === "excluir" && d.parentId).map((d) => d.parentId));
   return todos.find(
     (d) =>
