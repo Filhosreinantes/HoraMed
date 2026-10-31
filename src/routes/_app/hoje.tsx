@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute } from "@tanstack/react-router";
-import { Clock, Stethoscope, ChevronRight, X, Pill } from "lucide-react";
+import { Clock, Stethoscope, ChevronRight, X, Pill, Activity } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useApp } from "@/lib/app-store";
 import { hojeYMD, medicacaoEmUso, doseRegistrada, nowLocalISO, uid, type Dados } from "@/lib/cuidados";
@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner"; 
 
 export const Route = createFileRoute("/_app/hoje")({
-  head: () => ({ meta: [{ title: "Hoje · Rotina Azul" }] }),
+  head: () => ({ meta: [{ title: "Hoje · horaMed" }] }),
   component: Hoje,
 });
 
@@ -47,9 +47,10 @@ function Hoje() {
   }, [emUso, logs, hoje]);
 
   // --- Lógica de Compromissos ---
+  // Filtramos apenas Consultas e Exames, que são os compromissos agendados.
   const compromissosHoje = useMemo(() => {
     return itens
-      .filter(i => i.data === hoje && i.cuidado !== "Medicação" && (i.cuidado as any) !== "Sintoma" && (i.cuidado as any) !== "BemEstar" && (i.cuidado as any) !== "Tesouro")
+      .filter(i => i.data === hoje && (i.cuidado === "Consulta" || i.cuidado === "Exame"))
       .sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
   }, [itens, hoje]);
 
@@ -77,6 +78,7 @@ function Hoje() {
 
   return (
     <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
+      
       {/* MODAL: TODAS AS DOSES */}
       {modalDosesAberto && (
         <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: `linear-gradient(135deg, var(--tema-claro) 0%, #F8F9FA 100%)` }}>
@@ -134,7 +136,7 @@ function Hoje() {
                 <div className="flex items-center justify-between gap-3 cursor-pointer" onClick={() => setDetalheAberto(i)}>
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="grid h-10 w-10 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
-                      <Stethoscope className="h-5 w-5" />
+                      {i.cuidado === "Consulta" ? <Stethoscope className="h-5 w-5" /> : <Activity className="h-5 w-5" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-sm text-foreground truncate">{i.titulo}</h3>
@@ -189,9 +191,9 @@ function Hoje() {
       {/* HEADER */}
       <header className="text-center px-4 mb-2 flex flex-col items-center">
         <h1 className="font-display text-4xl font-bold italic text-[var(--tema-escuro)] flex items-center justify-center gap-2">
-          Rotina Azul <span className="text-3xl not-italic">💙</span>
+          horaMed <span className="text-3xl not-italic">🩺</span>
         </h1>
-        <p className="text-xs font-sans italic text-muted-foreground mt-2">Organização que acalma, cuidado que transforma.</p>
+        <p className="text-xs font-sans italic text-muted-foreground mt-2">Sua saúde organizada de forma simples.</p>
       </header>
 
       <div className="px-4"><SeletorTesouro /></div>
@@ -232,7 +234,7 @@ function Hoje() {
                           {a.med.dosagem && a.med.estoqueAtual !== undefined && <span>·</span>}
                           {a.med.estoqueAtual !== undefined && (
                             <span>
-                              {a.med.estoqueAtual === 1 ? "Resta 1 comprimido" : `Restam ${a.med.estoqueAtual} comprimidos`}
+                              {a.med.estoqueAtual === 1 ? "Resta 1 unid." : `Restam ${a.med.estoqueAtual} unid.`}
                             </span>
                           )}
                         </div>
@@ -274,7 +276,7 @@ function Hoje() {
                     <div className="flex items-center justify-between gap-3 p-3 cursor-pointer hover:bg-white transition" onClick={() => setDetalheAberto(comp)}>
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="grid h-8 w-8 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
-                          <Stethoscope className="h-4 w-4" />
+                          {comp.cuidado === "Consulta" ? <Stethoscope className="h-4 w-4" /> : <Activity className="h-4 w-4" />}
                         </div>
                         <div className="flex flex-col min-w-0">
                           <span className="font-bold text-sm text-foreground truncate">{comp.titulo}</span>
