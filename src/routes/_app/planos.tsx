@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { AlarmClock, Award, Ban, Check, History, Lock, RefreshCw, Users, X, FileText, Layers, Sparkles } from "lucide-react";
+import { Award, Check, History, Lock, RefreshCw, Users, X, FileText, Sparkles, BellRing, UserCircle, ShieldPlus, Activity } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -9,17 +9,17 @@ import { ORDEM_PLANOS, PLANOS, reais, type PlanoId } from "@/lib/planos";
 import { ehAppAndroid } from "@/lib/plataforma";
 
 export const Route = createFileRoute("/_app/planos")({
-  head: () => ({ meta: [{ title: "Seja Premium · Rotina Azul" }] }),
+  head: () => ({ meta: [{ title: "Seja Premium · horaMed" }] }),
   component: Planos,
 });
 
-// Cada linha compara o mesmo recurso nos dois planos; o grátis é só ilustrativo.
+// Tabela de comparação específica para o horaMed
 const LINHAS: { gratis?: string; premium: string; icone: ReactNode }[] = [
-  { gratis: "Até 2 por tipo", premium: "Cadastros ilimitados", icone: <Layers className="h-4 w-4" /> },
-  { gratis: "1 por mês", premium: "Relatórios ilimitados", icone: <FileText className="h-4 w-4" /> },
+  { gratis: "1 Perfil", premium: "Perfis de pacientes ilimitados", icone: <Users className="h-4 w-4" /> },
+  { gratis: "Até 3 alarmes", premium: "Alarmes ilimitados", icone: <BellRing className="h-4 w-4" /> },
+  { gratis: "Histórico básico", premium: "Histórico completo de Pressão e Glicose", icone: <Activity className="h-4 w-4" /> },
   { gratis: "Com anúncios", premium: "Sem anúncios", icone: <Sparkles className="h-4 w-4" /> },
-  { premium: "Vários Tesouros", icone: <Users className="h-4 w-4" /> },
-  { premium: "Histórico completo", icone: <History className="h-4 w-4" /> },
+  { premium: "Relatórios médicos ilimitados", icone: <FileText className="h-4 w-4" /> },
 ];
 
 function Planos() {
@@ -40,7 +40,7 @@ function Planos() {
           <X className="h-5 w-5" />
         </Link>
         <p className="notebook p-4 text-center text-sm text-muted-foreground">
-          Para assinar ou renovar, acesse o site do Rotina Azul.
+          Para assinar ou renovar o Premium, acesse o site oficial do horaMed pelo navegador do seu celular.
         </p>
       </div>
     );
@@ -104,7 +104,7 @@ function Planos() {
       </div>
 
       <p className="text-center text-muted-foreground">
-        Desbloqueie todos os recursos do Rotina Azul.
+        Desbloqueie todos os recursos do horaMed e cuide da sua saúde sem limites.
       </p>
 
       <div className="space-y-3">
