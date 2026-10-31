@@ -24,6 +24,8 @@ class ErroCheckout extends Error {
 }
 
 async function chamar<T>(body: Record<string, unknown>): Promise<T> {
+  // ⚠️ ATENÇÃO: Se você criou uma nova Edge Function chamada "horamed-checkout" no Supabase, 
+  // troque o nome abaixo. Se ainda está usando a mesma função do Rotina Azul, deixe como está.
   const { data, error } = await supabase.functions.invoke("rotina-azul-checkout", { body });
   if (error) {
     const msg = await error.context
@@ -127,7 +129,7 @@ export function CheckoutPix({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="max-h-[95vh] w-full max-w-sm space-y-4 overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
         <div className="text-center">
-          <h2 className="font-display text-2xl font-bold text-foreground">Assinar Rotina Azul</h2>
+          <h2 className="font-display text-2xl font-bold text-foreground">Assinar horaMed</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             {PLANOS[plano].nome} · {reais(PLANOS[plano].centavos)} no PIX
           </p>
