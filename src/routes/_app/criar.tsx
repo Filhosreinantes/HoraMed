@@ -2,10 +2,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
-import { Camera, Loader2, X, Clock, CalendarDays, Stethoscope, Leaf, FileText, Pill, Check } from "lucide-react";
+import { Camera, Loader2, X, Clock, CalendarDays, Stethoscope, FileText, Pill, Check, Activity, Droplet } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import { supabase } from "@/lib/supabase";
-import { DIAS_SEMANA, gerarSessoes, nowLocalISO, uid, hojeYMD, type Cuidado, type Dados, type Programacao } from "@/lib/cuidados";
+import { nowLocalISO, uid, hojeYMD, type Cuidado, type Dados } from "@/lib/cuidados";
 import { Botao, Campo, Divisor, SeletorTesouro } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/_app/criar")({
@@ -16,31 +16,30 @@ export const Route = createFileRoute("/_app/criar")({
   },
   head: () => ({
     meta: [
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { title: "Novo compromisso · Rotina Azul" },
-      { name: "description", content: "Agende consultas, terapias, exames e medicações." },
-      { property: "og:title", content: "Novo compromisso · Rotina Azul" },
-      { property: "og:description", content: "Agende consultas, terapias, exames e medicações." },
+      { title: "Novo registro · horaMed" },
+      { name: "description", content: "Agende medicamentos, consultas, exames e registre sinais vitais." },
     ],
   }),
   component: Criar,
 });
 
-type K = "data"|"hora"|"local"|"profissional"|"especialidade"|"tipoTerapia"|"tipoExame"|"recomendacoes"|"medicamento"|"frequencia"|"inicio"|"fim"|"programacao"|"meses"|"diaSemana"|"prazoDias";
+// Adicionamos os novos tipos e removemos os de terapia
+type K = "data"|"hora"|"local"|"profissional"|"especialidade"|"tipoExame"|"recomendacoes"|"medicamento"|"frequencia"|"inicio"|"fim"|"prazoDias"|"pressaoSistolica"|"pressaoDiastolica"|"observacoes"|"glicoseValor"|"glicoseContexto";
 type F = Partial<Record<K, string>>;
 
 export function Criar({ tipoInicial, onFechar }: { tipoInicial?: any, onFechar?: () => void } = {}) {
   const { duplicar } = Route.useSearch() as { duplicar?: string };
   const { ativa, salvarRegistros, itens } = useApp(); 
   const navigate = useNavigate();
-  const [tipo, setTipo] = useState<Cuidado | null>(tipoInicial || "Consulta");
-  const [f, setF] = useState<F>({ programacao: "unica", meses: "3", diaSemana: "1", inicio: hojeYMD() });
-useEffect(() => {
-  if (tipoInicial) {
-    setTipo(tipoInicial);
-  }
-}, [tipoInicial]);
+  
+  const [tipo, setTipo] = useState<any>(tipoInicial || "Consulta");
+  const [f, setF] = useState<F>({ inicio: hojeYMD() });
+
+  useEffect(() => {
+    if (tipoInicial) {
+      setTipo(tipoInicial);
+    }
+  }, [tipoInicial]);
 
   const [fotoUrl, setFotoUrl] = useState("");
   const [enviandoFoto, setEnviandoFoto] = useState<"caixa" | null>(null);
@@ -82,15 +81,9 @@ useEffect(() => {
         }
         if (med.diasSemana) setDiasSemana(med.diasSemana);
         if (med.fotoUrl) setFotoUrl(med.fotoUrl);
-        
         if (med.tratamento) {
-          const opcoes = ["Febre", "Dor", "Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite", "Asma", "Bronquite", "Sinusite", "Gastrite", "Refluxo", "Diabetes", "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático", "Tireoide", "Ansiedade", "Depressão", "Vitaminas / Suplementos"];
-          if (opcoes.includes(med.tratamento)) {
-            setTratamento(med.tratamento);
-          } else {
-            setTratamento(med.tratamento); // Salva o nome personalizado direto
-            setTratamentoOutro(med.tratamento);
-          }
+          setTratamento(med.tratamento);
+          setTratamentoOutro(med.tratamento);
         }
       }
     }
@@ -119,9 +112,7 @@ useEffect(() => {
 
   const toggleDia = (diaIndex: number) => {
     setDiasSemana((prev) =>
-      prev.includes(diaIndex)
-        ? prev.filter((d) => d !== diaIndex)
-        : [...prev, diaIndex]
+      prev.includes(diaIndex) ? prev.filter((d) => d !== diaIndex) : [...prev, diaIndex]
     );
   };
 
@@ -136,7 +127,6 @@ useEffect(() => {
     const { data, error } = await supabase.storage.from("medicamentos").upload(nomeArquivo, file);
 
     if (error) {
-      console.error(error);
       toast.error("Erro ao enviar a foto.");
       setEnviandoFoto(null);
       return;
@@ -164,13 +154,13 @@ useEffect(() => {
     const base = { pessoaId: ativa.id, criadoEm: nowLocalISO(), cuidado: tipo, situacao: "proximo" as const };
     let lista: Dados[] = [];
 
+    // USANDO CAMPOS GENÉRICOS (titulo / detalhes) PARA NÃO QUEBRAR O BANCO
     if (tipo === "Consulta") {
       lista = [{ ...base, id: uid(), titulo: `Consulta${f.especialidade ? ` · ${f.especialidade}` : ""}`, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, especialidade: f.especialidade }];
     } else if (tipo === "Exame") {
       lista = [{ ...base, id: uid(), titulo: `Exame · ${f.tipoExame}`, tipoExame: f.tipoExame, data: f.data, hora: f.hora, local: f.local, profissional: f.profissional, recomendacoes: f.recomendacoes }];
     } else if (tipo === "Medicação") {
       const horariosCalculados = calcularHorarios();
-
       lista = [{
         ...base,
         id: uid(),
@@ -188,29 +178,34 @@ useEffect(() => {
         fim: fimCalculado || undefined,
         fotoUrl: fotoUrl,
         diasSemana: diasSemana,
-        tratamento: tratamento || undefined, // ✅ Agora salva o texto final (ou "Ouvido" ou "Febre")
+        tratamento: tratamento || undefined,
       }];
-    } else {
-      const prog = f.programacao as Programacao;
-      const meses = Number(f.meses);
-      const dia = Number(f.diaSemana);
-      const datas = gerarSessoes(f.data ?? "", prog, meses, prog === "semanal" ? dia : undefined);
-      const programaId = prog === "unica" ? undefined : uid();
-      lista = datas.map((data, idx) => ({
-        ...base,
-        id: uid(),
-        titulo: `Terapia · ${f.tipoTerapia}${datas.length > 1 ? ` (${idx + 1}/${datas.length})` : ""}`,
-        tipoTerapia: f.tipoTerapia, profissional: f.profissional, local: f.local, data, hora: f.hora,
-        ...(programaId ? { programa: true, programaId, duracaoMeses: meses, frequencia: prog, diaSemana: prog === "semanal" ? DIAS_SEMANA[dia] : undefined } : {}),
-      }));
+    } else if (tipo === "Pressão") {
+      lista = [{ 
+        ...base, 
+        id: uid(), 
+        titulo: `Pressão: ${f.pressaoSistolica}/${f.pressaoDiastolica}`, 
+        data: f.data, 
+        hora: f.hora,
+        detalhes: f.observacoes // Salvando observações no detalhes genérico
+      }];
+    } else if (tipo === "Glicose") {
+      lista = [{ 
+        ...base, 
+        id: uid(), 
+        titulo: `Glicose: ${f.glicoseValor} mg/dL`, 
+        data: f.data, 
+        hora: f.hora,
+        detalhes: `Contexto: ${f.glicoseContexto || "jejum"}. ${f.observacoes || ""}`.trim()
+      }];
     }
 
     setSalvando(true);
     const ok = await salvarRegistros(lista);
     setSalvando(false);
     if (ok) {
-      toast.success(lista.length > 1 ? `${lista.length} sessões agendadas!` : "Agendamento guardado!");
-      navigate({ to: "/acompanhamento" });
+      toast.success("Registro salvo com sucesso!");
+      navigate({ to: "/acompanhamento" }); // Ajuste se a rota principal for outra
     }
   };
 
@@ -218,10 +213,10 @@ useEffect(() => {
     <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
       <header className="text-center px-4 mb-2 flex flex-col items-center">
         <h1 className="font-display text-4xl font-bold italic text-[var(--tema-escuro)] flex items-center justify-center gap-2">
-          Rotina Azul <span className="text-3xl not-italic">💙</span>
+          horaMed <span className="text-3xl not-italic">🩺</span>
         </h1>
         <p className="text-xs font-sans italic text-muted-foreground mt-2">
-          {duplicar ? "Renovar Programação" : "Organização que acalma, cuidado que transforma."}
+          {duplicar ? "Renovar Programação" : "Sua saúde organizada de forma simples."}
         </p>
       </header>
       
@@ -230,21 +225,22 @@ useEffect(() => {
       </div>
 
       <p className="font-display text-xl up font-bold text-[var(--tema)] text-center mb-2">
-        Adicione aqui os novos registros
+        O que você quer registrar?
       </p>
 
       <div className="grid grid-cols-2 gap-4 px-4 mt-6">
         {[
-          { tipo: "Consulta", icone: Stethoscope },
-          { tipo: "Terapia", icone: Leaf },
-          { tipo: "Exame", icone: FileText },
           { tipo: "Medicação", icone: Pill },
+          { tipo: "Consulta", icone: Stethoscope },
+          { tipo: "Exame", icone: FileText },
+          { tipo: "Pressão", icone: Activity },
+          { tipo: "Glicose", icone: Droplet },
         ].map(({ tipo: c, icone: Icone }) => {
           const selecionado = tipo === c;
           return (
             <button
               key={c}
-              onClick={() => setTipo(selecionado ? null : (c as Cuidado))}
+              onClick={() => setTipo(selecionado ? null : c)}
               className={`notebook flex flex-col items-center justify-center p-4 transition hover:bg-muted/10 ${
                 selecionado ? "border-[var(--tema)]" : "border-[#B8933F]/60"
               }`}
@@ -258,17 +254,11 @@ useEffect(() => {
             >
               <div
                 className="grid h-10 w-10 place-items-center rounded-full transition-colors mb-2"
-                style={{
-                  backgroundColor: "var(--tema-claro)",
-                  color: "var(--tema-escuro)",
-                }}
+                style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}
               >
                 <Icone className="h-5 w-5" />
               </div>
-              <span
-                className="font-display text-sm font-bold italic transition-colors"
-                style={{ color: selecionado ? "var(--tema-escuro)" : "#4A4A4A" }}
-              >
+              <span className="font-display text-sm font-bold italic transition-colors" style={{ color: selecionado ? "var(--tema-escuro)" : "#4A4A4A" }}>
                 {c}
               </span>
             </button>
@@ -280,44 +270,25 @@ useEffect(() => {
         <div className="relative mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="fixed inset-0 z-0" onClick={() => setTipo(null)} />
 
-          <form
-            onSubmit={guardar}
-            className="relative z-10 space-y-5 rounded-[2rem] bg-white p-6 shadow-xl"
-            style={{ border: "1px solid var(--tema-claro)", borderTop: "4px solid var(--tema)" }}
-          >
+          <form onSubmit={guardar} className="relative z-10 space-y-5 rounded-[2rem] bg-white p-6 shadow-xl" style={{ border: "1px solid var(--tema-claro)", borderTop: "4px solid var(--tema)" }}>
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>
-                {tipo === "Medicação" ? (duplicar ? "Renovar Medicação" : "Nova Medicação") : `Nova ${tipo}`}
+                {tipo === "Medicação" ? (duplicar ? "Renovar Medicação" : "Nova Medicação") : `Novo(a) ${tipo}`}
               </h2>
-              <button
-                type="button"
-                onClick={() => setTipo(null)}
-                className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-200"
-              >
+              <button type="button" onClick={() => setTipo(null)} className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-200">
                 <X className="h-3 w-3" /> Fechar
               </button>
             </div>
-           
             
             <style>{`
               form input.field, form select.field, form textarea.field {
-                border-radius: 1rem;
-                border: 1.5px solid #E2E8F0;
-                background-color: #FFFFFF;
-                font-family: var(--font-sans);
-                padding: 0.75rem 1rem;
+                border-radius: 1rem; border: 1.5px solid #E2E8F0; background-color: #FFFFFF;
+                font-family: var(--font-sans); padding: 0.75rem 1rem;
               }
               form input.field:focus, form select.field:focus, form textarea.field:focus {
-                border-color: var(--tema);
-                box-shadow: 0 0 0 3px var(--tema-claro);
-                outline: none;
+                border-color: var(--tema); box-shadow: 0 0 0 3px var(--tema-claro); outline: none;
               }
-              form label > span {
-                font-family: var(--font-display);
-                font-style: italic;
-                color: var(--tema-escuro);
-                font-weight: 600;
-              }
+              form label > span { font-family: var(--font-display); font-style: italic; color: var(--tema-escuro); font-weight: 600; }
             `}</style>
 
             {tipo === "Consulta" && (
@@ -332,42 +303,6 @@ useEffect(() => {
               </>
             )}
 
-            {tipo === "Terapia" && (
-              <>
-                <Campo label="Tipo">{inp("tipoTerapia", "text", true)}</Campo>
-                <Campo label="Profissional">{inp("profissional")}</Campo>
-                <Campo label="Local">{inp("local")}</Campo>
-                <Campo label="Programação">
-                  <select className="field" value={f.programacao} onChange={set("programacao")}>
-                    <option value="unica">Sessão única</option>
-                    <option value="semanal">Toda semana</option>
-                    <option value="quinzenal">A cada 15 dias</option>
-                    <option value="mensal">Uma vez por mês</option>
-                  </select>
-                </Campo>
-                {f.programacao === "semanal" && (
-                  <Campo label="Dia da semana">
-                    <select className="field" value={f.diaSemana} onChange={set("diaSemana")}>
-                      {DIAS_SEMANA.map((d, i) => <option key={d} value={i}>{d}</option>)}
-                    </select>
-                  </Campo>
-                )}
-                <div className="grid grid-cols-2 gap-3">
-                  <Campo label="Primeira sessão">{inp("data", "date", true)}</Campo>
-                  <Campo label="Hora">{inp("hora", "time")}</Campo>
-                </div>
-                {f.programacao !== "unica" && (
-                  <Campo label="Por quanto tempo">
-                    <select className="field" value={f.meses} onChange={set("meses")}>
-                      <option value="3">3 meses</option>
-                      <option value="6">6 meses</option>
-                      <option value="12">12 meses</option>
-                    </select>
-                  </Campo>
-                )}
-              </>
-            )}
-
             {tipo === "Exame" && (
               <>
                 <Campo label="Tipo de exame">{inp("tipoExame", "text", true)}</Campo>
@@ -377,26 +312,47 @@ useEffect(() => {
                 </div>
                 <Campo label="Local">{inp("local")}</Campo>
                 <Campo label="Profissional / solicitante">{inp("profissional")}</Campo>
-                <Campo label="Recomendações">
-                  <textarea className="field min-h-24" value={f.recomendacoes ?? ""} onChange={set("recomendacoes")} />
+                <Campo label="Recomendações"><textarea className="field min-h-24" value={f.recomendacoes ?? ""} onChange={set("recomendacoes")} /></Campo>
+              </>
+            )}
+
+            {tipo === "Pressão" && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Campo label="Data">{inp("data", "date", true)}</Campo>
+                  <Campo label="Hora">{inp("hora", "time")}</Campo>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Campo label="Sistólica (Máx)">{inp("pressaoSistolica", "number", true)}</Campo>
+                  <Campo label="Diastólica (Mín)">{inp("pressaoDiastolica", "number", true)}</Campo>
+                </div>
+                <Campo label="Observações"><textarea className="field min-h-20" value={f.observacoes ?? ""} onChange={set("observacoes")} placeholder="Ex: Após caminhada..." /></Campo>
+              </>
+            )}
+
+            {tipo === "Glicose" && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Campo label="Data">{inp("data", "date", true)}</Campo>
+                  <Campo label="Hora">{inp("hora", "time")}</Campo>
+                </div>
+                <Campo label="Valor (mg/dL)">{inp("glicoseValor", "number", true)}</Campo>
+                <Campo label="Contexto">
+                  <select className="field" value={f.glicoseContexto ?? "jejum"} onChange={set("glicoseContexto")}>
+                    <option value="jejum">Em jejum</option>
+                    <option value="pos_prandial">Após refeição</option>
+                    <option value="aleatorio">Aleatório</option>
+                  </select>
                 </Campo>
+                <Campo label="Observações"><textarea className="field min-h-20" value={f.observacoes ?? ""} onChange={set("observacoes")} /></Campo>
               </>
             )}
 
             {tipo === "Medicação" && (
               <>
                 <Campo label="Nome">{inp("medicamento", "text", true)}</Campo>
-
                 <div className="grid grid-cols-[1.5fr_2fr] gap-3">
-                  <Campo label="Dosagem">
-                    <input
-                      className="field"
-                      type="number"
-                      placeholder="Ex: 5"
-                      value={dosagemValor}
-                      onChange={(e) => setDosagemValor(e.target.value)}
-                    />
-                  </Campo>
+                  <Campo label="Dosagem"><input className="field" type="number" placeholder="Ex: 5" value={dosagemValor} onChange={(e) => setDosagemValor(e.target.value)} /></Campo>
                   <Campo label="Unidade">
                     <select className="field" value={dosagemUnidade} onChange={(e) => setDosagemUnidade(e.target.value)}>
                       <option value="ml">ml (mililitros)</option>
@@ -407,151 +363,48 @@ useEffect(() => {
                     </select>
                   </Campo>
                 </div>
-
-                {(dosagemUnidade === "Comprimido(s)" || dosagemUnidade === "Cápsula(s)" || dosagemUnidade === "Injeção") ? (
-                  <Campo label="Estoque">
-                    <input
-                      className="field text-xs"
-                      type="number"
-                      placeholder="Escreva só números. Quantos comprimidos tem."
-                      value={estoqueAtual}
-                      onChange={(e) => setEstoqueAtual(e.target.value)}
-                    />
-                  </Campo>
-                ) : (
-                  <Campo label="Estoque">
-                    <input
-                      className="field text-xs"
-                      type="number"
-                      placeholder="Escreva só números. Quantos ml tem no frasco."
-                      value={estoqueAtual}
-                      onChange={(e) => setEstoqueAtual(e.target.value)}
-                    />
-                  </Campo>
-                )}
-
+                <Campo label="Estoque"><input className="field text-xs" type="number" placeholder="Quantos comprimidos/ml tem." value={estoqueAtual} onChange={(e) => setEstoqueAtual(e.target.value)} /></Campo>
                 <Campo label="Tratamento">
                   <div className="border-[1.5px] border-[#E2E8F0] rounded-2xl bg-white overflow-hidden">
-                    
                     {digitandoOutro ? (
                       <div className="p-3 flex items-center gap-2">
-                        <input
-                          type="text"
-                          className="w-full bg-transparent text-sm focus:outline-none text-foreground"
-                          placeholder="Escreva aqui o seu tratamento."
-                          value={tratamentoOutro}
-                          onChange={(e) => setTratamentoOutro(e.target.value)}
-                          autoFocus
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // ✅ A MÁGICA: Pega o texto e coloca como o valor do tratamento
-                            if (tratamentoOutro.trim()) {
-                              setTratamento(tratamentoOutro);
-                            } else {
-                              setTratamento(""); // Se apagar tudo, limpa o tratamento
-                            }
-                            setDigitandoOutro(false);
-                          }}
-                          className="p-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
+                        <input type="text" className="w-full bg-transparent text-sm focus:outline-none text-foreground" placeholder="Escreva aqui o seu tratamento." value={tratamentoOutro} onChange={(e) => setTratamentoOutro(e.target.value)} autoFocus />
+                        <button type="button" onClick={() => { if (tratamentoOutro.trim()) { setTratamento(tratamentoOutro); } else { setTratamento(""); } setDigitandoOutro(false); }} className="p-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition"><Check className="w-4 h-4" /></button>
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => setMostrarLista(!mostrarLista)}
-                        className="w-full flex items-center justify-between p-3 text-sm text-left bg-white hover:bg-gray-50 transition"
-                      >
-                        <span className={tratamento ? "text-foreground font-medium" : "text-muted-foreground"}>
-                          {tratamento || "Selecione ou escreva abaixo..."}
-                        </span>
-                        <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
+                      <button type="button" onClick={() => setMostrarLista(!mostrarLista)} className="w-full flex items-center justify-between p-3 text-sm text-left bg-white hover:bg-gray-50 transition">
+                        <span className={tratamento ? "text-foreground font-medium" : "text-muted-foreground"}>{tratamento || "Selecione ou escreva abaixo..."}</span>
+                        <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                       </button>
                     )}
-
                     {mostrarLista && !digitandoOutro && (
                       <div className="border-t border-[#E2E8F0] max-h-56 overflow-y-auto p-2 bg-slate-50">
-                        {[
-                          "Febre", "Dor", "Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite",
-                          "Asma", "Bronquite", "Sinusite", "Gastrite", "Refluxo", "Diabetes",
-                          "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático",
-                          "Tireoide", "Ansiedade", "Depressão", "Vitaminas / Suplementos"
-                        ].map(doenca => (
-                          <button
-                            key={doenca}
-                            type="button"
-                            onClick={() => {
-                              setTratamento(doenca);
-                              setTratamentoOutro("");
-                              setMostrarLista(false);
-                            }}
-                            className={`w-full text-left p-2.5 text-sm rounded-lg mb-1 transition ${
-                              tratamento === doenca ? "bg-primary text-primary-foreground font-bold" : "hover:bg-white text-foreground"
-                            }`}
-                          >
-                            {doenca}
-                          </button>
+                        {["Febre", "Dor", "Gripe", "Resfriado", "Infecção urinária", "Alergia", "Laringite", "Asma", "Bronquite", "Sinusite", "Gastrite", "Refluxo", "Diabetes", "Hipertensão", "Colesterol", "Cardiológico", "Renal", "Hepático", "Tireoide", "Ansiedade", "Depressão", "Vitaminas / Suplementos"].map(doenca => (
+                          <button key={doenca} type="button" onClick={() => { setTratamento(doenca); setTratamentoOutro(""); setMostrarLista(false); }} className={`w-full text-left p-2.5 text-sm rounded-lg mb-1 transition ${tratamento === doenca ? "bg-primary text-primary-foreground font-bold" : "hover:bg-white text-foreground"}`}>{doenca}</button>
                         ))}
-                        
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setTratamentoOutro(""); // limpa o campo ao abrir
-                            setMostrarLista(false);
-                            setDigitandoOutro(true);
-                          }}
-                          className={`w-full text-left p-2.5 text-sm rounded-lg mt-1 border-t border-gray-200 transition hover:bg-white text-foreground font-semibold`}
-                        >
-                          Outro (não listado acima)
-                        </button>
+                        <button type="button" onClick={() => { setTratamentoOutro(""); setMostrarLista(false); setDigitandoOutro(true); }} className={`w-full text-left p-2.5 text-sm rounded-lg mt-1 border-t border-gray-200 transition hover:bg-white text-foreground font-semibold`}>Outro (não listado acima)</button>
                       </div>
                     )}
                   </div>
                 </Campo>
-
                 <div>
                   <span className="text-xs font-semibold block mb-1">Foto da Caixa</span>
                   {fotoUrl ? (
                     <div className="relative w-20 h-20 overflow-hidden rounded-xl border border-gold/40">
                       <img src={fotoUrl} alt="Caixa" className="h-full w-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => setFotoUrl("")}
-                        className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      <button type="button" onClick={() => setFotoUrl("")} className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white"><X className="h-3 w-3" /></button>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed border-gold/40 bg-muted/30"
-                    >
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="flex h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed border-gold/40 bg-muted/30">
                       {enviandoFoto === "caixa" ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Camera className="h-5 w-5 text-muted-foreground" />}
                     </button>
                   )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    ref={fileInputRef}
-                    onChange={fazerUploadFoto}
-                    className="hidden"
-                  />
+                  <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={fazerUploadFoto} className="hidden" />
                 </div>
-
                 <div className="space-y-3">
                   <span className="text-sm font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Horários</span>
                   <div className="grid grid-cols-2 gap-3">
-                    <Campo label="Começa às:">
-                      <input type="time" className="field" value={horaInicial} onChange={(e) => setHoraInicial(e.target.value)} />
-                    </Campo>
+                    <Campo label="Começa às:"><input type="time" className="field" value={horaInicial} onChange={(e) => setHoraInicial(e.target.value)} /></Campo>
                     <Campo label="Tomadas ao dia:">
                       <select className="field" value={vezesAoDia} onChange={(e) => setVezesAoDia(Number(e.target.value))}>
                         <option value={1}>1x ao dia (24h)</option>
@@ -561,63 +414,32 @@ useEffect(() => {
                       </select>
                     </Campo>
                   </div>
-                  <div className="rounded-xl bg-sky/30 p-3 text-sm text-primary">
-                    <strong>Horários gerados: </strong>
-                    {calcularHorarios().join(" • ")}
-                  </div>
+                  <div className="rounded-xl bg-sky/30 p-3 text-sm text-primary"><strong>Horários gerados: </strong>{calcularHorarios().join(" • ")}</div>
                 </div>
-
                 <div className="space-y-3">
                   <span className="text-sm font-semibold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Dias da Semana</span>
-                  <p className="text-xs text-muted-foreground">Desmarque os dias em que NÃO vai tomar o remédio.</p>
                   <div className="flex flex-wrap gap-2">
                     {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((dia, index) => {
                       const ativo = diasSemana.includes(index);
                       return (
-                        <button
-                          key={dia}
-                          type="button"
-                          onClick={() => toggleDia(index)}
-                          className={`grid h-10 w-10 place-items-center rounded-full text-xs font-bold transition ${
-                            ativo ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {dia}
-                        </button>
+                        <button key={dia} type="button" onClick={() => toggleDia(index)} className={`grid h-10 w-10 place-items-center rounded-full text-xs font-bold transition ${ativo ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{dia}</button>
                       );
                     })}
                   </div>
                 </div>
-
                 <Campo label="Profissional que prescreveu">{inp("profissional")}</Campo>
                 <Campo label="Especialidade">{inp("especialidade")}</Campo>
-                
                 <div className="grid grid-cols-2 gap-3">
                   <Campo label="Início">{inp("inicio", "date")}</Campo>
-                  <Campo label="Prazo (dias)">
-                    <input 
-                      className="field" 
-                      type="number" 
-                      placeholder="Ex: 5" 
-                      value={f.prazoDias ?? ""} 
-                      onChange={set("prazoDias")} 
-                    />
-                  </Campo>
+                  <Campo label="Prazo (dias)"><input className="field" type="number" placeholder="Ex: 5" value={f.prazoDias ?? ""} onChange={set("prazoDias")} /></Campo>
                 </div>
-                <p className="text-xs text-muted-foreground">Deixe o prazo em branco para uso contínuo.</p>
               </>
             )}
 
             <Divisor />
-
             <div className="pt-4 pb-24">
-              <Botao
-                type="submit"
-                disabled={salvando}
-                className="w-full rounded-full py-3 text-base font-bold shadow-lg transition-transform hover:scale-[1.01]"
-                style={{ backgroundColor: "var(--tema)", color: "white" }}
-              >
-                {salvando ? "Salvando..." : "Guardar agendamento"}
+              <Botao type="submit" disabled={salvando} className="w-full rounded-full py-3 text-base font-bold shadow-lg transition-transform hover:scale-[1.01]" style={{ backgroundColor: "var(--tema)", color: "white" }}>
+                {salvando ? "Salvando..." : "Guardar Registro"}
               </Botao>
             </div>
           </form>
