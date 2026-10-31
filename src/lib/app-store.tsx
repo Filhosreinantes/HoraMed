@@ -46,7 +46,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     const fuso = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (!fuso) return;
     supabase
-      .from("rotina_preferencias")
+      .from("horamed_preferencias")
       .upsert({ user_id: user.id, fuso, atualizado_em: new Date().toISOString() })
       .then(({ error }) => error && console.error("Erro ao salvar fuso:", error));
   }, [user.id]);
@@ -67,7 +67,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     }
     setAssinaturaAtiva(null);
     const { data, error } = await supabase
-      .from("rotina_assinaturas")
+      .from("horamed_assinaturas")
       .select("ativa_ate")
       .eq("email", user.email.toLowerCase())
       .maybeSingle();
@@ -86,7 +86,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
 
   const recarregar = useCallback(async () => {
     const { data: ps, error } = await supabase
-      .from("pedacinho_pessoas")
+      .from("horamed_pessoas")
       .select("*")
       .eq("user_id", user.id)
       .order("criado_em", { ascending: true });
@@ -102,7 +102,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
       const agora = nowLocalISO();
       const nova = { id: `inicial-${user.id}`, user_id: user.id, nome: "Meu Perfil", emoji: "🧑", tema: "azul", criado_em: agora, atualizado_em: agora };
       const { error: e2 } = await supabase
-        .from("pedacinho_pessoas")
+        .from("horamed_pessoas")
         .upsert(nova, { onConflict: "id", ignoreDuplicates: true });
       if (e2) toast.error("Não foi possível criar o perfil inicial.");
       else lista = [nova as unknown as Pessoa];
@@ -116,7 +116,7 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     });
 
     const { data: rs } = await supabase
-  .from("pedacinho_registros")
+  .from("horamed_registros")
   .select("dados, tipo")
   .eq("user_id", user.id);
 
@@ -168,7 +168,7 @@ setCarregando(false);
       criado_em: agora,
       atualizado_em: agora,
     }));
-    const { error } = await supabase.from("pedacinho_registros").insert(rows);
+    const { error } = await supabase.from("horamed_registros").insert(rows);
     
     if (error) {
       toast.error("Não foi possível salvar. Tente novamente.");
