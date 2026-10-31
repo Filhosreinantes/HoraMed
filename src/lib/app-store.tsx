@@ -53,6 +53,14 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
 
   // ✅ VERIFICAÇÃO DE ASSINATURA
   const checarAssinatura = useCallback(async () => {
+    // 🚧 MODO DE TESTE / PASSE VIP 🚧
+    // Libera o acesso instantâneo para o e-mail de desenvolvimento
+    if (user?.email === "avaliarfilhosreinantes@gmail.com") {
+      setAssinaturaAtiva(true);
+      setAssinaturaAte("2099-12-31");
+      return;
+    }
+
     if (!user?.email) {
       setAssinaturaAtiva(false);
       return;
@@ -92,7 +100,6 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     let lista = (ps ?? []) as Pessoa[];
     if (lista.length === 0) {
       const agora = nowLocalISO();
-      // ✅ Nome inicial mudado para "Meu Perfil"
       const nova = { id: `inicial-${user.id}`, user_id: user.id, nome: "Meu Perfil", emoji: "🧑", tema: "azul", criado_em: agora, atualizado_em: agora };
       const { error: e2 } = await supabase
         .from("pedacinho_pessoas")
