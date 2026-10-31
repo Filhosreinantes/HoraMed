@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { Check, ChevronDown, X, Clock, Pencil, Trash2, Stethoscope, Leaf, FileText, Pill, CalendarClock } from "lucide-react";
+import { Check, ChevronDown, X, Clock, Pencil, Trash2, Stethoscope, FileText, Pill, CalendarClock, Activity, Droplet } from "lucide-react";
 import { toast } from "sonner";
 import { Botao, Selo } from "@/components/ui-kit";
 import { useApp } from "@/lib/app-store";
@@ -19,6 +19,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
 
   const pendente = (item.situacao ?? "proximo") === "proximo";
   const ehMedicamento = item.cuidado === "Medicação";
+  const ehSinal = item.cuidado === "Pressão" || item.cuidado === "Glicose";
   const mostraEstoque = item.dosagemUnidade !== "ml" && item.estoqueAtual !== undefined;
 
   const tituloExibicao = ehMedicamento 
@@ -31,7 +32,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
     setExpandido(true);
   };
 
-  // ✅ 1. SALVAR EDIÇÃO (Sempre em "acontecimentos" para garantir leitura)
+  // 1. SALVAR EDIÇÃO (Sempre em "acontecimentos" para garantir leitura)
   const salvarEdicao = async (isRemarcar: boolean = false) => {
     if (salvando) return;
     setSalvando(true);
@@ -46,10 +47,10 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
       const ok = await salvarRegistros([{
         id: uid(), pessoaId, criadoEm: nowLocalISO(), titulo: isRemarcar ? `Remarcado` : `Editado`,
         cuidado, evento: true, parentId: id, acao: "editar", alteracoes
-      }], "acontecimentos"); // ✅ Sempre na tabela mestre
+      }], "acontecimentos");
 
       if (ok) {
-        toast.success(isRemarcar ? "Sessão remarcada com sucesso!" : "Editado com sucesso!");
+        toast.success(isRemarcar ? "Remarcado com sucesso!" : "Editado com sucesso!");
         setEditando(false);
       }
     } catch {
@@ -59,7 +60,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
     }
   };
 
-  // ✅ 2. REGISTRAR (Tomou/Faltou)
+  // 2. REGISTRAR (Tomou/Faltou)
   const registrar = async (situacao: Situacao) => {
     if (salvando) return;
     setSalvando(true);
@@ -73,7 +74,6 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
       const tabela = item.cuidado === "Medicação" ? "medicacao_logs" : "acontecimentos";
       let ok = await salvarRegistros([dadosLog], tabela);
 
-      // Desconto de estoque: vai em "acontecimentos", que é o que o app-store lê para aplicar edições.
       if (ok && ehMedicamento && situacao === "feito" && mostraEstoque) {
         const qtdTomada = Number(item.dosagemValor || 1);
         const novoEstoque = Math.max(0, (item.estoqueAtual || 0) - qtdTomada);
@@ -84,7 +84,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
       }
 
       if (ok) {
-        toast.success("Acompanhamento registrado!");
+        toast.success("Registrado!");
         setNota("");
       }
     } catch {
@@ -94,40 +94,39 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
     }
   };
 
-  // ✅ 3. EXCLUIR (Sempre em "acontecimentos")
+  // 3. EXCLUIR
   const excluir = async () => {
-    if (!confirm("Tem certeza que deseja excluir? Isso removerá o item da lista.")) return;
+    if (!confirm("Tem certeza que deseja excluir este registro?")) return;
     
     try {
       const ok = await salvarRegistros([{ 
-        id: uid(), 
-        pessoaId: item.pessoaId, 
-        criadoEm: nowLocalISO(), 
-        titulo: "Excluído", 
-        cuidado: item.cuidado, 
-        evento: true, 
-        parentId: item.id, 
-        acao: "excluir" 
-      }], "acontecimentos"); // ✅ Forçamos a gravação na tabela master de eventos
+        id: uid(), pessoaId: item.pessoaId, criadoEm: nowLocalISO(), titulo: "Excluído", 
+        cuidado: item.cuidado, evento: true, parentId: item.id, acao: "excluir" 
+      }], "acontecimentos");
 
-      if (ok) {
-        toast.success("Excluído com sucesso!");
-      } else {
-        toast.error("Erro ao excluir.");
-      }
+      if (ok) toast.success("Excluído com sucesso!");
+      else toast.error("Erro ao excluir.");
     } catch (e) {
       console.error(e);
       toast.error("Erro de conexão ao excluir.");
     }
   };
 
+  // Detalhes mostrados na lista expandida
   const linhas: [string, string | undefined][] = [
-    ["Data", formatData(item.data)], ["Hora", item.hora], ["Local", item.local],
-    ["Profissional", item.profissional], ["Especialidade", item.especialidade],
-    ["Tipo de terapia", item.tipoTerapia], ["Tipo de exame", item.tipoExame],
-    ["Recomendações", item.recomendacoes], ["Medicamento", item.medicamento],
-    ["Dosagem", item.dosagem], ["Horários", item.horarios?.length ? item.horarios.join(" · ") : item.frequencia],
-    ["Início", formatData(item.inicio)], ["Fim", item.cuidado === "Medicação" ? (item.fim ? formatData(item.fim) : "Uso contínuo") : undefined],
+    ["Data", formatData(item.data)], 
+    ["Hora", item.hora], 
+    ["Local", item.local],
+    ["Profissional", item.profissional], 
+    ["Especialidade", item.especialidade],
+    ["Tipo de exame", item.tipoExame],
+    ["Recomendações", item.recomendacoes], 
+    ["Medicamento", item.medicamento],
+    ["Dosagem", item.dosagem], 
+    ["Horários", item.horarios?.length ? item.horarios.join(" · ") : item.frequencia],
+    ["Início", formatData(item.inicio)], 
+    ["Fim", item.cuidado === "Medicação" ? (item.fim ? formatData(item.fim) : "Uso contínuo") : undefined],
+    ["Observações", item.detalhes],
     ["Anotações", item.observacaoAcompanhamento],
   ];
 
@@ -142,9 +141,10 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
             ) : (
               <span className={`grid ${compacto ? "h-10 w-10" : "h-14 w-14"} place-items-center rounded-xl`} style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
                 {item.cuidado === "Consulta" && <Stethoscope className={compacto ? "h-5 w-5" : "h-7 w-7"} />}
-                {item.cuidado === "Terapia" && <Leaf className={compacto ? "h-5 w-5" : "h-7 w-7"} />}
                 {item.cuidado === "Exame" && <FileText className={compacto ? "h-5 w-5" : "h-7 w-7"} />}
                 {item.cuidado === "Medicação" && <Pill className={compacto ? "h-5 w-5" : "h-7 w-7"} />}
+                {item.cuidado === "Pressão" && <Activity className={compacto ? "h-5 w-5" : "h-7 w-7"} />}
+                {item.cuidado === "Glicose" && <Droplet className={compacto ? "h-5 w-5" : "h-7 w-7"} />}
               </span>
             )}
           </button>
@@ -186,7 +186,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
               )}
             </div>
 
-            {compacto && pendente && !ehMedicamento && !editando && (
+            {compacto && pendente && !ehMedicamento && !ehSinal && !editando && (
               <div className="flex flex-col gap-1 items-end">
                 <div className="flex gap-1">
                   <button onClick={() => registrar("feito")} className="text-[10px] font-bold text-white px-2 py-0.5 rounded bg-[var(--tema)]">Compareceu</button>
@@ -210,6 +210,15 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
                       <input type="time" className="field text-sm" value={formEdicao.hora || ""} onChange={e => setFormEdicao({ ...formEdicao, hora: e.target.value })} />
                     </>
                   )}
+                  {ehSinal && (
+                    <input 
+                      type="text" 
+                      className="field text-sm col-span-2" 
+                      placeholder="Valor (ex: Pressão: 120/80)" 
+                      value={formEdicao.titulo || ""} 
+                      onChange={e => setFormEdicao({ ...formEdicao, titulo: e.target.value })} 
+                    />
+                  )}
                   {ehMedicamento && (
                     <>
                       <input type="text" className="field text-sm col-span-2" placeholder="Nome do remédio" value={formEdicao.medicamento || ""} onChange={e => setFormEdicao({ ...formEdicao, medicamento: e.target.value })} />
@@ -217,11 +226,15 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
                       <input type="number" className="field text-sm col-span-2" placeholder="Estoque atual" value={formEdicao.estoqueAtual || ""} onChange={e => setFormEdicao({ ...formEdicao, estoqueAtual: e.target.value })} />
                     </>
                   )}
-                  <input type="text" className="field text-sm col-span-2" placeholder="Local" value={formEdicao.local || ""} onChange={e => setFormEdicao({ ...formEdicao, local: e.target.value })} />
-                  <input type="text" className="field text-sm col-span-2" placeholder="Profissional" value={formEdicao.profissional || ""} onChange={e => setFormEdicao({ ...formEdicao, profissional: e.target.value })} />
+                  {!ehSinal && (
+                    <>
+                      <input type="text" className="field text-sm col-span-2" placeholder="Local" value={formEdicao.local || ""} onChange={e => setFormEdicao({ ...formEdicao, local: e.target.value })} />
+                      <input type="text" className="field text-sm col-span-2" placeholder="Profissional" value={formEdicao.profissional || ""} onChange={e => setFormEdicao({ ...formEdicao, profissional: e.target.value })} />
+                    </>
+                  )}
                 </div>
 
-                {!ehMedicamento && (
+                {!ehMedicamento && !ehSinal && (
                   <button 
                     onClick={() => salvarEdicao(true)} 
                     disabled={salvando}
@@ -242,7 +255,7 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
               </dl>
             )}
 
-            {!editando && pendente && !ehMedicamento && !compacto && (
+            {!editando && pendente && !ehMedicamento && !ehSinal && !compacto && (
               <>
                 <textarea aria-label="Anotações" className="field min-h-20 mt-2" placeholder="Anotações" value={nota} onChange={(e) => setNota(e.target.value)} disabled={salvando} />
                 <div className="flex flex-wrap gap-2 mt-2">
