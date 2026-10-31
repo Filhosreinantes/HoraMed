@@ -90,16 +90,19 @@ export function calcularAlarmes(
   for (let i = 0; i < DIAS; i++) {
     const dia = somarDias(hoje, i);
     for (const { med, horario, hora, tipo } of lembretesDoDia(todos, dia)) {
-      const remedio = [med.medicamento || "a medicação", med.dosagem].filter(Boolean).join(" ");
+      const medFormatada = [med.medicamento || "a medicação", med.dosagem].filter(Boolean).join(" ");
       const pessoa = nomes.get(med.pessoaId);
       const de = pessoa ? ` de ${pessoa}` : "";
+      
+      // Textos das notificações adaptados para o horaMed
       const [title, body] =
         tipo === "insistir"
           ? [
               `⏰ Dose das ${horario} ainda não registrada`,
-              `${remedio}${de}. Toque para registrar.`,
+              `${medFormatada}${de}. Toque para registrar.`,
             ]
-          : [`💊 Hora do remédio${de}`, `${horario} · ${remedio}`];
+          : [`💊 Hora da medicação${de}`, `${horario} · ${medFormatada}`];
+          
       out.push({
         id: idDe(`med-${med.id}-${dia}-${horario}-${tipo}`),
         at: quando(dia, hora),
