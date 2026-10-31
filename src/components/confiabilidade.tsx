@@ -33,7 +33,7 @@ const ITENS: {
     chave: "bateria",
     titulo: "🔋 Sem economia de bateria",
     texto:
-      'Evita que o celular atrase os alarmes. Na lista, escolha "Todos os apps", toque em Rotina Azul e marque "Não otimizar".',
+      'Evita que o celular atrase os alarmes. Na lista, escolha "Todos os apps", toque em horaMed e marque "Não otimizar".',
     corrigir: corrigirBateria,
   },
 ];
@@ -65,7 +65,7 @@ export function Lista({ estado, verificar }: { estado: Confiabilidade; verificar
     } catch (e) {
       console.error("Erro ao abrir configuração:", e);
       toast.error(
-        "Não foi possível abrir a configuração. Procure o Rotina Azul nas configurações do celular.",
+        "Não foi possível abrir a configuração. Procure o horaMed nas configurações do celular.",
       );
     }
     verificar();
@@ -126,14 +126,15 @@ export function ConfiabilidadeCartao() {
         </Link>
       </div>
       <p className="text-xs text-muted-foreground">
-        O alarme toca no horário de cada remédio, mesmo sem internet, e continua tocando até você
+        O alarme toca no horário de cada medicação, mesmo sem internet, e continua tocando até você
         tocar em "Já tomei" ou "Adiar".
       </p>
     </div>
   );
 }
 
-const CHAVE = "rotina-azul:confiabilidade-perguntada";
+// ✅ Chave do localStorage atualizada
+const CHAVE = "horamed:confiabilidade-perguntada";
 
 /** Na primeira vez no app, mostra o que falta liberar para os alarmes tocarem. */
 export function ConfiabilidadePrompt() {
@@ -163,7 +164,7 @@ export function ConfiabilidadePrompt() {
         <div className="text-center">
           <h2 className="font-display text-2xl font-bold text-foreground">Ative os Lembretes</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Para o alarme tocar na hora dos remédios, libere os itens abaixo. Você pode mudar isso
+            Para o alarme tocar na hora das medicações, libere os itens abaixo. Você pode mudar isso
             depois no Perfil.
           </p>
         </div>
