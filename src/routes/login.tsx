@@ -1,11 +1,10 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { Stethoscope } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Botao, Campo, Divisor } from "@/components/ui-kit";
-import { CheckoutPix } from "@/components/checkout-pix";
-import { ehAppAndroid, urlDoSite } from "@/lib/plataforma";
-import { PLANOS, reais } from "@/lib/planos";
+import { urlDoSite } from "@/lib/plataforma";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
@@ -13,15 +12,15 @@ export const Route = createFileRoute("/login")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { title: "Entrar · Rotina Azul" },
-      { name: "description", content: "Entre para ver a agenda de cuidados dos seus Tesouros." },
-      { property: "og:title", content: "Entrar · Rotina Azul" },
-      { property: "og:description", content: "Sua agenda de cuidados num só lugar." },
+      { title: "Entrar · horaMed" },
+      { name: "description", content: "Entre para organizar seus medicamentos e consultas." },
+      { property: "og:title", content: "Entrar · horaMed" },
+      { property: "og:description", content: "Sua saúde organizada de forma simples." },
     ],
   }),
   beforeLoad: async () => {
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/acompanhamento", replace: true });
+    if (data.session) throw redirect({ to: "/hoje", replace: true });
   },
   component: Login,
 });
@@ -31,9 +30,8 @@ function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [ocupado, setOcupado] = useState(false);
-  const [pixAberto, setPixAberto] = useState(false);
 
-  // ✅ RASTREADOR DE AFILIADOS NA TELA DE LOGIN
+  // ✅ RASTREADOR DE AFILIADOS
   useEffect(() => {
     const ref = new URLSearchParams(window.location.search).get("ref");
     if (ref) {
@@ -41,7 +39,7 @@ function Login() {
       import("@/lib/supabase").then(({ supabase }) => {
         supabase.from("affiliate_clicks").insert({
           codigo_ref: ref,
-          app_origem: "Rotina Azul",
+          app_origem: "horaMed", // Mudamos para o novo app
         }).then(({ error }) => {
           if (error) console.error("Erro no rastreio:", error);
         });
@@ -55,8 +53,8 @@ function Login() {
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
     setOcupado(false);
     if (error) { toast.error("E-mail ou senha incorretos."); return; }
-    toast.success("Bem-vinda de volta!");
-    navigate({ to: "/acompanhamento", replace: true });
+    toast.success("Bem-vindo(a) de volta!");
+    navigate({ to: "/hoje", replace: true });
   };
 
   const criar = async () => {
@@ -69,7 +67,7 @@ function Login() {
     });
     setOcupado(false);
     if (error) { toast.error("Não foi possível criar a conta: " + error.message); return; }
-    if (data.session) navigate({ to: "/acompanhamento", replace: true });
+    if (data.session) navigate({ to: "/hoje", replace: true });
     else toast.success("Conta criada! Confira seu e-mail para confirmar.");
   };
 
@@ -85,11 +83,16 @@ function Login() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-10">
       <div className="text-center">
-        <img src="/filhos.png" alt="Filhos Reinantes" className="mx-auto h-16 w-auto mb-4" />
-        <h1 className="mt-2 text-3xl font-semibold">Rotina Azul</h1>
-        <p className="mt-1 text-muted-foreground">Sua agenda de cuidados num só lugar.</p>
+        {/* Substituímos a imagem por um ícone médico */}
+        <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-sky-100 text-sky-600">
+          <Stethoscope className="h-10 w-10" />
+        </div>
+        <h1 className="mt-2 text-3xl font-display font-bold italic text-[#2C4A6B]">horaMed</h1>
+        <p className="mt-1 text-muted-foreground">Sua saúde organizada de forma simples.</p>
       </div>
+      
       <Divisor />
+      
       <form onSubmit={entrar} className="notebook space-y-4 p-6">
         <Campo label="E-mail">
           <input className="field" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -101,38 +104,6 @@ function Login() {
         <Botao type="button" variant="outline" disabled={ocupado} onClick={criar} className="w-full">Criar minha conta</Botao>
         <Botao type="button" variant="ghost" onClick={esqueci} className="w-full py-1 text-sm">Esqueci minha senha</Botao>
       </form>
-
-      {/* ═══ LOJA FILHOS REINANTES ═══ */}
-      {/* No app Android não há venda: a Play Store só aceita pagamento pelo Google Play. */}
-      {!ehAppAndroid() && (
-      <div className="mt-8 border-t border-gold/30 pt-6">
-        <h2 className="mb-4 text-center font-display text-sm font-bold uppercase tracking-widest text-gold">
-          Loja Filhos Reinantes
-        </h2>
-
-        <div className="space-y-3">
-          {/* Card Rotina Azul (Clicável para comprar) */}
-          <button
-            onClick={() => setPixAberto(true)}
-            className="notebook flex w-full items-center justify-between border-gold/40 p-4 text-left transition hover:bg-sky/20"
-          >
-            <div>
-              <h3 className="font-display text-lg font-bold text-foreground">Rotina Azul</h3>
-              <p className="text-xs text-muted-foreground">Sua agenda de cuidados</p>
-            </div>
-            <div className="text-right">
-              <span className="block rounded-full bg-gold/20 px-3 py-1 text-xs font-bold text-foreground">
-                Assinar
-              </span>
-              <span className="mt-1 block text-sm font-bold text-gold">{reais(PLANOS.mensal.centavos)}/mês</span>
-            </div>
-          </button>
-        </div>
-      </div>
-      )}
-
-      {/* ═══ MODAL DE COMPRA PIX ═══ */}
-      {pixAberto && <CheckoutPix emailInicial={email} onFechar={() => setPixAberto(false)} />}
     </main>
   );
 }
