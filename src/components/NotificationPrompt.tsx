@@ -8,7 +8,8 @@ import {
   type EstadoNotificacoes,
 } from "@/lib/notificacoes";
 
-const CHAVE = "rotina-azul:notificacao-perguntada";
+// ✅ Chave do localStorage atualizada para o horaMed
+const CHAVE = "horamed:notificacao-perguntada";
 
 /** Convite para ativar os lembretes, mostrado uma vez por aparelho depois do login. */
 export function NotificationPrompt() {
@@ -47,7 +48,7 @@ export function NotificationPrompt() {
     setCarregando(true);
     try {
       const final = await ativarNotificacoes(user.id);
-      if (final === "ativas") toast.success("Lembretes ativados! 💙");
+      if (final === "ativas") toast.success("Lembretes ativados! 🩺");
       else if (final === "pendente")
         toast.error('Permissão não concedida. Toque em "Permitir" para receber os lembretes.');
       else toast.error(MENSAGEM[final], { duration: 8000 });
@@ -75,11 +76,11 @@ export function NotificationPrompt() {
             <p className="mt-2 text-sm text-muted-foreground">{MENSAGEM[estado]}</p>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">
-              Para te avisar na hora dos remédios, o navegador vai pedir sua permissão.
+              Para te avisar na hora das medicações, o navegador vai pedir sua permissão.
               <br />
               <br />
               <strong className="text-primary">Toque em "Permitir"</strong> para não perder nenhum
-              horário. Prometemos não enviar spam! 💙
+              horário. Prometemos não enviar spam! 🩺
             </p>
           )}
         </div>
