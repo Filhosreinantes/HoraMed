@@ -5,21 +5,21 @@ import { useApp } from "@/lib/app-store";
 import { SITUACAO_LABEL, type Situacao } from "@/lib/cuidados";
 import { cn } from "@/lib/utils";
 
-// ✅ Nome curto: só as 2 primeiras palavras
+// Nome curto: só as 2 primeiras palavras
 const nomeCurto = (nome: string) => nome.trim().split(" ").slice(0, 2).join(" ");
 
 export function Divisor() {
   return (
     <div className="my-5 flex items-center gap-3 text-gold">
       <span className="h-px flex-1 bg-gold/40" />
-      <span className="text-lg">❦</span>
+      <span className="text-lg">✚</span>
       <span className="h-px flex-1 bg-gold/40" />
     </div>
   );
 }
 
 export function SeletorTesouro({
-  prefixo = "Cuidando de",
+  prefixo = "Perfil de",
   somenteLeitura = false,
   permitirCriar = false,
 }: {
@@ -46,7 +46,6 @@ export function SeletorTesouro({
           <span className="text-[0.65rem] font-bold uppercase tracking-wider text-gold">
             {prefixo}
           </span>
-          {/* ✅ Nome reduzido para text-base */}
           <span className="truncate font-display text-base font-bold text-foreground">
             {ativa.emoji} {nomeCurto(ativa.nome)}
           </span>
@@ -97,7 +96,7 @@ export function SeletorTesouro({
                   onClick={() => setAberto(false)}
                   className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-bold text-accent transition hover:bg-muted"
                 >
-                  <Plus className="h-4 w-4" /> Criar novo Tesouro
+                  <Plus className="h-4 w-4" /> Criar novo Perfil
                 </Link>
               </li>
             )}
