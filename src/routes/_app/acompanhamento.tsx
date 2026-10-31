@@ -10,6 +10,7 @@ import {
 import { Botao, Divisor, Pill, SeletorTesouro } from "@/components/ui-kit";
 import { CompromissoCard } from "@/components/compromisso-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChevronLeft, History, Stethoscope, FileText, Pill as PillIcon, Plane, RefreshCw, Activity, Droplet, CalendarCheck, PillBottle, X, ClipboardList, Pill, HeartPulse } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/acompanhamento")({
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/_app/acompanhamento")({
 type View = "menu" | "compromissos" | "medicacoes_menu" | "medicacoes_historico" | "medicacoes_proximos" | "medicacoes_estoque" | "medicacoes_viagem" | "sinais_vitais";
 type Periodo = "mes" | "ano" | "tudo";
 type Drill = { cuidado: Cuidado; situacao: Situacao } | null;
+type View = "menu" | "compromissos" | "medicacoes_menu" | "medicacoes_historico" | "medicacoes_proximos" | "medicacoes_estoque" | "medicacoes_viagem" | "sinais_vitais" | "tratamentos" | "relatorios";
 
 const LINHAS: { s: Situacao; label: string }[] = [
   { s: "feito", label: "Compareceu" },
