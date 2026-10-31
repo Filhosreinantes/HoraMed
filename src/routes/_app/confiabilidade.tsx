@@ -5,7 +5,7 @@ import { Lista, tudoCerto, useConfiabilidade } from "@/components/confiabilidade
 import { ehAppAndroid } from "@/lib/alarmes";
 
 export const Route = createFileRoute("/_app/confiabilidade")({
-  head: () => ({ meta: [{ title: "Confiabilidade do alarme · Rotina Azul" }] }),
+  head: () => ({ meta: [{ title: "Confiabilidade do alarme · horaMed" }] }),
   component: Confiabilidade,
 });
 
@@ -27,13 +27,13 @@ function Confiabilidade() {
 
       {!ehAppAndroid() ? (
         <p className="notebook p-4 text-sm text-muted-foreground">
-          Estas permissões existem só no aplicativo Android do Rotina Azul.
+          Estas permissões existem apenas no aplicativo Android do horaMed.
         </p>
       ) : !estado ? null : (
         <>
           <p className="text-sm text-muted-foreground">
             {tudoCerto(estado)
-              ? "✅ Tudo certo: os alarmes vão tocar no horário."
+              ? "✅ Tudo certo: os alarmes dos seus medicamentos vão tocar no horário."
               : "Libere o que está marcado com ❗ para o alarme tocar no horário."}
           </p>
           <Lista estado={estado} verificar={verificar} />
