@@ -42,8 +42,7 @@ export function AlarmeModal({ item, fechar }: { item: Item, fechar: () => void }
 
     let ok = await salvarRegistros([dados], "medicacao_logs");
 
-    // Desconto de estoque (se existir e não for ml): vai em "acontecimentos",
-    // porque o app-store só aplica edições vindas dessa tabela.
+    // Desconto de estoque (se existir e não for ml)
     if (ok && item.estoqueAtual !== undefined && item.dosagemUnidade !== "ml") {
       const qtdTomada = Number(item.dosagemValor || 1);
       const novoEstoque = Math.max(0, item.estoqueAtual - qtdTomada);
@@ -62,7 +61,7 @@ export function AlarmeModal({ item, fechar }: { item: Item, fechar: () => void }
     setSalvando(false);
 
     if (ok) {
-      toast.success("Boa! Remédio registrado.");
+      toast.success("Boa! Medicação registrada.");
       fechar();
     }
   };
@@ -72,7 +71,7 @@ export function AlarmeModal({ item, fechar }: { item: Item, fechar: () => void }
     try {
       await adiarAlarme(
         {
-          title: `💊 Hora do remédio${horario ? ` das ${horario}` : ""}`,
+          title: `💊 Hora da medicação${horario ? ` das ${horario}` : ""}`,
           body: [item.medicamento, item.dosagem].filter(Boolean).join(" "),
           medId: item.id,
           pessoaId: item.pessoaId,
