@@ -18,13 +18,13 @@ interface Ctx {
   recarregar: () => Promise<void>;
   salvarRegistros: (lista: Dados[], tipo?: string) => Promise<boolean>;
   assinaturaAtiva: boolean | null | "erro";
-  /** Fim do período pago (ISO), ou null sem assinatura. */
   assinaturaAte: string | null;
   checarAssinatura: () => Promise<void>;
 }
 
 const AppCtx = createContext<Ctx | null>(null);
-const KEY = "rotina-azul:ativa";
+// ✅ Chave do localStorage atualizada para o horaMed
+const KEY = "horamed:ativa"; 
 
 export function AppProvider({ user, children }: { user: User; children: ReactNode }) {
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
@@ -64,7 +64,6 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
       .eq("email", user.email.toLowerCase())
       .maybeSingle();
     if (error) {
-      // Falha de rede não pode trancar quem já pagou: mostra "tentar de novo".
       console.error("Erro ao checar assinatura:", error);
       setAssinaturaAtiva("erro");
       return;
@@ -83,22 +82,25 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
       .select("*")
       .eq("user_id", user.id)
       .order("criado_em", { ascending: true });
+      
     if (error) {
-      toast.error("Não foi possível carregar seus Tesouros.");
+      toast.error("Não foi possível carregar seus perfis.");
       setCarregando(false);
       return;
     }
+    
     let lista = (ps ?? []) as Pessoa[];
     if (lista.length === 0) {
       const agora = nowLocalISO();
-      // Id fixo por conta: se duas telas carregarem juntas, a segunda criação é ignorada.
-      const nova = { id: `inicial-${user.id}`, user_id: user.id, nome: "Meu Tesouro", emoji: "🌸", tema: "azul", criado_em: agora, atualizado_em: agora };
+      // ✅ Nome inicial mudado para "Meu Perfil"
+      const nova = { id: `inicial-${user.id}`, user_id: user.id, nome: "Meu Perfil", emoji: "🧑", tema: "azul", criado_em: agora, atualizado_em: agora };
       const { error: e2 } = await supabase
         .from("pedacinho_pessoas")
         .upsert(nova, { onConflict: "id", ignoreDuplicates: true });
       if (e2) toast.error("Não foi possível criar o perfil inicial.");
       else lista = [nova as unknown as Pessoa];
     }
+    
     setPessoas(lista);
     const salvo = localStorage.getItem(KEY);
     setAtivaIdState((cur) => {
@@ -157,15 +159,14 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
     }
     setRegistros((r) => [...r, ...lista.map(d => ({ ...d, tipo }))]);
 
-    // Os lembretes de medicação são enviados pelo servidor (rotina-azul-lembretes).
     return true;
   };
 
-  // Doses marcadas como "Já tomei" na tela de alarme (feita pelo código nativo, que não
-  // acessa o servidor): grava como o botão "Tomei" do app, com o desconto de estoque.
+  // Doses marcadas como "Já tomei" na tela de alarme
   const salvarRef = useRef(salvarRegistros);
   salvarRef.current = salvarRegistros;
   const sincronizandoDoses = useRef(false);
+  
   useEffect(() => {
     if (carregando || !ehAppAndroid() || sincronizandoDoses.current) return;
     sincronizandoDoses.current = true;
@@ -241,7 +242,6 @@ export function AppProvider({ user, children }: { user: User; children: ReactNod
 
   const logs = useMemo(() => {
     const daPessoa = registros.filter((d) => d.pessoaId === ativaId && d.tipo === "medicacao_logs");
-    // Exclusões de doses: o log some e o próprio evento de exclusão não aparece na lista.
     const excluidos = new Set(daPessoa.filter((d) => d.acao === "excluir" && d.parentId).map((d) => d.parentId));
     return daPessoa.filter((d) => !d.acao && !excluidos.has(d.id));
   }, [registros, ativaId]);
