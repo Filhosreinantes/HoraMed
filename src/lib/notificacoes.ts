@@ -97,7 +97,7 @@ export async function desativarNotificacoes(): Promise<EstadoNotificacoes> {
 
 /** Pede ao servidor uma notificação de teste para a conta logada. */
 export async function enviarNotificacaoTeste() {
-  const { data, error } = await supabase.functions.invoke("rotina-azul-lembretes", {
+  const { data, error } = await supabase.functions.invoke("horamed-lembretes", {
     body: { acao: "teste" },
   });
   if (error) {
