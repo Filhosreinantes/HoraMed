@@ -14,7 +14,7 @@ import { DesativarLembretes } from "@/components/notificacoes-cartao";
 import { ehAppAndroid } from "@/lib/alarmes";
 
 export const Route = createFileRoute("/_app/configuracoes")({
-  head: () => ({ meta: [{ title: "Ajuda e configurações · Rotina Azul" }] }),
+  head: () => ({ meta: [{ title: "Ajuda e configurações · horaMed" }] }),
   component: Configuracoes,
 });
 
@@ -24,14 +24,14 @@ const REGRAS: { icone: ReactNode; cor: string; titulo: string; texto: string }[]
     cor: "bg-sky text-accent",
     titulo: "🔔 Notificações",
     texto:
-      "Necessário para exibir o alarme e o botão PARAR. Sem isso, você não será lembrado de tomar seus remédios.",
+      "Necessário para exibir o alarme e o botão PARAR. Sem isso, você não será lembrado de tomar seus medicamentos.",
   },
   {
     icone: <AlarmClock className="h-5 w-5" />,
     cor: "bg-purple-100 text-purple-600",
     titulo: "⏰ Alarme exato",
     texto:
-      "O alarme toca exatamente no horário definido. O Rotina Azul usa alarme de relógio do Android, então não precisa de nenhuma permissão extra para isso.",
+      "O alarme toca exatamente no horário definido. O horaMed usa alarme de relógio do Android, então não precisa de nenhuma permissão extra para isso.",
   },
   {
     icone: <Smartphone className="h-5 w-5" />,
@@ -52,7 +52,7 @@ const REGRAS: { icone: ReactNode; cor: string; titulo: string; texto: string }[]
     cor: "bg-red-100 text-red-500",
     titulo: "🔕 Modo Não Perturbe",
     texto:
-      "Garante que o som do alarme toque mesmo com o celular no silencioso. Opcional, mas recomendado.",
+      "Garante que o som do alarme toque mesmo com o celular no silencioso. Opcional, mas recomendado para medicamentos de horário rigoroso.",
   },
 ];
 
