@@ -1,22 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  AlarmClock,
   ArrowLeft,
-  Ban,
   Award,
   Check,
   ChevronRight,
   Gem,
   Gift,
-  History,
   RefreshCw,
   Settings,
   Star,
   Users,
   FileText,
-  Layers,
-  Megaphone,
+  BellRing,
   Sparkles,
+  UserCircle,
+  ShieldPlus
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
@@ -25,22 +23,21 @@ import { ehVitalicio } from "@/lib/planos";
 import { ehAppAndroid } from "@/lib/plataforma";
 
 export const Route = createFileRoute("/_app/assinatura")({
-  head: () => ({ meta: [{ title: "Minha assinatura · Rotina Azul" }] }),
+  head: () => ({ meta: [{ title: "Minha assinatura · horaMed" }] }),
   component: Assinatura,
 });
 
 const GRATIS: { icone: ReactNode; texto: string; cor: string }[] = [
-  { icone: <Layers className="h-4 w-4" />, texto: "Alarmes ilimitados", cor: "bg-muted text-muted-foreground" },
-  { icone: <Layers className="h-4 w-4" />, texto: "1 Perfil", cor: "bg-muted text-muted-foreground" },
-  { icone: <Layers className="h-4 w-4" />, texto: "Até 2 cadastros por tipo", cor: "bg-muted text-muted-foreground" },
-  { icone: <FileText className="h-4 w-4" />, texto: "1 Relatório por mês", cor: "bg-muted text-muted-foreground" },
-  { icone: <Megaphone className="h-4 w-4" />, texto: "Com anúncios", cor: "bg-amber-100 text-amber-700" },
+  { icone: <UserCircle className="h-4 w-4" />, texto: "1 Perfil de paciente", cor: "bg-muted text-muted-foreground" },
+  { icone: <BellRing className="h-4 w-4" />, texto: "Até 3 alarmes de medicação", cor: "bg-muted text-muted-foreground" },
+  { icone: <FileText className="h-4 w-4" />, texto: "Histórico básico", cor: "bg-muted text-muted-foreground" },
+  { icone: <Sparkles className="h-4 w-4" />, texto: "Com anúncios", cor: "bg-amber-100 text-amber-700" },
 ];
 
 const PREMIUM: { icone: ReactNode; texto: string }[] = [
-  { icone: <Layers className="h-4 w-4" />, texto: "Alarmes ilimitados" },
-  { icone: <Layers className="h-4 w-4" />, texto: "Perfis ilimitados" },
-  { icone: <Layers className="h-4 w-4" />, texto: "Cadastros ilimitados" },
+  { icone: <Users className="h-4 w-4" />, texto: "Perfis ilimitados" },
+  { icone: <BellRing className="h-4 w-4" />, texto: "Alarmes ilimitados" },
+  { icone: <ShieldPlus className="h-4 w-4" />, texto: "Histórico completo de Pressão e Glicose" },
   { icone: <FileText className="h-4 w-4" />, texto: "Relatórios ilimitados" },
   { icone: <Sparkles className="h-4 w-4" />, texto: "Sem anúncios" },
 ];
@@ -121,10 +118,10 @@ function Assinatura() {
         </div>
       </section>
 
-      {/* Compra só no site: a Play Store exige o Google Play para vender dentro do app. */}
+      {/* Compra só no site: A Play Store exige o Google Play para vender dentro do app. */}
       {android ? (
         <p className="rounded-2xl bg-muted p-4 text-center text-sm text-muted-foreground">
-          Para assinar ou renovar, acesse o site do Rotina Azul.
+          Para assinar ou renovar o Premium, acesse o site oficial do <strong>horaMed</strong> pelo navegador do seu celular.
         </p>
       ) : (
         <Link
