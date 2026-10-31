@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute } from "@tanstack/react-router";
 import { Clock, Stethoscope, ChevronRight, X, Pill, Activity } from "lucide-react";
 import { useState, useMemo } from "react";
@@ -9,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner"; 
 
 export const Route = createFileRoute("/_app/hoje")({
-  head: () => ({ meta: [{ title: "Hoje · horaMed" }] }),
+  head: () => ({ meta: [{ title: "Hoje · HoraMed" }] }),
   component: Hoje,
 });
 
@@ -18,7 +17,6 @@ function Hoje() {
   const hoje = hojeYMD();
 
   const [modalDosesAberto, setModalDosesAberto] = useState(false);
-  const [modalCompromissosAberto, setModalCompromissosAberto] = useState(false);
   const [detalheAberto, setDetalheAberto] = useState<any>(null);
 
   // --- Lógica de Medicações ---
@@ -47,10 +45,14 @@ function Hoje() {
   }, [emUso, logs, hoje]);
 
   // --- Lógica de Compromissos ---
-  // Filtramos apenas Consultas e Exames, que são os compromissos agendados.
+  // ✅ CORREÇÃO: Filtra para não mostrar compromissos que já foram marcados como feito/faltou/cancelado
   const compromissosHoje = useMemo(() => {
     return itens
-      .filter(i => i.data === hoje && (i.cuidado === "Consulta" || i.cuidado === "Exame"))
+      .filter(i => 
+        i.data === hoje && 
+        (i.cuidado === "Consulta" || i.cuidado === "Exame") &&
+        (i.situacao ?? "proximo") === "proximo" 
+      )
       .sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
   }, [itens, hoje]);
 
@@ -67,9 +69,17 @@ function Hoje() {
     }
   };
 
+  // ✅ CORREÇÃO: Agora envia a situação como evento direto, para o resolverSituacoes atualizar a UI.
   const atualizarSituacao = async (id: string, pessoaId: string, cuidado: string, situacao: string) => {
     const ok = await salvarRegistros([{ 
-      id: uid(), pessoaId, criadoEm: nowLocalISO(), titulo: `Status: ${situacao}`, cuidado, evento: true, parentId: id, acao: "editar", alteracoes: { situacao } 
+      id: uid(), 
+      pessoaId, 
+      criadoEm: nowLocalISO(), 
+      titulo: `Status: ${situacao}`, 
+      cuidado, 
+      evento: true, 
+      parentId: id, 
+      situacao 
     }], "acontecimentos");
     if (ok) toast.success("Status atualizado!");
   };
@@ -96,18 +106,10 @@ function Hoje() {
                     <Pill className="h-4 w-4" />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="font-bold text-sm text-foreground truncate">
-                      {a.med.medicamento}
+                    <span className="font-bold text-sm text-foreground truncate">{a.med.medicamento}</span>
+                    <span className="text-[11px] text-muted-foreground truncate">
+                      {a.med.dosagem} {a.med.estoqueAtual !== undefined && `· Restam ${a.med.estoqueAtual} un.`}
                     </span>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
-                      {a.med.dosagem && <span>{a.med.dosagem}</span>}
-                      {a.med.dosagem && a.med.estoqueAtual !== undefined && <span>·</span>}
-                      {a.med.estoqueAtual !== undefined && (
-                        <span>
-                          {a.med.estoqueAtual === 1 ? "Resta 1 unid." : `Restam ${a.med.estoqueAtual} unid.`}
-                        </span>
-                      )}
-                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -116,55 +118,6 @@ function Hoje() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: TODOS OS COMPROMISSOS */}
-      {modalCompromissosAberto && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: `linear-gradient(135deg, var(--tema-claro) 0%, #F8F9FA 100%)` }}>
-          <div className="sticky top-0 z-50 flex justify-between items-center p-4 bg-white/80 backdrop-blur-md border-b border-[var(--tema)]/20 max-w-lg mx-auto">
-             <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>Compromissos de hoje</h2>
-             <button onClick={() => setModalCompromissosAberto(false)} className="flex items-center gap-1 rounded-full bg-white/60 px-4 py-2 text-sm font-bold text-[var(--tema-escuro)] hover:bg-white shadow-sm border border-[var(--tema)]/30">
-               <X className="h-4 w-4" /> Fechar
-             </button>
-          </div>
-          
-          <div className="p-4 space-y-3 max-w-lg mx-auto pb-24">
-            {compromissosHoje.map((i) => (
-              <div key={i.id} className="bg-white rounded-2xl shadow-sm border border-white p-3 flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-3 cursor-pointer" onClick={() => setDetalheAberto(i)}>
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="grid h-10 w-10 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
-                      {i.cuidado === "Consulta" ? <Stethoscope className="h-5 w-5" /> : <Activity className="h-5 w-5" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-sm text-foreground truncate">{i.titulo}</h3>
-                      <p className="text-xs text-muted-foreground truncate">{i.hora || "Horário a definir"}{i.local ? ` · ${i.local}` : ""} · {i.data.split('-').reverse().join('/')}</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDetalheAberto(i);
-                    }}
-                    className="shrink-0 rounded-lg border border-[var(--tema)]/30 bg-white/90 px-2.5 py-1 text-xs font-bold text-[var(--tema-escuro)] shadow-xs transition hover:bg-white hover:border-[var(--tema)] active:scale-95"
-                  >
-                    Detalhes
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => atualizarSituacao(i.id, i.pessoaId, i.cuidado as string, "feito")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[10px] py-1.5 rounded-md opacity-90 hover:opacity-100">Compareceu</button>
-                  <button onClick={() => atualizarSituacao(i.id, i.pessoaId, i.cuidado as string, "faltou")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[10px] py-1.5 rounded-md opacity-90 hover:opacity-100">Faltou</button>
-                  <button onClick={() => atualizarSituacao(i.id, i.pessoaId, i.cuidado as string, "cancelado")} className="flex-1 bg-[var(--tema)] text-white font-bold text-[10px] py-1.5 rounded-md opacity-90 hover:opacity-100">Cancelou</button>
-                </div>
-              </div>
-            ))}
-            
-            <p className="text-center text-xs text-[var(--tema-escuro)] font-medium mt-6 opacity-70 italic">
-              *clique nos botões para confirmar as ações.
-            </p>
           </div>
         </div>
       )}
@@ -191,7 +144,7 @@ function Hoje() {
       {/* HEADER */}
       <header className="text-center px-4 mb-2 flex flex-col items-center">
         <h1 className="font-display text-4xl font-bold italic text-[var(--tema-escuro)] flex items-center justify-center gap-2">
-          horaMed <span className="text-3xl not-italic">🩺</span>
+          HoraMed <span className="text-3xl not-italic">🩺</span>
         </h1>
         <p className="text-xs font-sans italic text-muted-foreground mt-2">Sua saúde organizada de forma simples.</p>
       </header>
@@ -220,38 +173,32 @@ function Hoje() {
                   <p className="text-sm font-bold uppercase tracking-wider text-[var(--tema-escuro)]">Medicações para tomar</p>
                 </div>
                 {agendaHoje.slice(0, 3).map((a, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-white/80 p-2.5 rounded-xl shadow-sm border border-white/50 gap-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="grid h-8 w-8 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
-                        <Pill className="h-4 w-4" />
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-bold text-sm text-foreground truncate">
-                          {a.med.medicamento}
-                        </span>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
-                          {a.med.dosagem && <span>{a.med.dosagem}</span>}
-                          {a.med.dosagem && a.med.estoqueAtual !== undefined && <span>·</span>}
-                          {a.med.estoqueAtual !== undefined && (
-                            <span>
-                              {a.med.estoqueAtual === 1 ? "Resta 1 unid." : `Restam ${a.med.estoqueAtual} unid.`}
-                            </span>
-                          )}
+                  <div key={idx} className="flex flex-col bg-white/80 p-3 rounded-xl shadow-sm border border-white/50 gap-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="grid h-8 w-8 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}>
+                          <Pill className="h-4 w-4" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold text-sm text-foreground truncate">{a.med.medicamento}</span>
+                          <span className="text-[11px] text-muted-foreground truncate">
+                            {a.med.dosagem} {a.med.estoqueAtual !== undefined && `· Restam ${a.med.estoqueAtual} un.`}
+                          </span>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-display font-bold text-sm" style={{ color: "var(--tema-escuro)" }}>{a.horario}</span>
+                        <button onClick={() => registrarMedicacao(a.med, hoje, a.horario)} className="text-[12px] font-bold text-white px-2.5 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Tomei</button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-display font-bold text-sm" style={{ color: "var(--tema-escuro)" }}>{a.horario}</span>
-                      <button onClick={() => registrarMedicacao(a.med, hoje, a.horario)} className="text-[14px] font-bold text-white px-2.5 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Tomei</button>
-                    </div>
+                    {/* ✅ Detalhes da medicação na tela Hoje */}
+                    <button onClick={() => setDetalheAberto(a.med)} className="text-[10px] font-bold text-[var(--tema)] underline self-start ml-11">
+                      Ver tratamento e detalhes
+                    </button>
                   </div>
                 ))}
                 {agendaHoje.length > 3 && (
-                  <button
-                    type="button"
-                    onClick={() => setModalDosesAberto(true)}
-                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:opacity-95 active:scale-[0.99]"
-                  >
+                  <button type="button" onClick={() => setModalDosesAberto(true)} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:opacity-95 active:scale-[0.99]">
                     <span>Ver todas as {agendaHoje.length} doses</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
@@ -263,7 +210,7 @@ function Hoje() {
 
             {/* Compromissos */}
             {compromissosHoje.length === 0 ? (
-               <p className="text-xs text-muted-foreground italic text-center">Nenhum compromisso para hoje.</p>
+               <p className="text-xs text-muted-foreground italic text-center">Nenhum compromisso pendente para hoje.</p>
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -283,16 +230,7 @@ function Hoje() {
                           <span className="text-xs text-muted-foreground truncate">{comp.hora || "Horário a definir"}{comp.local ? ` · ${comp.local}` : ""}</span>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDetalheAberto(comp);
-                        }}
-                        className="shrink-0 rounded-lg border border-[var(--tema)]/30 bg-white/90 px-2.5 py-1 text-xs font-bold text-[var(--tema-escuro)] shadow-xs transition hover:bg-white hover:border-[var(--tema)] active:scale-95"
-                      >
-                        Detalhes
-                      </button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setDetalheAberto(comp); }} className="shrink-0 rounded-lg border border-[var(--tema)]/30 bg-white/90 px-2.5 py-1 text-xs font-bold text-[var(--tema-escuro)] shadow-xs transition hover:bg-white hover:border-[var(--tema)] active:scale-95">Detalhes</button>
                     </div>
                     
                     <div className="flex border-t border-gray-100 p-1.5 gap-1.5">
@@ -302,17 +240,6 @@ function Hoje() {
                     </div>
                   </div>
                 ))}
-
-                {compromissosHoje.length > 3 && (
-                  <button
-                    type="button"
-                    onClick={() => setModalCompromissosAberto(true)}
-                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:opacity-95 active:scale-[0.99]"
-                  >
-                    <span>Ver todos os {compromissosHoje.length} compromissos</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                )}
               </div>
             )}
           </div>
