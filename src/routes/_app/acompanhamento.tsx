@@ -572,6 +572,52 @@ if (view === "medicacoes_historico") {
         <div className="grid grid-cols-2 gap-2 mb-3">
           <input type="date" className="field text-sm p-2" value={dataHistorico} onChange={(e) => setDataHistorico(e.target.value)} />
           <select className="field text-sm p-2" value={filtroMed} onChange={(e) => setFiltroMed(e.target.value)}>
+            <option value="">Todos os remédios</option>
+            {emUso.map((m: any) => <option key={m.id} value={m.medicamento}>{m.medicamento}</option>)}
+          </select>
+        </div>
+        {logsFiltrados.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum registro encontrado.</p>
+        ) : (
+          <ul className="space-y-2">
+            {logsFiltrados.map((l: any) => (
+              <li key={l.id} className="flex items-center gap-2 rounded-lg bg-muted/20 p-2 font-sans text-sm">
+                <span className="text-green-600">✓</span>
+                <span className="flex-1 text-foreground">{l.titulo}</span>
+                <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
+                <button onClick={() => excluirLog(l)} className="p-1 text-muted-foreground hover:text-red-500 transition" title="Excluir registro"><Trash2 className="h-4 w-4" /></button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="notebook p-4 space-y-3 mt-4">
+        <p className="text-xs font-bold uppercase text-muted-foreground">Filtrar e Baixar Relatório</p>
+        <div className="grid grid-cols-2 gap-2">
+          <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
+          <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
+        </div>
+        <Link
+          to="/relatorios"
+          search={{
+            tipo: "historico_doses",
+            filtros: JSON.stringify({
+              historico_doses: {
+                q: filtroMed,
+                dataInicio: filtroDataInicio,
+                dataFim: filtroDataFim,
+              },
+            }),
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
+        >
+          <FileText className="h-4 w-4" /> Baixar Relatório
+        </Link>
+      </div>
+    </div>
+  );
+}
    
   // ✅ TELA: MEUS REMÉDIOS (Estoque com Editar/Excluir)
   if (view === "medicacoes_estoque") {
