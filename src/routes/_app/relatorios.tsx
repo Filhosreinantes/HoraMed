@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
 import { ArrowLeft, Printer, Activity, Pill, FileText, HeartPulse, History } from "lucide-react";
+import { useState, useMemo } from "react";
 import { useApp } from "@/lib/app-store";
 import { formatData, hojeYMD, type Situacao } from "@/lib/cuidados";
 
@@ -8,97 +8,94 @@ export const Route = createFileRoute("/_app/relatorios")({
   validateSearch: (search: Record<string, unknown>) => {
     return {
       tipo: (search.tipo as string) || "tudo",
-      q: (search.q as string) || "",
-      situacao: (search.situacao as string) || "",
-      dataInicio: (search.dataInicio as string) || "",
-      dataFim: (search.dataFim as string) || "",
+      filtros: (search.filtros as string) || "{}",
     };
   },
   head: () => ({ meta: [{ title: "Relatórios · HoraMed" }] }),
   component: Relatorios,
 });
 
-const TODAS_SECOES = ["medicamentos", "historico_doses", "sinais", "compromissos", "tratamentos"];
+type FiltroSecao = { q?: string; dataInicio?: string; dataFim?: string; situacao?: string };
 
 function Relatorios() {
-  const { tipo, q, situacao, dataInicio, dataFim } = Route.useSearch();
-  const app = useApp() as any;
-  const itens = (app.itens ?? []) as any[];
-  const logs = (app.logs ?? []) as any[];
-  const ativa = app.ativa;
+  const { tipo, filtros: filtrosJson } = Route.useSearch();
+  const { itens, logs, ativa } = useApp();
   const hoje = hojeYMD();
 
-  // ✅ Checkboxes do Relatório Geral
-  const [secoesSelecionadas, setSecoesSelecionadas] = useState<string[]>(TODAS_SECOES);
-  const toggleSecao = (chave: string) => {
-    setSecoesSelecionadas((prev) =>
-      prev.includes(chave) ? prev.filter((c) => c !== chave) : [...prev, chave]
-    );
+  // ✅ Decodifica os filtros iniciais que vieram da URL (ex: do Acompanhamento)
+  const filtrosIniciais = useMemo(() => JSON.parse(filtrosJson) as Record<string, FiltroSecao>, [filtrosJson]);
+
+  // ✅ Estado local para os filtros (atualiza em tempo real)
+  const [filtros, setFiltros] = useState<Record<string, FiltroSecao>>(filtrosIniciais);
+
+  // ✅ Função para atualizar um filtro específico e re-renderizar
+  const atualizarFiltro = (secao: string, campo: keyof FiltroSecao, valor: string) => {
+    setFiltros(prev => ({
+      ...prev,
+      [secao]: { ...prev[secao], [campo]: valor }
+    }));
   };
 
   // --- FILTROS BASE ---
-  let medsEmUso = itens.filter((i) => i.cuidado === "Medicação");
-  if (tipo === "medicamentos_encerrados") {
-    medsEmUso = medsEmUso.filter((i) => i.fim && i.fim < hoje);
-  } else {
-    medsEmUso = medsEmUso.filter((i) => !i.fim || i.fim >= hoje);
-  }
+  // ✅ Aviso 2 resolvido: aceita tanto "Medicação_Log" quanto "Medicação" + evento: true
+  let historicoDoses = logs.filter(l => 
+    (l.cuidado as string) === "Medicação_Log" || 
+    ((l.cuidado as string) === "Medicação" && l.evento === true && !l.acao)
+  ).sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
 
-  let sinaisVitais = itens
-    .filter((i) => i.cuidado === "Pressão" || i.cuidado === "Glicose")
-    .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+  let medsEmUso = itens.filter(i => i.cuidado === "Medicação" && (!i.fim || i.fim >= hoje));
+  let sinaisVitais = itens.filter(i => i.cuidado === "Pressão" || i.cuidado === "Glicose").sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+  let compromissos = itens.filter(i => i.cuidado === "Consulta" || i.cuidado === "Exame").sort((a, b) => (b.data || "").localeCompare(a.data || ""));
 
-  let compromissos = itens
-    .filter((i) => i.cuidado === "Consulta" || i.cuidado === "Exame")
-    .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
-
-  let historicoDoses = logs
-    .filter((l: any) => l.cuidado === "Medicação_Log" || (l.cuidado === "Medicação" && l.evento === true))
-    .sort((a: any, b: any) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
-
-  // --- FILTRO DE TEXTO ---
-  if (q) {
-    const termo = q.toLowerCase();
-    medsEmUso = medsEmUso.filter(
-      (i) =>
-        (i.medicamento || i.titulo || "").toLowerCase().includes(termo) ||
-        (i.tratamento || "").toLowerCase().includes(termo)
-    );
-    sinaisVitais = sinaisVitais.filter(
-      (i) =>
-        (i.titulo || "").toLowerCase().includes(termo) ||
-        (i.detalhes || "").toLowerCase().includes(termo) ||
-        (i.cuidado || "").toLowerCase().includes(termo)
-    );
-    compromissos = compromissos.filter(
-      (i) =>
-        (i.titulo || "").toLowerCase().includes(termo) ||
-        (i.local || "").toLowerCase().includes(termo)
-    );
-    historicoDoses = historicoDoses.filter((l: any) =>
-      (l.titulo || "").toLowerCase().includes(termo)
-    );
-  }
-
-  // --- FILTRO DE SITUAÇÃO (APENAS COMPROMISSOS) ---
-  if (situacao) compromissos = compromissos.filter((i) => (i.situacao ?? "proximo") === situacao);
-
-  // --- FILTRO DE DATA (TODAS AS SEÇÕES) ---
-  const dentroDoPeriodo = (data?: string) => {
-    if (!data) return true;
-    if (dataInicio && data < dataInicio) return false;
-    if (dataFim && data > dataFim) return false;
-    return true;
+  // ✅ Função auxiliar para aplicar filtros em uma lista
+  const aplicarFiltros = (lista: any[], secao: string) => {
+    const f = filtros[secao] || {};
+    let resultado = [...lista];
+    
+    if (f.q) {
+      const termo = f.q.toLowerCase();
+      resultado = resultado.filter(item => {
+        const texto = `${item.titulo || ""} ${item.medicamento || ""} ${item.local || ""} ${item.profissional || ""} ${item.tratamento || ""} ${item.detalhes || ""}`.toLowerCase();
+        return texto.includes(termo);
+      });
+    }
+    
+    if (f.dataInicio) {
+      resultado = resultado.filter(item => {
+        const data = item.data || item.inicio || item.criadoEm?.slice(0, 10);
+        return data && data >= f.dataInicio!;
+      });
+    }
+    
+    if (f.dataFim) {
+      resultado = resultado.filter(item => {
+        const data = item.data || item.inicio || item.criadoEm?.slice(0, 10);
+        return data && data <= f.dataFim!;
+      });
+    }
+    
+    if (f.situacao) {
+      resultado = resultado.filter(item => (item.situacao ?? "proximo") === f.situacao);
+    }
+    
+    return resultado;
   };
-  medsEmUso = medsEmUso.filter((m) => dentroDoPeriodo(m.inicio));
-  sinaisVitais = sinaisVitais.filter((s) => dentroDoPeriodo(s.data));
-  compromissos = compromissos.filter((c) => dentroDoPeriodo(c.data));
-  historicoDoses = historicoDoses.filter((h: any) => dentroDoPeriodo(h.data));
 
-  // --- TRATAMENTOS (com filtro de texto) ---
-  const tratamentosUnicos = Array.from(
-    new Set(itens.filter((i) => i.cuidado === "Medicação" && i.tratamento).map((i) => i.tratamento))
-  ) as string[];
+  // Aplicar filtros em cada seção
+  medsEmUso = aplicarFiltros(medsEmUso, "medicamentos");
+  sinaisVitais = aplicarFiltros(sinaisVitais, "sinais");
+  compromissos = aplicarFiltros(compromissos, "compromissos");
+  historicoDoses = aplicarFiltros(historicoDoses, "historico_doses");
+
+  const tratamentosUnicos = Array.from(new Set(
+    itens.filter(i => i.cuidado === "Medicação" && i.tratamento).map(i => i.tratamento)
+  )) as string[];
+
+  const tratamentosFiltrados = tratamentosUnicos.filter(t => {
+    const f = filtros["tratamentos"] || {};
+    if (f.q) return t.toLowerCase().includes(f.q.toLowerCase());
+    return true;
+  });
 
   const mostraTudo = tipo === "tudo";
   const imprimir = () => window.print();
@@ -117,104 +114,144 @@ function Relatorios() {
     return "Próximo";
   };
 
-return (
-  <div className="mx-auto w-full max-w-lg pb-20 pt-2">
-    <div className="flex items-center justify-between mb-4 print:hidden">
-      <Link
-        to="/acompanhamento"
-        className="flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Voltar
-      </Link>
-      <button
-        onClick={imprimir}
-        className="flex items-center gap-2 rounded-full bg-[#5B92C7] px-4 py-2 text-sm font-bold text-white shadow-md"
-      >
-        <Printer className="h-4 w-4" /> Baixar PDF
-      </button>
-    </div>
-
-    <div className="hidden print:block mb-6 text-center">
-      <h1 className="text-2xl font-bold text-[#2C4A6B]">Relatório de Saúde - HoraMed</h1>
-      <p className="text-sm text-muted-foreground">Paciente: {ativa?.nome}</p>
-      <p className="text-xs text-muted-foreground">Gerado em {formatData(hoje)}</p>
-      {q && <p className="text-xs text-muted-foreground">Filtro: "{q}"</p>}
-      {situacao && (
-        <p className="text-xs text-muted-foreground">Situação: {labelStatus(situacao as Situacao)}</p>
-      )}
-      {(dataInicio || dataFim) && (
-        <p className="text-xs text-muted-foreground">
-          Período: {dataInicio ? formatData(dataInicio) : "início"} até {dataFim ? formatData(dataFim) : "hoje"}
-        </p>
-      )}
-    </div>
-
-    {/* ✅ Checkboxes do Relatório Geral (só quando tipo === "tudo") */}
-    {tipo === "tudo" && (
-      <div className="notebook p-4 mb-4 mx-4 print:hidden">
-        <p className="text-xs font-bold uppercase text-muted-foreground mb-2">
-          O que incluir no relatório:
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { chave: "medicamentos", label: "Medicamentos" },
-            { chave: "historico_doses", label: "Histórico de Doses" },
-            { chave: "sinais", label: "Pressão e Glicose" },
-            { chave: "compromissos", label: "Consultas e Exames" },
-            { chave: "tratamentos", label: "Tratamentos" },
-          ].map((s) => (
-            <label key={s.chave} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={secoesSelecionadas.includes(s.chave)}
-                onChange={() => toggleSecao(s.chave)}
-              />
-              {s.label}
-            </label>
-          ))}
-        </div>
+  return (
+    <div className="mx-auto w-full max-w-lg pb-20 pt-2">
+      <div className="flex items-center justify-between mb-4 print:hidden">
+        <Link to="/acompanhamento" className="flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" /> Voltar
+        </Link>
+        <button onClick={imprimir} className="flex items-center gap-2 rounded-full bg-[#5B92C7] px-4 py-2 text-sm font-bold text-white shadow-md">
+          <Printer className="h-4 w-4" /> Baixar PDF
+        </button>
       </div>
-    )}
 
-    <div className="px-4 print:px-0">
-      {/* ✅ MEDICAÇÕES EM USO */}
-      {(mostraTudo || tipo === "medicamentos" || tipo === "medicamentos_encerrados") &&
-        secoesSelecionadas.includes("medicamentos") && (
+      {/* ✅ Aviso 4 resolvido: usando div em vez de header para o cabeçalho do PDF */}
+      <div className="hidden print:block mb-6 text-center">
+        <h1 className="text-2xl font-bold text-[#2C4A6B]">Relatório de Saúde - HoraMed</h1>
+        <p className="text-sm text-muted-foreground">Paciente: {ativa?.nome}</p>
+        <p className="text-xs text-muted-foreground">Gerado em {formatData(hoje)}</p>
+      </div>
+
+      {/* ✅ Bloco de Filtros por seção */}
+      {mostraTudo && (
+        <div className="notebook p-4 mb-4 space-y-4 print:hidden">
+          <p className="text-sm font-bold text-[#2C4A6B]">Refine o Relatório Geral</p>
+          
+          {/* Filtro de Medicamentos */}
+          <div className="border border-gray-200 rounded-lg p-3">
+            <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Medicamentos</p>
+            <input type="text" placeholder="Buscar remédio..." className="field text-sm p-2 w-full mb-2" 
+              value={filtros["medicamentos"]?.q || ""} 
+              onChange={(e) => atualizarFiltro("medicamentos", "q", e.target.value)} 
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input type="date" className="field text-sm p-2" 
+                value={filtros["medicamentos"]?.dataInicio || ""} 
+                onChange={(e) => atualizarFiltro("medicamentos", "dataInicio", e.target.value)} 
+              />
+              <input type="date" className="field text-sm p-2" 
+                value={filtros["medicamentos"]?.dataFim || ""} 
+                onChange={(e) => atualizarFiltro("medicamentos", "dataFim", e.target.value)} 
+              />
+            </div>
+          </div>
+
+          {/* Filtro de Consultas e Exames */}
+          <div className="border border-gray-200 rounded-lg p-3">
+            <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Consultas e Exames</p>
+            <input type="text" placeholder="Buscar consulta..." className="field text-sm p-2 w-full mb-2" 
+              value={filtros["compromissos"]?.q || ""} 
+              onChange={(e) => atualizarFiltro("compromissos", "q", e.target.value)} 
+            />
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <input type="date" className="field text-sm p-2" 
+                value={filtros["compromissos"]?.dataInicio || ""} 
+                onChange={(e) => atualizarFiltro("compromissos", "dataInicio", e.target.value)} 
+              />
+              <input type="date" className="field text-sm p-2" 
+                value={filtros["compromissos"]?.dataFim || ""} 
+                onChange={(e) => atualizarFiltro("compromissos", "dataFim", e.target.value)} 
+              />
+            </div>
+            <select className="field text-sm p-2 w-full"
+              value={filtros["compromissos"]?.situacao || ""}
+              onChange={(e) => atualizarFiltro("compromissos", "situacao", e.target.value)}
+            >
+              <option value="">Todos os status</option>
+              <option value="proximo">Próximos</option>
+              <option value="feito">Compareceu</option>
+              <option value="faltou">Faltou</option>
+              <option value="cancelado">Cancelou</option>
+            </select>
+          </div>
+
+          {/* Filtro de Pressão e Glicose */}
+          <div className="border border-gray-200 rounded-lg p-3">
+            <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Pressão e Glicose</p>
+            <div className="grid grid-cols-2 gap-2">
+              <input type="date" className="field text-sm p-2" 
+                value={filtros["sinais"]?.dataInicio || ""} 
+                onChange={(e) => atualizarFiltro("sinais", "dataInicio", e.target.value)} 
+              />
+              <input type="date" className="field text-sm p-2" 
+                value={filtros["sinais"]?.dataFim || ""} 
+                onChange={(e) => atualizarFiltro("sinais", "dataFim", e.target.value)} 
+              />
+            </div>
+          </div>
+
+          {/* Filtro de Histórico de Doses */}
+          <div className="border border-gray-200 rounded-lg p-3">
+            <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Histórico de Doses</p>
+            <input type="text" placeholder="Buscar dose..." className="field text-sm p-2 w-full mb-2" 
+              value={filtros["historico_doses"]?.q || ""} 
+              onChange={(e) => atualizarFiltro("historico_doses", "q", e.target.value)} 
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input type="date" className="field text-sm p-2" 
+                value={filtros["historico_doses"]?.dataInicio || ""} 
+                onChange={(e) => atualizarFiltro("historico_doses", "dataInicio", e.target.value)} 
+              />
+              <input type="date" className="field text-sm p-2" 
+                value={filtros["historico_doses"]?.dataFim || ""} 
+                onChange={(e) => atualizarFiltro("historico_doses", "dataFim", e.target.value)} 
+              />
+            </div>
+          </div>
+
+          {/* Filtro de Tratamentos */}
+          <div className="border border-gray-200 rounded-lg p-3">
+            <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Tratamentos</p>
+            <input type="text" placeholder="Buscar tratamento..." className="field text-sm p-2 w-full" 
+              value={filtros["tratamentos"]?.q || ""} 
+              onChange={(e) => atualizarFiltro("tratamentos", "q", e.target.value)} 
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="px-4 print:px-0">
+        {/* Seção de Medicamentos */}
+        {(mostraTudo || tipo === "medicamentos") && (
           <section className="mb-8">
-            {renderHeader(
-              tipo === "medicamentos_encerrados" ? "Medicações Encerradas" : "Medicações em Uso",
-              Pill
-            )}
-            {medsEmUso.length === 0 ? (
-              <p className="text-sm italic text-muted-foreground">Nenhuma medicação encontrada.</p>
-            ) : (
+            {renderHeader("Medicações em Uso", Pill)}
+            {medsEmUso.length === 0 ? <p className="text-sm italic text-muted-foreground">Nenhuma medicação encontrada.</p> : (
               <ul className="space-y-3">
-                {medsEmUso.map((m) => (
+                {medsEmUso.map(m => (
                   <li key={m.id} className="rounded-xl border border-gray-200 bg-white p-4 text-sm">
-                    <p className="font-bold text-lg text-foreground mb-2">
-                      {m.medicamento} {m.dosagem && `- ${m.dosagem}`}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                      <p><strong className="text-foreground">Horários:</strong> {m.horarios?.join(", ")}</p>
+                    <div className="flex justify-between items-start border-b border-gray-100 pb-2 mb-2">
+                      <p className="font-bold text-lg text-foreground">{m.medicamento}</p>
+                      <span className="text-xs font-bold text-[#5B92C7] bg-[#E8F1F9] px-2 py-0.5 rounded-full">{m.dosagem}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                      {m.profissional && <p><strong className="text-foreground">Médico:</strong> {m.profissional}</p>}
+                      {m.especialidade && <p><strong className="text-foreground">Especialidade:</strong> {m.especialidade}</p>}
+                      {m.tratamento && <p className="col-span-2"><strong className="text-foreground">Tratamento:</strong> {m.tratamento}</p>}
                       <p><strong className="text-foreground">Início:</strong> {formatData(m.inicio)}</p>
                       <p><strong className="text-foreground">Fim:</strong> {m.fim ? formatData(m.fim) : "Uso contínuo"}</p>
+                      <p className="col-span-2"><strong className="text-foreground">Horários:</strong> {m.horarios?.join(", ")}</p>
                       <p><strong className="text-foreground">Estoque:</strong> {m.estoqueAtual || 0} {m.dosagemUnidade || "un"}</p>
-                      {m.profissional && (
-                        <p className="col-span-2">
-                          <strong className="text-foreground">Prescrito por:</strong> {m.profissional}
-                          {m.especialidade && ` (${m.especialidade})`}
-                        </p>
-                      )}
-                      {m.tratamento && (
-                        <p className="col-span-2">
-                          <strong className="text-foreground">Tratamento:</strong> {m.tratamento}
-                        </p>
-                      )}
-                      {m.detalhes && (
-                        <p className="col-span-2">
-                          <strong className="text-foreground">Observações:</strong> {m.detalhes}
-                        </p>
-                      )}
+                      {m.detalhes && <p className="col-span-2"><strong className="text-foreground">Observações:</strong> {m.detalhes}</p>}
                     </div>
                   </li>
                 ))}
@@ -223,21 +260,16 @@ return (
           </section>
         )}
 
-      {/* ✅ HISTÓRICO DE DOSES */}
-      {(mostraTudo || tipo === "historico_doses") &&
-        secoesSelecionadas.includes("historico_doses") && (
+        {/* Seção de Histórico de Doses */}
+        {(mostraTudo || tipo === "historico_doses") && (
           <section className="mb-8">
             {renderHeader("Histórico de Doses", History)}
-            {historicoDoses.length === 0 ? (
-              <p className="text-sm italic text-muted-foreground">Nenhuma dose registrada no período.</p>
-            ) : (
+            {historicoDoses.length === 0 ? <p className="text-sm italic text-muted-foreground">Nenhuma dose registrada no período.</p> : (
               <ul className="space-y-2">
-                {historicoDoses.map((d: any) => (
+                {historicoDoses.map(d => (
                   <li key={d.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm flex justify-between items-start">
                     <p className="font-bold text-foreground">{d.titulo}</p>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatData(d.data)} {d.criadoEm?.slice(11, 16)}
-                    </span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">{formatData(d.data)} {d.criadoEm?.slice(11, 16)}</span>
                   </li>
                 ))}
               </ul>
@@ -245,23 +277,18 @@ return (
           </section>
         )}
 
-      {/* ✅ SINAIS VITAIS (Pressão e Glicose) */}
-      {(mostraTudo || tipo === "sinais") &&
-        secoesSelecionadas.includes("sinais") && (
+        {/* Seção de Pressão e Glicose */}
+        {(mostraTudo || tipo === "sinais") && (
           <section className="mb-8">
             {renderHeader("Pressão e Glicose", Activity)}
-            {sinaisVitais.length === 0 ? (
-              <p className="text-sm italic text-muted-foreground">Nenhuma medição encontrada.</p>
-            ) : (
+            {sinaisVitais.length === 0 ? <p className="text-sm italic text-muted-foreground">Nenhuma medição encontrada.</p> : (
               <ul className="space-y-2">
-                {sinaisVitais.map((s) => (
+                {sinaisVitais.map(s => (
                   <li key={s.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
                     <p className="font-bold text-[#2C4A6B] uppercase tracking-wide text-xs mb-1">{s.cuidado}</p>
                     <p className="font-bold text-foreground">{s.titulo}</p>
                     {s.detalhes && <p className="text-muted-foreground text-xs">{s.detalhes}</p>}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatData(s.data)} {s.hora}
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{formatData(s.data)} {s.hora}</p>
                   </li>
                 ))}
               </ul>
@@ -269,80 +296,63 @@ return (
           </section>
         )}
 
-        {/* ✅ CONSULTAS E EXAMES */}
-        {(mostraTudo || tipo === "compromissos") &&
-          secoesSelecionadas.includes("compromissos") && (
-            <section className="mb-8">
-              {renderHeader("Consultas e Exames", FileText)}
-              {compromissos.length === 0 ? (
-                <p className="text-sm italic text-muted-foreground">Nenhum compromisso encontrado.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {compromissos.map((c) => (
-                    <li key={c.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm flex justify-between items-start">
-                      <div>
-                        <p className="font-bold text-foreground">{c.titulo}</p>
-                        <p className="text-muted-foreground">
-                          {c.local || "Local não informado"} | {c.profissional || "Profissional não informado"}
-                        </p>
-                        <p className="text-xs font-bold mt-1 text-[#5B92C7]">{labelStatus(c.situacao)}</p>
-                      </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatData(c.data)} {c.hora}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          )}
+        {/* Seção de Compromissos */}
+        {(mostraTudo || tipo === "compromissos") && (
+          <section className="mb-8">
+            {renderHeader("Consultas e Exames", FileText)}
+            {compromissos.length === 0 ? <p className="text-sm italic text-muted-foreground">Nenhum compromisso encontrado.</p> : (
+              <ul className="space-y-2">
+                {compromissos.map(c => (
+                  <li key={c.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-foreground">{c.titulo}</p>
+                      <p className="text-muted-foreground">{c.local || "Local não informado"} | {c.profissional || "Profissional não informado"}</p>
+                      <p className="text-xs font-bold mt-1 text-[#5B92C7]">{labelStatus(c.situacao)}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">{formatData(c.data)} {c.hora}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
-        {/* ✅ TRATAMENTOS */}
-        {(mostraTudo || tipo === "tratamentos") &&
-          secoesSelecionadas.includes("tratamentos") && (
-            <section className="mb-8">
-              {renderHeader("Histórico de Tratamentos", HeartPulse)}
-              {tratamentosUnicos.length === 0 ? (
-                <p className="text-sm italic text-muted-foreground">Nenhum tratamento registrado.</p>
-              ) : (
-                <div className="space-y-3">
-                  {tratamentosUnicos
-                    .filter((t) => !q || t.toLowerCase().includes(q.toLowerCase()))
-                    .map((tratamento) => (
-                      <div key={tratamento} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
-                        <h3 className="font-bold text-[#2C4A6B] mb-1">{tratamento}</h3>
-                        <ul className="space-y-1">
-                          {itens
-                            .filter((i) => i.cuidado === "Medicação" && i.tratamento === tratamento)
-                            .map((m) => (
-                              <li key={m.id} className="text-muted-foreground">
-                                • {m.medicamento} ({m.dosagem}) - {formatData(m.inicio)}{" "}
-                                {m.fim ? `a ${formatData(m.fim)}` : "(contínuo)"}
-                              </li>
-                            ))}
-                        </ul>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </section>
-          )}
+        {/* Seção de Tratamentos */}
+        {(mostraTudo || tipo === "tratamentos") && (
+          <section className="mb-8">
+            {renderHeader("Histórico de Tratamentos", HeartPulse)}
+            {tratamentosFiltrados.length === 0 ? <p className="text-sm italic text-muted-foreground">Nenhum tratamento registrado.</p> : (
+              <div className="space-y-3">
+                {tratamentosFiltrados.map(tratamento => (
+                  <div key={tratamento} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
+                    <h3 className="font-bold text-[#2C4A6B] mb-1">{tratamento}</h3>
+                    <ul className="space-y-1">
+                      {itens.filter(i => i.cuidado === "Medicação" && i.tratamento === tratamento).map(m => (
+                        <li key={m.id} className="text-muted-foreground">
+                          • {m.medicamento} ({m.dosagem}) - {formatData(m.inicio)} {m.fim ? `a ${formatData(m.fim)}` : "(contínuo)"}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </div>
 
+      {/* ✅ Aviso 4 resolvido: seletor mais específico para não esconder o cabeçalho do PDF */}
       <style>{`
         @media print {
           body { background: white !important; }
           .print\\:hidden { display: none !important; }
           main { padding: 0 !important; }
           section { page-break-inside: avoid; }
-
-          /* ✅ Esconde apenas navegação do Layout (fora do conteúdo do PDF) */
-          nav, [role="navigation"] { display: none !important; }
-          .fixed { display: none !important; }
-
+          
+          /* Esconde só a navbar e os botões fixos, mas mantém divs normais */
+          nav, .fixed, .print\\:hidden { display: none !important; }
+          
           body > div, #root { padding: 0 !important; margin: 0 !important; }
-
-          /* ⚠️ NÃO escondemos header nem .absolute */
         }
       `}</style>
     </div>
