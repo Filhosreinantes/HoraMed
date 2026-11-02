@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import { ArrowLeft, Printer, Activity, Pill, FileText, HeartPulse, History } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import { formatData, hojeYMD, type Situacao } from "@/lib/cuidados";
@@ -17,6 +18,8 @@ export const Route = createFileRoute("/_app/relatorios")({
   component: Relatorios,
 });
 
+const TODAS_SECOES = ["medicamentos", "historico_doses", "sinais", "compromissos", "tratamentos"];
+
 function Relatorios() {
   const { tipo, q, situacao, dataInicio, dataFim } = Route.useSearch();
   const app = useApp() as any;
@@ -25,16 +28,32 @@ function Relatorios() {
   const ativa = app.ativa;
   const hoje = hojeYMD();
 
+  // ✅ Checkboxes do Relatório Geral
+  const [secoesSelecionadas, setSecoesSelecionadas] = useState<string[]>(TODAS_SECOES);
+  const toggleSecao = (chave: string) => {
+    setSecoesSelecionadas((prev) =>
+      prev.includes(chave) ? prev.filter((c) => c !== chave) : [...prev, chave]
+    );
+  };
+
   // --- FILTROS BASE ---
-  let medsEmUso = itens.filter((i) => i.cuidado === "Medicação" && (!i.fim || i.fim >= hoje));
+  let medsEmUso = itens.filter((i) => i.cuidado === "Medicação");
+  if (tipo === "medicamentos_encerrados") {
+    medsEmUso = medsEmUso.filter((i) => i.fim && i.fim < hoje);
+  } else {
+    medsEmUso = medsEmUso.filter((i) => !i.fim || i.fim >= hoje);
+  }
+
   let sinaisVitais = itens
     .filter((i) => i.cuidado === "Pressão" || i.cuidado === "Glicose")
     .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+
   let compromissos = itens
     .filter((i) => i.cuidado === "Consulta" || i.cuidado === "Exame")
     .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+
   let historicoDoses = logs
-    .filter((l: any) => l.cuidado === "Medicação" && l.evento === true)
+    .filter((l: any) => l.cuidado === "Medicação_Log" || (l.cuidado === "Medicação" && l.evento === true))
     .sort((a: any, b: any) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
 
   // --- FILTRO DE TEXTO ---
@@ -48,7 +67,8 @@ function Relatorios() {
     sinaisVitais = sinaisVitais.filter(
       (i) =>
         (i.titulo || "").toLowerCase().includes(termo) ||
-        (i.detalhes || "").toLowerCase().includes(termo)
+        (i.detalhes || "").toLowerCase().includes(termo) ||
+        (i.cuidado || "").toLowerCase().includes(termo)
     );
     compromissos = compromissos.filter(
       (i) =>
@@ -75,6 +95,7 @@ function Relatorios() {
   compromissos = compromissos.filter((c) => dentroDoPeriodo(c.data));
   historicoDoses = historicoDoses.filter((h: any) => dentroDoPeriodo(h.data));
 
+  // --- TRATAMENTOS (com filtro de texto) ---
   const tratamentosUnicos = Array.from(
     new Set(itens.filter((i) => i.cuidado === "Medicação" && i.tratamento).map((i) => i.tratamento))
   ) as string[];
@@ -96,42 +117,74 @@ function Relatorios() {
     return "Próximo";
   };
 
-  return (
-    <div className="mx-auto w-full max-w-lg pb-20 pt-2">
-      <div className="flex items-center justify-between mb-4 print:hidden">
-        <Link
-          to="/acompanhamento"
-          className="flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" /> Voltar
-        </Link>
-        <button
-          onClick={imprimir}
-          className="flex items-center gap-2 rounded-full bg-[#5B92C7] px-4 py-2 text-sm font-bold text-white shadow-md"
-        >
-          <Printer className="h-4 w-4" /> Baixar PDF
-        </button>
-      </div>
+return (
+  <div className="mx-auto w-full max-w-lg pb-20 pt-2">
+    <div className="flex items-center justify-between mb-4 print:hidden">
+      <Link
+        to="/acompanhamento"
+        className="flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" /> Voltar
+      </Link>
+      <button
+        onClick={imprimir}
+        className="flex items-center gap-2 rounded-full bg-[#5B92C7] px-4 py-2 text-sm font-bold text-white shadow-md"
+      >
+        <Printer className="h-4 w-4" /> Baixar PDF
+      </button>
+    </div>
 
-      <div className="hidden print:block mb-6 text-center">
-        <h1 className="text-2xl font-bold text-[#2C4A6B]">Relatório de Saúde - HoraMed</h1>
-        <p className="text-sm text-muted-foreground">Paciente: {ativa?.nome}</p>
-        <p className="text-xs text-muted-foreground">Gerado em {formatData(hoje)}</p>
-        {q && <p className="text-xs text-muted-foreground">Filtro: "{q}"</p>}
-        {situacao && (
-          <p className="text-xs text-muted-foreground">Situação: {labelStatus(situacao as Situacao)}</p>
-        )}
-        {(dataInicio || dataFim) && (
-          <p className="text-xs text-muted-foreground">
-            Período: {dataInicio ? formatData(dataInicio) : "início"} até {dataFim ? formatData(dataFim) : "hoje"}
-          </p>
-        )}
-      </div>
+    <div className="hidden print:block mb-6 text-center">
+      <h1 className="text-2xl font-bold text-[#2C4A6B]">Relatório de Saúde - HoraMed</h1>
+      <p className="text-sm text-muted-foreground">Paciente: {ativa?.nome}</p>
+      <p className="text-xs text-muted-foreground">Gerado em {formatData(hoje)}</p>
+      {q && <p className="text-xs text-muted-foreground">Filtro: "{q}"</p>}
+      {situacao && (
+        <p className="text-xs text-muted-foreground">Situação: {labelStatus(situacao as Situacao)}</p>
+      )}
+      {(dataInicio || dataFim) && (
+        <p className="text-xs text-muted-foreground">
+          Período: {dataInicio ? formatData(dataInicio) : "início"} até {dataFim ? formatData(dataFim) : "hoje"}
+        </p>
+      )}
+    </div>
 
-      <div className="px-4 print:px-0">
-        {(mostraTudo || tipo === "medicamentos") && (
+    {/* ✅ Checkboxes do Relatório Geral (só quando tipo === "tudo") */}
+    {tipo === "tudo" && (
+      <div className="notebook p-4 mb-4 mx-4 print:hidden">
+        <p className="text-xs font-bold uppercase text-muted-foreground mb-2">
+          O que incluir no relatório:
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { chave: "medicamentos", label: "Medicamentos" },
+            { chave: "historico_doses", label: "Histórico de Doses" },
+            { chave: "sinais", label: "Pressão e Glicose" },
+            { chave: "compromissos", label: "Consultas e Exames" },
+            { chave: "tratamentos", label: "Tratamentos" },
+          ].map((s) => (
+            <label key={s.chave} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={secoesSelecionadas.includes(s.chave)}
+                onChange={() => toggleSecao(s.chave)}
+              />
+              {s.label}
+            </label>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <div className="px-4 print:px-0">
+      {/* ✅ MEDICAÇÕES EM USO */}
+      {(mostraTudo || tipo === "medicamentos" || tipo === "medicamentos_encerrados") &&
+        secoesSelecionadas.includes("medicamentos") && (
           <section className="mb-8">
-            {renderHeader("Medicações em Uso", Pill)}
+            {renderHeader(
+              tipo === "medicamentos_encerrados" ? "Medicações Encerradas" : "Medicações em Uso",
+              Pill
+            )}
             {medsEmUso.length === 0 ? (
               <p className="text-sm italic text-muted-foreground">Nenhuma medicação encontrada.</p>
             ) : (
@@ -170,11 +223,13 @@ function Relatorios() {
           </section>
         )}
 
-        {(mostraTudo || tipo === "historico_doses") && (
+      {/* ✅ HISTÓRICO DE DOSES */}
+      {(mostraTudo || tipo === "historico_doses") &&
+        secoesSelecionadas.includes("historico_doses") && (
           <section className="mb-8">
             {renderHeader("Histórico de Doses", History)}
             {historicoDoses.length === 0 ? (
-              <p className="text-sm italic text-muted-foreground">Nenhuma dose registrada.</p>
+              <p className="text-sm italic text-muted-foreground">Nenhuma dose registrada no período.</p>
             ) : (
               <ul className="space-y-2">
                 {historicoDoses.map((d: any) => (
@@ -190,7 +245,9 @@ function Relatorios() {
           </section>
         )}
 
-        {(mostraTudo || tipo === "sinais") && (
+      {/* ✅ SINAIS VITAIS (Pressão e Glicose) */}
+      {(mostraTudo || tipo === "sinais") &&
+        secoesSelecionadas.includes("sinais") && (
           <section className="mb-8">
             {renderHeader("Pressão e Glicose", Activity)}
             {sinaisVitais.length === 0 ? (
@@ -198,14 +255,13 @@ function Relatorios() {
             ) : (
               <ul className="space-y-2">
                 {sinaisVitais.map((s) => (
-                  <li key={s.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm flex justify-between items-start">
-                    <div>
-                      <p className="font-bold text-foreground">{s.titulo}</p>
-                      {s.detalhes && <p className="text-muted-foreground text-xs">{s.detalhes}</p>}
-                    </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  <li key={s.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
+                    <p className="font-bold text-[#2C4A6B] uppercase tracking-wide text-xs mb-1">{s.cuidado}</p>
+                    <p className="font-bold text-foreground">{s.titulo}</p>
+                    {s.detalhes && <p className="text-muted-foreground text-xs">{s.detalhes}</p>}
+                    <p className="text-xs text-muted-foreground mt-1">
                       {formatData(s.data)} {s.hora}
-                    </span>
+                    </p>
                   </li>
                 ))}
               </ul>
@@ -213,58 +269,64 @@ function Relatorios() {
           </section>
         )}
 
-        {(mostraTudo || tipo === "compromissos") && (
-          <section className="mb-8">
-            {renderHeader("Consultas e Exames", FileText)}
-            {compromissos.length === 0 ? (
-              <p className="text-sm italic text-muted-foreground">Nenhum compromisso encontrado.</p>
-            ) : (
-              <ul className="space-y-2">
-                {compromissos.map((c) => (
-                  <li key={c.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm flex justify-between items-start">
-                    <div>
-                      <p className="font-bold text-foreground">{c.titulo}</p>
-                      <p className="text-muted-foreground">
-                        {c.local || "Local não informado"} | {c.profissional || "Profissional não informado"}
-                      </p>
-                      <p className="text-xs font-bold mt-1 text-[#5B92C7]">{labelStatus(c.situacao)}</p>
-                    </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatData(c.data)} {c.hora}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
+        {/* ✅ CONSULTAS E EXAMES */}
+        {(mostraTudo || tipo === "compromissos") &&
+          secoesSelecionadas.includes("compromissos") && (
+            <section className="mb-8">
+              {renderHeader("Consultas e Exames", FileText)}
+              {compromissos.length === 0 ? (
+                <p className="text-sm italic text-muted-foreground">Nenhum compromisso encontrado.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {compromissos.map((c) => (
+                    <li key={c.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm flex justify-between items-start">
+                      <div>
+                        <p className="font-bold text-foreground">{c.titulo}</p>
+                        <p className="text-muted-foreground">
+                          {c.local || "Local não informado"} | {c.profissional || "Profissional não informado"}
+                        </p>
+                        <p className="text-xs font-bold mt-1 text-[#5B92C7]">{labelStatus(c.situacao)}</p>
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatData(c.data)} {c.hora}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
 
-        {(mostraTudo || tipo === "tratamentos") && (
-          <section className="mb-8">
-            {renderHeader("Histórico de Tratamentos", HeartPulse)}
-            {tratamentosUnicos.length === 0 ? (
-              <p className="text-sm italic text-muted-foreground">Nenhum tratamento registrado.</p>
-            ) : (
-              <div className="space-y-3">
-                {tratamentosUnicos.map((tratamento) => (
-                  <div key={tratamento} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
-                    <h3 className="font-bold text-[#2C4A6B] mb-1">{tratamento}</h3>
-                    <ul className="space-y-1">
-                      {itens
-                        .filter((i) => i.cuidado === "Medicação" && i.tratamento === tratamento)
-                        .map((m) => (
-                          <li key={m.id} className="text-muted-foreground">
-                            • {m.medicamento} ({m.dosagem}) - {formatData(m.inicio)}{" "}
-                            {m.fim ? `a ${formatData(m.fim)}` : "(contínuo)"}
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
+        {/* ✅ TRATAMENTOS */}
+        {(mostraTudo || tipo === "tratamentos") &&
+          secoesSelecionadas.includes("tratamentos") && (
+            <section className="mb-8">
+              {renderHeader("Histórico de Tratamentos", HeartPulse)}
+              {tratamentosUnicos.length === 0 ? (
+                <p className="text-sm italic text-muted-foreground">Nenhum tratamento registrado.</p>
+              ) : (
+                <div className="space-y-3">
+                  {tratamentosUnicos
+                    .filter((t) => !q || t.toLowerCase().includes(q.toLowerCase()))
+                    .map((tratamento) => (
+                      <div key={tratamento} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
+                        <h3 className="font-bold text-[#2C4A6B] mb-1">{tratamento}</h3>
+                        <ul className="space-y-1">
+                          {itens
+                            .filter((i) => i.cuidado === "Medicação" && i.tratamento === tratamento)
+                            .map((m) => (
+                              <li key={m.id} className="text-muted-foreground">
+                                • {m.medicamento} ({m.dosagem}) - {formatData(m.inicio)}{" "}
+                                {m.fim ? `a ${formatData(m.fim)}` : "(contínuo)"}
+                              </li>
+                            ))}
+                        </ul>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </section>
+          )}
       </div>
 
       <style>{`
@@ -280,9 +342,7 @@ function Relatorios() {
 
           body > div, #root { padding: 0 !important; margin: 0 !important; }
 
-          /* ⚠️ NÃO escondemos header nem .absolute:
-             - <header> pode ser usado pelo cabeçalho do PDF
-             - .absolute pode conter elementos decorativos internos */
+          /* ⚠️ NÃO escondemos header nem .absolute */
         }
       `}</style>
     </div>
