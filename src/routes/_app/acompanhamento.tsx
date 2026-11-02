@@ -43,14 +43,14 @@ const LINHAS: { s: Situacao; label: string }[] = [
 ];
 
 function Acompanhamento() {
-  const { itens, logs, carregando, salvarRegistros } = useApp();
+  // ✅ Adicionado `ativa` (necessário para Nota_Tratamento)
+  const { itens, logs, ativa, carregando, salvarRegistros } = useApp() as any;
   const navigate = useNavigate();
   const [view, setView] = useState<View>("menu");
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [drill, setDrill] = useState<Drill>(null);
   const [buscaProximos, setBuscaProximos] = useState("");
 
-  // ✅ Filtros reutilizados por todas as telas
   const [filtroDataInicio, setFiltroDataInicio] = useState("");
   const [filtroDataFim, setFiltroDataFim] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<Situacao | "">("");
@@ -66,20 +66,20 @@ function Acompanhamento() {
   const hoje = hojeYMD();
 
   const filtrados = useMemo(() => {
-    return itens.filter((i) => {
+    return itens.filter((i: any) => {
       if (periodo === "tudo") return true;
       const d = i.data || i.inicio || "";
       return periodo === "mes" ? d.slice(0, 7) === hoje.slice(0, 7) : d.slice(0, 4) === hoje.slice(0, 4);
     });
   }, [itens, periodo, hoje]);
 
-  const meds = itens.filter((i) => i.cuidado === "Medicação");
-  const emUso = ordenarPorDataHora(meds.filter((m) => medicacaoEmUso(m)));
-  const encerradas = ordenarPorDataHora(meds.filter((m) => !medicacaoEmUso(m)));
+  const meds = itens.filter((i: any) => i.cuidado === "Medicação");
+  const emUso = ordenarPorDataHora(meds.filter((m: any) => medicacaoEmUso(m)));
+  const encerradas = ordenarPorDataHora(meds.filter((m: any) => !medicacaoEmUso(m)));
   
   const continuos = useMemo(() => {
     const mapa: Record<string, any> = {};
-    emUso.filter(m => !m.fim).forEach(m => {
+    emUso.filter((m: any) => !m.fim).forEach((m: any) => {
       const nome = m.medicamento || "";
       const existente = mapa[nome];
       if (!existente || (m.inicio || "") > (existente.inicio || "")) {
@@ -92,19 +92,19 @@ function Acompanhamento() {
   const remediosAgrupados = useMemo(() => {
     const mapa: Record<string, { med: any, dosesTomadas: number, caixasTomadas: number }> = {};
     
-    meds.forEach(m => {
+    meds.forEach((m: any) => {
       const nome = m.medicamento || "Desconhecido";
       if (!mapa[nome]) {
         mapa[nome] = { 
           med: m, 
-          dosesTomadas: logs.filter(l => l.parentId === m.id).length,
+          dosesTomadas: logs.filter((l: any) => l.parentId === m.id).length,
           caixasTomadas: 0 
         };
       } else {
         if (m.inicio && (m.inicio > (mapa[nome].med.inicio || ""))) {
           mapa[nome].med = m;
         }
-        mapa[nome].dosesTomadas += logs.filter(l => l.parentId === m.id).length;
+        mapa[nome].dosesTomadas += logs.filter((l: any) => l.parentId === m.id).length;
         mapa[nome].caixasTomadas += 1;
       }
     });
@@ -114,25 +114,25 @@ function Acompanhamento() {
 
   const sinaisVitais = useMemo(() => {
     return itens
-      .filter(i => i.cuidado === "Pressão" || i.cuidado === "Glicose")
-      .sort((a, b) => (b.data || "").localeCompare(a.data || "") || (b.hora || "").localeCompare(a.hora || ""));
+      .filter((i: any) => i.cuidado === "Pressão" || i.cuidado === "Glicose")
+      .sort((a: any, b: any) => (b.data || "").localeCompare(a.data || "") || (b.hora || "").localeCompare(a.hora || ""));
   }, [itens]);
 
   const tratamentos = useMemo(() => {
     return Array.from(new Set(
-      itens.filter(i => i.cuidado === "Medicação" && i.tratamento).map(i => i.tratamento)
+      itens.filter((i: any) => i.cuidado === "Medicação" && i.tratamento).map((i: any) => i.tratamento)
     )) as string[];
   }, [itens]);
 
   const proximos = useMemo(() => {
-    let lista = ordenarPorDataHora(itens.filter((i) => 
+    let lista = ordenarPorDataHora(itens.filter((i: any) => 
       compromissoPendente(i) && 
       (i.cuidado === "Consulta" || i.cuidado === "Exame")
     ));
-    if (buscaProximos) lista = lista.filter((i) => i.cuidado === buscaProximos);
-    if (filtroDataInicio) lista = lista.filter(i => i.data && i.data >= filtroDataInicio);
-    if (filtroDataFim) lista = lista.filter(i => i.data && i.data <= filtroDataFim);
-    if (filtroStatus) lista = lista.filter(i => (i.situacao ?? "proximo") === filtroStatus);
+    if (buscaProximos) lista = lista.filter((i: any) => i.cuidado === buscaProximos);
+    if (filtroDataInicio) lista = lista.filter((i: any) => i.data && i.data >= filtroDataInicio);
+    if (filtroDataFim) lista = lista.filter((i: any) => i.data && i.data <= filtroDataFim);
+    if (filtroStatus) lista = lista.filter((i: any) => (i.situacao ?? "proximo") === filtroStatus);
     return lista;
   }, [itens, buscaProximos, filtroDataInicio, filtroDataFim, filtroStatus]);
 
@@ -142,7 +142,7 @@ function Acompanhamento() {
     dataLimite.setDate(dataLimite.getDate() + 15);
     const limiteYMD = `${dataLimite.getFullYear()}-${String(dataLimite.getMonth() + 1).padStart(2, "0")}-${String(dataLimite.getDate()).padStart(2, "0")}`;
 
-    emUso.forEach((m) => {
+    emUso.forEach((m: any) => {
       const dataInicio = m.inicio || hoje;
       const dataFim = m.fim || limiteYMD;
       if (dataFim < hoje) return;
@@ -181,7 +181,7 @@ function Acompanhamento() {
     return logs
       .filter((i: any) => !filtroMed || i.titulo.toLowerCase().includes(filtroMed.toLowerCase()))
       .filter((i: any) => i.data === dataHistorico)
-      .sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
+      .sort((a: any, b: any) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
   }, [logs, filtroMed, dataHistorico]);
 
   const excluirLog = async (log: any) => {
@@ -201,7 +201,7 @@ function Acompanhamento() {
   const calcularViagem = () => {
     const dias = duracaoViagem();
     if (dias === 0) return [];
-    return emUso.map(med => {
+    return emUso.map((med: any) => {
       const vezesAoDia = med.horarios?.length || 1;
       const dosagem = Number(med.dosagemValor || 1);
       return { med, total: dias * vezesAoDia * dosagem, unidade: med.dosagemUnidade || "un" };
@@ -213,9 +213,9 @@ function Acompanhamento() {
 // ✅ TELA: SINAIS VITAIS
 if (view === "sinais_vitais") {
   const sinaisFiltrados = sinaisVitais
-    .filter((s) => !filtroSinal || s.cuidado === filtroSinal)
-    .filter((s) => !filtroDataInicio || (s.data && s.data >= filtroDataInicio))
-    .filter((s) => !filtroDataFim || (s.data && s.data <= filtroDataFim));
+    .filter((s: any) => !filtroSinal || s.cuidado === filtroSinal)
+    .filter((s: any) => !filtroDataInicio || (s.data && s.data >= filtroDataInicio))
+    .filter((s: any) => !filtroDataFim || (s.data && s.data <= filtroDataFim));
 
   return (
     <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -232,7 +232,7 @@ if (view === "sinais_vitais") {
              <p>Nenhuma medição registrada ainda.</p>
            </div>
         ) : (
-          sinaisFiltrados.map((s) => {
+          sinaisFiltrados.map((s: any) => {
             const isPressao = s.cuidado === "Pressão";
             return (
               <div key={s.id} className="notebook p-4 flex items-center gap-4 bg-white shadow-sm border border-border/50">
@@ -252,7 +252,6 @@ if (view === "sinais_vitais") {
         )}
       </div>
 
-      {/* ✅ Filtros e botão unificado */}
       <div className="notebook p-4 space-y-3 mt-4">
         <p className="text-xs font-bold uppercase text-muted-foreground">Filtrar e Baixar Relatório</p>
         <div className="grid grid-cols-2 gap-2">
@@ -266,7 +265,12 @@ if (view === "sinais_vitais") {
         </select>
         <Link
           to="/relatorios"
-          search={{ tipo: "sinais", dataInicio: filtroDataInicio, dataFim: filtroDataFim, q: filtroSinal }}
+          search={{
+            tipo: "sinais",
+            filtros: JSON.stringify({
+              sinais: { dataInicio: filtroDataInicio, dataFim: filtroDataFim, q: filtroSinal },
+            }),
+          }}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
         >
           <FileText className="h-4 w-4" /> Baixar Relatório
@@ -276,7 +280,7 @@ if (view === "sinais_vitais") {
   );
 }
 
-// ✅ TELA: TRATAMENTOS
+// ✅ TELA: TRATAMENTOS (com observação por tratamento)
 if (view === "tratamentos") {
   const tratamentosFiltrados = tratamentos.filter((t) => !filtroTratamento || t === filtroTratamento);
 
@@ -299,19 +303,64 @@ if (view === "tratamentos") {
         {tratamentosFiltrados.length === 0 ? (
           <p className="notebook p-4 text-sm text-muted-foreground italic">Nenhum tratamento registrado. Ao criar uma medicação, preencha o campo "Tratamento".</p>
         ) : (
-          tratamentosFiltrados.map(tratamento => {
-            const medsDoTratamento = itens.filter(i => i.cuidado === "Medicação" && i.tratamento === tratamento);
+          tratamentosFiltrados.map((tratamento) => {
+            const medsDoTratamento = itens.filter((i: any) => i.cuidado === "Medicação" && i.tratamento === tratamento);
+
+            // ✅ Busca a observação salva para este tratamento
+            const notaSalva = itens.find((i: any) =>
+              i.cuidado === "Nota_Tratamento" && i.titulo === tratamento
+            )?.detalhes || "";
+
             return (
               <div key={tratamento} className="notebook p-4 space-y-2 border-l-4" style={{ borderLeftColor: "var(--tema)" }}>
                 <h3 className="font-bold text-lg text-foreground">{tratamento}</h3>
                 <ul className="space-y-1">
-                  {medsDoTratamento.map(m => (
+                  {medsDoTratamento.map((m: any) => (
                     <li key={m.id} className="text-sm text-muted-foreground flex justify-between">
                       <span>{m.medicamento} ({m.dosagem})</span>
                       <span className="text-xs">{formatData(m.inicio)} {m.fim ? `- ${formatData(m.fim)}` : "(contínuo)"}</span>
                     </li>
                   ))}
                 </ul>
+
+                <div className="mt-2 pt-2 border-t border-border/50">
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Observações do tratamento</label>
+                  <textarea
+                    className="field text-sm min-h-16 w-full"
+                    placeholder="Ex: Iniciou em outubro, gripe forte..."
+                    value={notaSalva}
+                    onChange={async (e) => {
+                      const novaNota = e.target.value;
+                      const notaExistente = itens.find((i: any) => i.cuidado === "Nota_Tratamento" && i.titulo === tratamento);
+
+                      if (notaExistente) {
+                        await salvarRegistros([{
+                          id: uid(),
+                          pessoaId: notaExistente.pessoaId,
+                          criadoEm: nowLocalISO(),
+                          titulo: "Editar nota",
+                          cuidado: "Nota_Tratamento",
+                          evento: true,
+                          parentId: notaExistente.id,
+                          acao: "editar",
+                          alteracoes: { detalhes: novaNota }
+                        }], "acontecimentos");
+                      } else {
+                        const pessoaId = medsDoTratamento[0]?.pessoaId || ativa?.id || "";
+                        await salvarRegistros([{
+                          id: uid(),
+                          pessoaId,
+                          criadoEm: nowLocalISO(),
+                          titulo: tratamento,
+                          cuidado: "Nota_Tratamento",
+                          detalhes: novaNota,
+                          data: hoje,
+                          situacao: "feito"
+                        }], "acontecimentos");
+                      }
+                    }}
+                  />
+                </div>
               </div>
             );
           })
@@ -326,7 +375,12 @@ if (view === "tratamentos") {
         </div>
         <Link
           to="/relatorios"
-          search={{ tipo: "tratamentos", q: filtroTratamento, dataInicio: filtroDataInicio, dataFim: filtroDataFim }}
+          search={{
+            tipo: "tratamentos",
+            filtros: JSON.stringify({
+              tratamentos: { q: filtroTratamento },
+            }),
+          }}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
         >
           <FileText className="h-4 w-4" /> Baixar Relatório
@@ -375,7 +429,11 @@ if (view === "menu") {
           <span className="font-display text-sm font-semibold italic text-center">Tratamentos</span>
         </button>
 
-        <Link to="/relatorios" search={{ tipo: "tudo" }} className="col-span-2 notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+        <Link
+          to="/relatorios"
+          search={{ tipo: "tudo", filtros: JSON.stringify({}) }}
+          className="col-span-2 notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10"
+        >
           <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><ClipboardList className="h-5 w-5" /></div>
           <span className="font-display text-sm font-semibold italic text-center">Relatório Geral (PDF)</span>
         </Link>
@@ -440,7 +498,7 @@ if (view === "medicacoes_proximos") {
 
       {continuos.length > 0 && (
         <div className="space-y-2 mb-4">
-          {continuos.map(m => {
+          {continuos.map((m: any) => {
             const inicioDate = parseYMD(m.inicio || hoje);
             const limiteDate = new Date(inicioDate.getTime());
             limiteDate.setDate(limiteDate.getDate() + 15);
@@ -476,7 +534,7 @@ if (view === "medicacoes_proximos") {
         {proximosAgendamentos.length === 0 ? (
           <p className="text-sm text-muted-foreground italic text-center p-4">Nenhuma dose pendente.</p>
         ) : (
-          proximosAgendamentos.map((a, idx) => {
+          proximosAgendamentos.map((a: any, idx: number) => {
             const itemFormatado = { ...a.med, data: a.data, hora: a.horario, situacao: "proximo", cuidado: "Medicação" as Cuidado } as unknown as Item;
             const isHoje = a.data === hoje;
             const [ano, mes, dia] = a.data.split("-");
@@ -514,44 +572,7 @@ if (view === "medicacoes_historico") {
         <div className="grid grid-cols-2 gap-2 mb-3">
           <input type="date" className="field text-sm p-2" value={dataHistorico} onChange={(e) => setDataHistorico(e.target.value)} />
           <select className="field text-sm p-2" value={filtroMed} onChange={(e) => setFiltroMed(e.target.value)}>
-            <option value="">Todos os remédios</option>
-            {emUso.map(m => <option key={m.id} value={m.medicamento}>{m.medicamento}</option>)}
-          </select>
-        </div>
-        {logsFiltrados.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum registro encontrado.</p>
-        ) : (
-          <ul className="space-y-2">
-            {logsFiltrados.map((l: any) => (
-              <li key={l.id} className="flex items-center gap-2 rounded-lg bg-muted/20 p-2 font-sans text-sm">
-                <span className="text-green-600">✓</span>
-                <span className="flex-1 text-foreground">{l.titulo}</span>
-                <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
-                <button onClick={() => excluirLog(l)} className="p-1 text-muted-foreground hover:text-red-500 transition" title="Excluir registro"><Trash2 className="h-4 w-4" /></button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="notebook p-4 space-y-3 mt-4">
-        <p className="text-xs font-bold uppercase text-muted-foreground">Filtrar e Baixar Relatório</p>
-        <div className="grid grid-cols-2 gap-2">
-          <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
-          <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
-        </div>
-        <Link
-          to="/relatorios"
-          search={{ tipo: "historico_doses", q: filtroMed, dataInicio: filtroDataInicio, dataFim: filtroDataFim }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
-        >
-          <FileText className="h-4 w-4" /> Baixar Relatório
-        </Link>
-      </div>
-    </div>
-  );
-}
-
+   
   // ✅ TELA: MEUS REMÉDIOS (Estoque com Editar/Excluir)
   if (view === "medicacoes_estoque") {
     return (
@@ -568,7 +589,7 @@ if (view === "medicacoes_historico") {
             <Pill ativo={filtroRemedios === "encerrados"} onClick={() => setFiltroRemedios("encerrados")}>Encerrados ({encerradas.length})</Pill>
           </div>
           <div className="space-y-3 mt-2">
-            {remediosAgrupados.filter(r => filtroRemedios === "uso" ? medicacaoEmUso(r.med) : !medicacaoEmUso(r.med)).map(r => {
+            {remediosAgrupados.filter((r) => filtroRemedios === "uso" ? medicacaoEmUso(r.med) : !medicacaoEmUso(r.med)).map((r) => {
               const estoqueBaixo = (r.med.estoqueAtual || 0) <= 5;
               return (
                 <div key={r.med.id} className="notebook p-4 space-y-2 bg-white text-sm">
@@ -633,8 +654,12 @@ if (view === "medicacoes_historico") {
               to="/relatorios"
               search={{
                 tipo: filtroRemedios === "encerrados" ? "medicamentos_encerrados" : "medicamentos",
-                dataInicio: filtroDataInicio,
-                dataFim: filtroDataFim
+                filtros: JSON.stringify({
+                  medicamentos: {
+                    dataInicio: filtroDataInicio,
+                    dataFim: filtroDataFim,
+                  },
+                }),
               }}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
             >
@@ -724,7 +749,7 @@ if (view === "medicacoes_historico") {
 
           <div className="grid gap-3">
             {(["Consulta", "Exame"] as Cuidado[]).map((c) => {
-              const doTipo = filtrados.filter((i) => i.cuidado === c);
+              const doTipo = filtrados.filter((i: any) => i.cuidado === c);
               return (
                 <div key={c} className="bg-muted/30 rounded-xl p-4 border border-border/50">
                   <div className="mb-2 flex items-center justify-between">
@@ -737,7 +762,7 @@ if (view === "medicacoes_historico") {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     {LINHAS.map(({ s, label }) => {
-                      const n = doTipo.filter((i) => (i.situacao ?? "proximo") === s).length;
+                      const n = doTipo.filter((i: any) => (i.situacao ?? "proximo") === s).length;
                       const ativo = drill && drill.cuidado === c && drill.situacao === s;
                       return (
                         <Botao variant="ghost" key={s} onClick={() => setDrill({ cuidado: c, situacao: s })} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${ativo ? "bg-primary text-primary-foreground" : "bg-white border border-border/50 shadow-sm"}`}>
@@ -782,9 +807,13 @@ if (view === "medicacoes_historico") {
               to="/relatorios"
               search={{
                 tipo: "compromissos",
-                situacao: drill.situacao,
-                dataInicio: filtroDataInicio,
-                dataFim: filtroDataFim,
+                filtros: JSON.stringify({
+                  compromissos: {
+                    situacao: drill.situacao,
+                    dataInicio: filtroDataInicio,
+                    dataFim: filtroDataFim,
+                  },
+                }),
               }}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
             >
@@ -793,13 +822,13 @@ if (view === "medicacoes_historico") {
             
             {(() => {
               const doDrill = filtrados
-                .filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)
-                .filter((i) => !filtroDataInicio || (i.data && i.data >= filtroDataInicio))
-                .filter((i) => !filtroDataFim || (i.data && i.data <= filtroDataFim));
+                .filter((i: any) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)
+                .filter((i: any) => !filtroDataInicio || (i.data && i.data >= filtroDataInicio))
+                .filter((i: any) => !filtroDataFim || (i.data && i.data <= filtroDataFim));
               if (doDrill.length === 0) {
                 return <p className="text-sm text-muted-foreground">Nada por aqui.</p>;
               }
-              return ordenarPorDataHora(doDrill).map((i) => <CompromissoCard key={i.id} item={i} compacto />);
+              return ordenarPorDataHora(doDrill).map((i: any) => <CompromissoCard key={i.id} item={i} compacto />);
             })()}
           </section>
         )}
@@ -830,10 +859,14 @@ if (view === "medicacoes_historico") {
             to="/relatorios"
             search={{
               tipo: "compromissos",
-              q: buscaProximos,
-              dataInicio: filtroDataInicio,
-              dataFim: filtroDataFim,
-              situacao: filtroStatus
+              filtros: JSON.stringify({
+                compromissos: {
+                  q: buscaProximos,
+                  dataInicio: filtroDataInicio,
+                  dataFim: filtroDataFim,
+                  situacao: filtroStatus,
+                },
+              }),
             }}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
           >
@@ -844,7 +877,7 @@ if (view === "medicacoes_historico") {
             <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso encontrado.</p>
           ) : (
             <div className="max-h-[400px] space-y-2 overflow-y-auto pr-1">
-              {proximos.map((i) => <CompromissoCard key={i.id} item={i} compacto />)}
+              {proximos.map((i: any) => <CompromissoCard key={i.id} item={i} compacto />)}
             </div>
           )}
         </section>
