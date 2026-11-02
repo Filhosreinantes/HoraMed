@@ -187,12 +187,25 @@ export function CompromissoCard({ item, compacto = false }: { item: Item; compac
             </div>
 
             {compacto && pendente && !ehMedicamento && !ehSinal && !editando && (
-              <div className="flex flex-col gap-1 items-end">
-                <div className="flex gap-1">
-                  <button onClick={() => registrar("feito")} className="text-[10px] font-bold text-white px-2 py-0.5 rounded bg-[var(--tema)]">Compareceu</button>
-                  <button onClick={() => registrar("faltou")} className="text-[10px] font-bold border border-[var(--tema)] text-[var(--tema-escuro)] px-2 py-0.5 rounded">Faltou</button>
-                </div>
-                <button onClick={() => registrar("cancelado")} className="text-[10px] font-bold text-muted-foreground hover:text-red-500 transition">Cancelou</button>
+              <div className="flex gap-1 mt-1">
+                <button
+                  onClick={() => registrar("feito")}
+                  className="flex-1 text-[10px] font-bold text-white px-2 py-1.5 rounded-md bg-green-600 hover:bg-green-700 transition"
+                >
+                  Compareceu
+                </button>
+                <button
+                  onClick={() => registrar("faltou")}
+                  className="flex-1 text-[10px] font-bold text-white px-2 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 transition"
+                >
+                  Faltou
+                </button>
+                <button
+                  onClick={() => registrar("cancelado")}
+                  className="flex-1 text-[10px] font-bold text-white px-2 py-1.5 rounded-md bg-red-500 hover:bg-red-600 transition"
+                >
+                  Cancelou
+                </button>
               </div>
             )}
           </div>
