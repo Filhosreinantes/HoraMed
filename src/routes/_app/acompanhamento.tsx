@@ -50,7 +50,7 @@ function Acompanhamento() {
   const [drill, setDrill] = useState<Drill>(null);
   const [buscaProximos, setBuscaProximos] = useState("");
 
-  // ✅ Filtros para a lista de Consultas/Exames
+  // ✅ Filtros reutilizados por todas as telas
   const [filtroDataInicio, setFiltroDataInicio] = useState("");
   const [filtroDataFim, setFiltroDataFim] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<Situacao | "">("");
@@ -215,9 +215,6 @@ function Acompanhamento() {
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
         <div className="flex justify-between items-center">
           <h1 className="font-display text-3xl font-semibold italic text-foreground">Pressão & Glicose</h1>
-          <Link to="/relatorios" search={{ tipo: "sinais" }} className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden">
-            <FileText className="h-3.5 w-3.5" /> Relatório
-          </Link>
         </div>
         <SeletorTesouro />
 
@@ -247,6 +244,21 @@ function Acompanhamento() {
             })
           )}
         </div>
+
+        <div className="notebook p-4 space-y-3 mt-4">
+          <p className="text-xs font-bold uppercase text-muted-foreground">Filtrar e Baixar Relatório</p>
+          <div className="grid grid-cols-2 gap-2">
+            <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
+            <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
+          </div>
+          <Link
+            to="/relatorios"
+            search={{ tipo: "sinais", dataInicio: filtroDataInicio, dataFim: filtroDataFim }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
+          >
+            <FileText className="h-4 w-4" /> Baixar Relatório
+          </Link>
+        </div>
       </div>
     );
   }
@@ -258,9 +270,6 @@ function Acompanhamento() {
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
         <div className="flex justify-between items-center">
           <h1 className="font-display text-3xl font-semibold italic text-foreground">Tratamentos</h1>
-          <Link to="/relatorios" search={{ tipo: "tratamentos" }} className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden">
-            <FileText className="h-3.5 w-3.5" /> Relatório
-          </Link>
         </div>
         <SeletorTesouro />
 
@@ -285,6 +294,21 @@ function Acompanhamento() {
               );
             })
           )}
+        </div>
+
+        <div className="notebook p-4 space-y-3 mt-4">
+          <p className="text-xs font-bold uppercase text-muted-foreground">Filtrar e Baixar Relatório</p>
+          <div className="grid grid-cols-2 gap-2">
+            <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
+            <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
+          </div>
+          <Link
+            to="/relatorios"
+            search={{ tipo: "tratamentos", dataInicio: filtroDataInicio, dataFim: filtroDataFim }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
+          >
+            <FileText className="h-4 w-4" /> Baixar Relatório
+          </Link>
         </div>
       </div>
     );
@@ -460,13 +484,6 @@ function Acompanhamento() {
         
         <div className="flex justify-between items-center">
           <h1 className="font-display text-3xl font-semibold italic text-foreground">Histórico</h1>
-          <Link 
-            to="/relatorios" 
-            search={{ tipo: "historico_doses", q: filtroMed }} 
-            className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden"
-          >
-            <FileText className="h-3.5 w-3.5" /> Relatório
-          </Link>
         </div>
         
         <SeletorTesouro />
@@ -494,20 +511,32 @@ function Acompanhamento() {
             </ul>
           )}
         </div>
+
+        <div className="notebook p-4 space-y-3 mt-4">
+          <p className="text-xs font-bold uppercase text-muted-foreground">Filtrar e Baixar Relatório</p>
+          <div className="grid grid-cols-2 gap-2">
+            <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
+            <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
+          </div>
+          <Link
+            to="/relatorios"
+            search={{ tipo: "historico_doses", q: filtroMed, dataInicio: filtroDataInicio, dataFim: filtroDataFim }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
+          >
+            <FileText className="h-4 w-4" /> Baixar Relatório
+          </Link>
+        </div>
       </div>
     );
   }
 
-  // ✅ TELA: MEUS REMÉDIOS (Estoque com Alerta)
+ // ✅ TELA: MEUS REMÉDIOS (Estoque com Alerta)
   if (view === "medicacoes_estoque") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
         <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
         <div className="flex justify-between items-center">
           <h1 className="font-display text-3xl font-semibold italic text-foreground">Meus Remédios</h1>
-          <Link to="/relatorios" search={{ tipo: "medicamentos" }} className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden">
-            <FileText className="h-3.5 w-3.5" /> Relatório
-          </Link>
         </div>
         <SeletorTesouro />
 
@@ -516,37 +545,60 @@ function Acompanhamento() {
             <Pill ativo={filtroRemedios === "uso"} onClick={() => setFiltroRemedios("uso")}>Em uso ({emUso.length})</Pill>
             <Pill ativo={filtroRemedios === "encerrados"} onClick={() => setFiltroRemedios("encerrados")}>Encerrados ({encerradas.length})</Pill>
           </div>
-          <div className="space-y-2 mt-2">
+          <div className="space-y-3 mt-2">
             {remediosAgrupados.filter(r => filtroRemedios === "uso" ? medicacaoEmUso(r.med) : !medicacaoEmUso(r.med)).map(r => {
               const estoqueBaixo = (r.med.estoqueAtual || 0) <= 5;
               return (
-                <div key={r.med.id} className="notebook p-4 space-y-1 bg-white text-sm">
-                  <div className="flex justify-between font-bold text-foreground">
-                    <span>{r.med.medicamento}</span>
-                    <span className="text-xs text-muted-foreground">{r.med.dosagem}</span>
+                <div key={r.med.id} className="notebook p-4 space-y-2 bg-white text-sm">
+                  <div className="flex justify-between items-start border-b border-border/50 pb-2">
+                    <div>
+                      <p className="font-bold text-base text-foreground">{r.med.medicamento}</p>
+                      <p className="text-xs text-muted-foreground">{r.med.dosagem}</p>
+                    </div>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${estoqueBaixo ? "bg-red-100 text-red-600" : "bg-green-100 text-green-700"}`}>
+                      {r.med.estoqueAtual || 0} un. {estoqueBaixo && "⚠️"}
+                    </span>
                   </div>
-                  <p className={`text-xs ${estoqueBaixo ? "text-red-600 font-bold" : "text-muted-foreground"}`}>
-                    <span className="font-semibold">Estoque atual:</span> {r.med.estoqueAtual || 0} {r.med.dosagemUnidade || "un"}
-                    {estoqueBaixo && " ⚠️ Estoque baixo!"}
-                  </p>
-                  <div className="flex gap-4 mt-2 pt-2 border-t border-border/50">
-                    <p className="text-xs text-[var(--tema-escuro)] font-semibold">
-                      {r.dosesTomadas} doses tomadas
-                    </p>
-                    <p className="text-xs text-[var(--tema-escuro)] font-semibold">
-                      {r.caixasTomadas} {r.caixasTomadas === 1 ? 'ciclo' : 'ciclos'} registrados
-                    </p>
+
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    {r.med.profissional && <p><strong className="text-foreground">Médico:</strong> {r.med.profissional}</p>}
+                    {r.med.especialidade && <p><strong className="text-foreground">Especialidade:</strong> {r.med.especialidade}</p>}
+                    {r.med.tratamento && <p className="col-span-2"><strong className="text-foreground">Tratamento:</strong> {r.med.tratamento}</p>}
+                    <p><strong className="text-foreground">Início:</strong> {formatData(r.med.inicio)}</p>
+                    <p><strong className="text-foreground">Fim:</strong> {r.med.fim ? formatData(r.med.fim) : "Uso contínuo"}</p>
+                    <p className="col-span-2"><strong className="text-foreground">Horários:</strong> {r.med.horarios?.join(", ")}</p>
+                    {r.med.detalhes && <p className="col-span-2"><strong className="text-foreground">Observações:</strong> {r.med.detalhes}</p>}
+                  </div>
+
+                  <div className="flex gap-4 mt-2 pt-2 border-t border-border/50 text-xs font-semibold text-[var(--tema-escuro)]">
+                    <p>{r.dosesTomadas} doses tomadas</p>
+                    <p>{r.caixasTomadas} {r.caixasTomadas === 1 ? 'ciclo' : 'ciclos'} registrados</p>
                   </div>
                 </div>
               );
             })}
+          </div>
+
+          <div className="space-y-3 pt-3 border-t border-border/50">
+            <p className="text-xs font-bold uppercase text-muted-foreground">Filtrar e Baixar Relatório</p>
+            <div className="grid grid-cols-2 gap-2">
+              <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
+              <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
+            </div>
+            <Link
+              to="/relatorios"
+              search={{ tipo: "medicamentos", dataInicio: filtroDataInicio, dataFim: filtroDataFim }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
+            >
+              <FileText className="h-4 w-4" /> Baixar Relatório
+            </Link>
           </div>
         </div>
       </div>
     );
   }
 
-  //  TELA: PLANEJADOR DE VIAGENS
+  // ✅ TELA: PLANEJADOR DE VIAGENS
   if (view === "medicacoes_viagem") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -656,25 +708,9 @@ function Acompanhamento() {
           <section className="notebook space-y-3 p-4 mt-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">{drill.cuidado} · {LINHAS.find((l) => l.s === drill.situacao)?.label}</h3>
-              
-              <div className="flex items-center gap-2">
-                <Link
-                  to="/relatorios"
-                  search={{
-                    tipo: "compromissos",
-                    situacao: drill.situacao,
-                    dataInicio: filtroDataInicio,
-                    dataFim: filtroDataFim,
-                  }}
-                  className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden"
-                >
-                  <FileText className="h-3.5 w-3.5" /> Relatório
-                </Link>
-
-                <Botao variant="ghost" onClick={() => setDrill(null)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-semibold">
-                  <X className="h-4 w-4" /> Fechar
-                </Botao>
-              </div>
+              <Botao variant="ghost" onClick={() => setDrill(null)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-semibold">
+                <X className="h-4 w-4" /> Fechar
+              </Botao>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -693,6 +729,19 @@ function Acompanhamento() {
                 placeholder="Data fim"
               />
             </div>
+
+            <Link
+              to="/relatorios"
+              search={{
+                tipo: "compromissos",
+                situacao: drill.situacao,
+                dataInicio: filtroDataInicio,
+                dataFim: filtroDataFim,
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
+            >
+              <FileText className="h-4 w-4" /> Baixar Relatório
+            </Link>
             
             {(() => {
               const doDrill = filtrados
@@ -710,23 +759,8 @@ function Acompanhamento() {
         <Divisor />
         
         <section className="space-y-3">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Todos os próximos</h2>
-            <Link 
-              to="/relatorios" 
-              search={{ 
-                tipo: "compromissos", 
-                q: buscaProximos,
-                dataInicio: filtroDataInicio,
-                dataFim: filtroDataFim,
-                status: filtroStatus
-              }} 
-              className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden"
-            >
-              <FileText className="h-3.5 w-3.5" /> Relatório
-            </Link>
-          </div>
-
+          <h2 className="text-xl font-semibold">Todos os próximos</h2>
+          
           <div className="grid grid-cols-2 gap-2">
             <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
             <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
@@ -738,9 +772,28 @@ function Acompanhamento() {
             <option value="faltou">Faltou</option>
             <option value="cancelado">Cancelou</option>
           </select>
+          <select className="field text-sm p-2 w-full" value={buscaProximos} onChange={(e) => setBuscaProximos(e.target.value)}>
+            <option value="">Todos os tipos</option>
+            <option value="Consulta">Consulta</option>
+            <option value="Exame">Exame</option>
+          </select>
+
+          <Link
+            to="/relatorios"
+            search={{
+              tipo: "compromissos",
+              q: buscaProximos,
+              dataInicio: filtroDataInicio,
+              dataFim: filtroDataFim,
+              situacao: filtroStatus
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
+          >
+            <FileText className="h-4 w-4" /> Baixar Relatório
+          </Link>
 
           {proximos.length === 0 ? (
-            <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso agendado.</p>
+            <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso encontrado.</p>
           ) : (
             <div className="max-h-[400px] space-y-2 overflow-y-auto pr-1">
               {proximos.map((i) => <CompromissoCard key={i.id} item={i} compacto />)}
@@ -753,3 +806,4 @@ function Acompanhamento() {
 
   return null;
 }
+```
