@@ -22,13 +22,9 @@ function Relatorios() {
   const { itens, logs, ativa } = useApp();
   const hoje = hojeYMD();
 
-  // ✅ Decodifica os filtros iniciais que vieram da URL (ex: do Acompanhamento)
   const filtrosIniciais = useMemo(() => JSON.parse(filtrosJson) as Record<string, FiltroSecao>, [filtrosJson]);
-
-  // ✅ Estado local para os filtros (atualiza em tempo real)
   const [filtros, setFiltros] = useState<Record<string, FiltroSecao>>(filtrosIniciais);
 
-  // ✅ Função para atualizar um filtro específico e re-renderizar
   const atualizarFiltro = (secao: string, campo: keyof FiltroSecao, valor: string) => {
     setFiltros(prev => ({
       ...prev,
@@ -37,17 +33,20 @@ function Relatorios() {
   };
 
   // --- FILTROS BASE ---
-  // ✅ Aviso 2 resolvido: aceita tanto "Medicação_Log" quanto "Medicação" + evento: true
   let historicoDoses = logs.filter(l => 
     (l.cuidado as string) === "Medicação_Log" || 
     ((l.cuidado as string) === "Medicação" && l.evento === true && !l.acao)
   ).sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
 
+  // ✅ Suporte a medicamentos encerrados
   let medsEmUso = itens.filter(i => i.cuidado === "Medicação" && (!i.fim || i.fim >= hoje));
+  if (tipo === "medicamentos_encerrados") {
+    medsEmUso = itens.filter(i => i.cuidado === "Medicação" && i.fim && i.fim < hoje);
+  }
+
   let sinaisVitais = itens.filter(i => i.cuidado === "Pressão" || i.cuidado === "Glicose").sort((a, b) => (b.data || "").localeCompare(a.data || ""));
   let compromissos = itens.filter(i => i.cuidado === "Consulta" || i.cuidado === "Exame").sort((a, b) => (b.data || "").localeCompare(a.data || ""));
 
-  // ✅ Função auxiliar para aplicar filtros em uma lista
   const aplicarFiltros = (lista: any[], secao: string) => {
     const f = filtros[secao] || {};
     let resultado = [...lista];
@@ -81,7 +80,6 @@ function Relatorios() {
     return resultado;
   };
 
-  // Aplicar filtros em cada seção
   medsEmUso = aplicarFiltros(medsEmUso, "medicamentos");
   sinaisVitais = aplicarFiltros(sinaisVitais, "sinais");
   compromissos = aplicarFiltros(compromissos, "compromissos");
@@ -99,6 +97,9 @@ function Relatorios() {
 
   const mostraTudo = tipo === "tudo";
   const imprimir = () => window.print();
+
+  // ✅ Título dinâmico para a seção de medicamentos
+  const tituloMeds = tipo === "medicamentos_encerrados" ? "Medicações Encerradas" : "Medicações em Uso";
 
   const renderHeader = (titulo: string, Icone: any) => (
     <div className="flex items-center gap-2 mb-2 mt-6">
@@ -125,7 +126,6 @@ function Relatorios() {
         </button>
       </div>
 
-      {/* ✅ Aviso 4 resolvido: usando div em vez de header para o cabeçalho do PDF */}
       <div className="hidden print:block mb-6 text-center">
         <h1 className="text-2xl font-bold text-[#2C4A6B]">Relatório de Saúde - HoraMed</h1>
         <p className="text-sm text-muted-foreground">Paciente: {ativa?.nome}</p>
@@ -231,10 +231,10 @@ function Relatorios() {
       )}
 
       <div className="px-4 print:px-0">
-        {/* Seção de Medicamentos */}
-        {(mostraTudo || tipo === "medicamentos") && (
+        {/* ✅ Seção de Medicamentos (com título dinâmico) */}
+        {(mostraTudo || tipo === "medicamentos" || tipo === "medicamentos_encerrados") && (
           <section className="mb-8">
-            {renderHeader("Medicações em Uso", Pill)}
+            {renderHeader(tituloMeds, Pill)}
             {medsEmUso.length === 0 ? <p className="text-sm italic text-muted-foreground">Nenhuma medicação encontrada.</p> : (
               <ul className="space-y-3">
                 {medsEmUso.map(m => (
@@ -341,7 +341,6 @@ function Relatorios() {
         )}
       </div>
 
-      {/* ✅ Aviso 4 resolvido: seletor mais específico para não esconder o cabeçalho do PDF */}
       <style>{`
         @media print {
           body { background: white !important; }
@@ -349,7 +348,6 @@ function Relatorios() {
           main { padding: 0 !important; }
           section { page-break-inside: avoid; }
           
-          /* Esconde só a navbar e os botões fixos, mas mantém divs normais */
           nav, .fixed, .print\\:hidden { display: none !important; }
           
           body > div, #root { padding: 0 !important; margin: 0 !important; }
