@@ -11,6 +11,7 @@ export const Route = createFileRoute("/_app/relatorios")({
       dataInicio: (search.dataInicio as string) || "",
       dataFim: (search.dataFim as string) || "",
       status: (search.status as Situacao | "") || "",
+      situacao: (search.situacao as Situacao | "") || "",
     };
   },
   head: () => ({ meta: [{ title: "Relatórios · HoraMed" }] }),
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/_app/relatorios")({
 });
 
 function Relatorios() {
-  const { tipo, q, dataInicio, dataFim, status } = Route.useSearch();
+  const { tipo, q, dataInicio, dataFim, status, situacao } = Route.useSearch();
   const { itens, ativa } = useApp();
   const hoje = hojeYMD();
 
@@ -34,11 +35,14 @@ function Relatorios() {
     compromissos = compromissos.filter(i => (i.titulo || "").toLowerCase().includes(termo) || (i.local || "").toLowerCase().includes(termo));
   }
 
-  // ✅ Aplicar filtros de data e status nos compromissos
+  // ✅ Aplicar filtros de data
   if (dataInicio) compromissos = compromissos.filter(i => i.data && i.data >= dataInicio);
   if (dataFim) compromissos = compromissos.filter(i => i.data && i.data <= dataFim);
-  if (status) compromissos = compromissos.filter(i => (i.situacao ?? "proximo") === status);
-  
+
+  // ✅ Aplicar filtro de status/situação (situacao tem prioridade — vem do clique no card)
+  const filtroSituacao = situacao || status;
+  if (filtroSituacao) compromissos = compromissos.filter(i => (i.situacao ?? "proximo") === filtroSituacao);
+
   const tratamentosUnicos = Array.from(new Set(
     itens.filter(i => i.cuidado === "Medicação" && i.tratamento).map(i => i.tratamento)
   )) as string[];
@@ -76,7 +80,7 @@ function Relatorios() {
         <p className="text-sm text-muted-foreground">Paciente: {ativa?.nome}</p>
         <p className="text-xs text-muted-foreground">Gerado em {formatData(hoje)}</p>
         {q && <p className="text-xs text-muted-foreground">Filtro de busca: "{q}"</p>}
-        {status && <p className="text-xs text-muted-foreground">Status: {labelStatus(status as Situacao)}</p>}
+        {filtroSituacao && <p className="text-xs text-muted-foreground">Status: {labelStatus(filtroSituacao as Situacao)}</p>}
         {(dataInicio || dataFim) && <p className="text-xs text-muted-foreground">Período: {dataInicio ? formatData(dataInicio) : "início"} até {dataFim ? formatData(dataFim) : "hoje"}</p>}
       </div>
 
@@ -131,7 +135,7 @@ function Relatorios() {
                       {/* ✅ Mostra o status do compromisso no relatório */}
                       <p className="text-xs font-bold mt-1 text-[#5B92C7]">{labelStatus(c.situacao)}</p>
                     </div>
-                                        <span className="text-xs text-muted-foreground whitespace-nowrap">{formatData(c.data)} {c.hora}</span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">{formatData(c.data)} {c.hora}</span>
                   </li>
                 ))}
               </ul>
@@ -168,6 +172,17 @@ function Relatorios() {
           .print\\:hidden { display: none !important; }
           main { padding: 0 !important; }
           section { page-break-inside: avoid; }
+
+          /* ✅ Esconde apenas elementos de navegação do Layout (fora do conteúdo do PDF) */
+          nav, [role="navigation"] { display: none !important; }
+          .fixed { display: none !important; }
+
+          /* ✅ Garante que o conteúdo ocupe toda a página */
+          body > div, #root { padding: 0 !important; margin: 0 !important; }
+
+          /* ⚠️ NÃO escondemos "header" nem ".absolute":
+                - <header> é usado pelo próprio cabeçalho do relatório
+                - .absolute pode conter elementos decorativos do PDF */
         }
       `}</style>
     </div>
