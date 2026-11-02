@@ -61,6 +61,8 @@ function Shell() {
   const [comprando, setComprando] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const ehConfiguracoes = pathname.startsWith("/configuracoes");
+  // ✅ NOVO: Detecta se está na página de relatórios
+  const ehRelatorios = pathname.startsWith("/relatorios");
   
   // ✅ LÊ A COR DINAMICAMENTE DO PERFIL ATIVO
   const tema = CORES[ativa?.tema || "azul"] ?? CORES.azul;
@@ -125,50 +127,59 @@ function Shell() {
       } as React.CSSProperties}
     >
       <div className="relative mx-auto min-h-screen max-w-lg px-4 pb-28 pt-6">
-        <div className="absolute right-4 top-5 z-30 flex items-center gap-2">
-          {/* ✅ Botão ATIVO agora leva para a tela de assinatura */}
-          <Link
-            to="/assinatura"
-            className="flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-xs font-bold tracking-wider text-emerald-700 shadow-sm transition hover:bg-emerald-200 active:scale-95"
-          >
-            <ShieldCheck className="h-3.5 w-3.5" />
-            <span>ATIVO</span>
-          </Link>
-
-          {!ehConfiguracoes && (
+        {/* ✅ ESCONDE O CABEÇALHO DE BOTÕES NA PÁGINA DE RELATÓRIOS E NA IMPRESSÃO */}
+        {!ehRelatorios && (
+          <div className="absolute right-4 top-5 z-30 flex items-center gap-2 print:hidden">
+            {/* ✅ Botão ATIVO agora leva para a tela de assinatura */}
             <Link
-              to="/perfil"
-              aria-label="Perfil"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-[var(--tema-escuro)] shadow-sm border border-[var(--tema)]/30 backdrop-blur-sm transition hover:bg-white hover:shadow hover:scale-105 active:scale-95"
+              to="/assinatura"
+              className="flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-xs font-bold tracking-wider text-emerald-700 shadow-sm transition hover:bg-emerald-200 active:scale-95"
             >
-              <Settings className="h-5 w-5" />
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>ATIVO</span>
             </Link>
-          )}
-        </div>
+
+            {!ehConfiguracoes && (
+              <Link
+                to="/perfil"
+                aria-label="Perfil"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-[var(--tema-escuro)] shadow-sm border border-[var(--tema)]/30 backdrop-blur-sm transition hover:bg-white hover:shadow hover:scale-105 active:scale-95"
+              >
+                <Settings className="h-5 w-5" />
+              </Link>
+            )}
+          </div>
+        )}
         
         <Outlet />
       </div>
 
-      {ehAppAndroid() ? <ConfiabilidadePrompt /> : <NotificationPrompt />}
+      {/* ✅ ESCONDE OS PROMPTS NA IMPRESSÃO */}
+      <div className="print:hidden">
+        {ehAppAndroid() ? <ConfiabilidadePrompt /> : <NotificationPrompt />}
+      </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/40 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-        <div className="mx-auto flex max-w-lg">
-          <Link to="/hoje" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>
-            <Home className="h-6 w-6" /> Hoje
-          </Link>
-          
-          <Link to="/criar" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>
-            <span className="-mt-6 grid h-12 w-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-soft">
-              <Plus className="h-6 w-6" />
-            </span>
-            Criar
-          </Link>
-          
-          <Link to="/acompanhamento" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>
-            <Activity className="h-6 w-6" /> Acompanhar
-          </Link>
-        </div>
-      </nav>
+      {/* ✅ ESCONDE O MENU INFERIOR NA PÁGINA DE RELATÓRIOS E NA IMPRESSÃO */}
+      {!ehRelatorios && (
+        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/40 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur print:hidden">
+          <div className="mx-auto flex max-w-lg">
+            <Link to="/hoje" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>
+              <Home className="h-6 w-6" /> Hoje
+            </Link>
+            
+            <Link to="/criar" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>
+              <span className="-mt-6 grid h-12 w-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-soft">
+                <Plus className="h-6 w-6" />
+              </span>
+              Criar
+            </Link>
+            
+            <Link to="/acompanhamento" className={tab} activeProps={{ className: "text-primary" }} inactiveProps={{ className: "text-muted-foreground" }}>
+              <Activity className="h-6 w-6" /> Acompanhar
+            </Link>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }
