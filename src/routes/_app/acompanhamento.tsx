@@ -806,4 +806,3 @@ function Acompanhamento() {
 
   return null;
 }
-```
