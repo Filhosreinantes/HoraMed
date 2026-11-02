@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Printer, Activity, Pill, FileText, HeartPulse } from "lucide-react";
+import { ArrowLeft, Printer, Activity, Pill, FileText, HeartPulse, History } from "lucide-react";
 import { useApp } from "@/lib/app-store";
 import { formatData, hojeYMD, type Situacao } from "@/lib/cuidados";
 
@@ -20,32 +20,62 @@ export const Route = createFileRoute("/_app/relatorios")({
 
 function Relatorios() {
   const { tipo, q, dataInicio, dataFim, status, situacao } = Route.useSearch();
-  const { itens, ativa } = useApp();
+  const app = useApp() as any;
+  const itens = (app.itens ?? []) as any[];
+  const ativa = app.ativa;
+  const logs = (app.logs ?? []) as any[];
+
   const hoje = hojeYMD();
 
-  let medsEmUso = itens.filter(i => i.cuidado === "Medicação" && (!i.fim || i.fim >= hoje));
-  let sinaisVitais = itens.filter(i => i.cuidado === "Pressão" || i.cuidado === "Glicose").sort((a, b) => (b.data || "").localeCompare(a.data || ""));
-  let compromissos = itens.filter(i => i.cuidado === "Consulta" || i.cuidado === "Exame").sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+  let medsEmUso = itens.filter((i) => i.cuidado === "Medicação" && (!i.fim || i.fim >= hoje));
+  let sinaisVitais = itens
+    .filter((i) => i.cuidado === "Pressão" || i.cuidado === "Glicose")
+    .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+  let compromissos = itens
+    .filter((i) => i.cuidado === "Consulta" || i.cuidado === "Exame")
+    .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
 
-  // ✅ Aplicar busca de texto
+  // ✅ Busca de texto
   if (q) {
     const termo = q.toLowerCase();
-    medsEmUso = medsEmUso.filter(i => (i.medicamento || i.titulo || "").toLowerCase().includes(termo) || (i.tratamento || "").toLowerCase().includes(termo));
-    sinaisVitais = sinaisVitais.filter(i => (i.titulo || "").toLowerCase().includes(termo) || (i.detalhes || "").toLowerCase().includes(termo));
-    compromissos = compromissos.filter(i => (i.titulo || "").toLowerCase().includes(termo) || (i.local || "").toLowerCase().includes(termo));
+    medsEmUso = medsEmUso.filter(
+      (i) =>
+        (i.medicamento || i.titulo || "").toLowerCase().includes(termo) ||
+        (i.tratamento || "").toLowerCase().includes(termo)
+    );
+    sinaisVitais = sinaisVitais.filter(
+      (i) =>
+        (i.titulo || "").toLowerCase().includes(termo) ||
+        (i.detalhes || "").toLowerCase().includes(termo)
+    );
+    compromissos = compromissos.filter(
+      (i) =>
+        (i.titulo || "").toLowerCase().includes(termo) ||
+        (i.local || "").toLowerCase().includes(termo)
+    );
   }
 
-  // ✅ Aplicar filtros de data
-  if (dataInicio) compromissos = compromissos.filter(i => i.data && i.data >= dataInicio);
-  if (dataFim) compromissos = compromissos.filter(i => i.data && i.data <= dataFim);
+  // ✅ Filtros de data
+  if (dataInicio) compromissos = compromissos.filter((i) => i.data && i.data >= dataInicio);
+  if (dataFim) compromissos = compromissos.filter((i) => i.data && i.data <= dataFim);
 
-  // ✅ Aplicar filtro de status/situação (situacao tem prioridade — vem do clique no card)
+  // ✅ Filtro de status/situação (situacao tem prioridade — vem do clique no card)
   const filtroSituacao = situacao || status;
-  if (filtroSituacao) compromissos = compromissos.filter(i => (i.situacao ?? "proximo") === filtroSituacao);
+  if (filtroSituacao) compromissos = compromissos.filter((i) => (i.situacao ?? "proximo") === filtroSituacao);
 
-  const tratamentosUnicos = Array.from(new Set(
-    itens.filter(i => i.cuidado === "Medicação" && i.tratamento).map(i => i.tratamento)
-  )) as string[];
+  // ✅ Histórico de Doses (vem dos logs, não dos itens)
+  let historicoDoses = logs
+    .filter((l: any) => l.cuidado === "Medicação" && l.evento === true)
+    .sort((a: any, b: any) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
+
+  if (q) {
+    const termo = q.toLowerCase();
+    historicoDoses = historicoDoses.filter((l: any) => (l.titulo || "").toLowerCase().includes(termo));
+  }
+
+  const tratamentosUnicos = Array.from(
+    new Set(itens.filter((i) => i.cuidado === "Medicação" && i.tratamento).map((i) => i.tratamento))
+  ) as string[];
 
   const mostraTudo = tipo === "tudo";
   const imprimir = () => window.print();
@@ -81,21 +111,48 @@ function Relatorios() {
         <p className="text-xs text-muted-foreground">Gerado em {formatData(hoje)}</p>
         {q && <p className="text-xs text-muted-foreground">Filtro de busca: "{q}"</p>}
         {filtroSituacao && <p className="text-xs text-muted-foreground">Status: {labelStatus(filtroSituacao as Situacao)}</p>}
-        {(dataInicio || dataFim) && <p className="text-xs text-muted-foreground">Período: {dataInicio ? formatData(dataInicio) : "início"} até {dataFim ? formatData(dataFim) : "hoje"}</p>}
+        {(dataInicio || dataFim) && (
+          <p className="text-xs text-muted-foreground">
+            Período: {dataInicio ? formatData(dataInicio) : "início"} até {dataFim ? formatData(dataFim) : "hoje"}
+          </p>
+        )}
       </div>
 
       <div className="px-4 print:px-0">
         {(mostraTudo || tipo === "medicamentos") && (
           <section className="mb-8">
             {renderHeader("Medicações em Uso", Pill)}
-            {medsEmUso.length === 0 ? <p className="text-sm italic text-muted-foreground">Nenhuma medicação encontrada.</p> : (
-              <ul className="space-y-2">
-                {medsEmUso.map(m => (
-                  <li key={m.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
-                    <p className="font-bold text-foreground">{m.medicamento} {m.dosagem && `- ${m.dosagem}`}</p>
-                    <p className="text-muted-foreground">Horários: {m.horarios?.join(", ")}</p>
-                    <p className="text-muted-foreground">Início: {formatData(m.inicio)} {m.fim ? `| Fim: ${formatData(m.fim)}` : "(Uso contínuo)"}</p>
-                    {m.tratamento && <p className="text-[#2C4A6B] font-medium mt-1">Tratamento: {m.tratamento}</p>}
+            {medsEmUso.length === 0 ? (
+              <p className="text-sm italic text-muted-foreground">Nenhuma medicação encontrada.</p>
+            ) : (
+              <ul className="space-y-3">
+                {medsEmUso.map((m) => (
+                  <li key={m.id} className="rounded-xl border border-gray-200 bg-white p-4 text-sm">
+                    <p className="font-bold text-lg text-foreground mb-2">
+                      {m.medicamento} {m.dosagem && `- ${m.dosagem}`}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <p><strong className="text-foreground">Horários:</strong> {m.horarios?.join(", ")}</p>
+                      <p><strong className="text-foreground">Início:</strong> {formatData(m.inicio)}</p>
+                      <p><strong className="text-foreground">Fim:</strong> {m.fim ? formatData(m.fim) : "Uso contínuo"}</p>
+                      <p><strong className="text-foreground">Estoque:</strong> {m.estoqueAtual || 0} {m.dosagemUnidade || "un"}</p>
+                      {m.profissional && (
+                        <p className="col-span-2">
+                          <strong className="text-foreground">Prescrito por:</strong> {m.profissional}
+                          {m.especialidade && ` (${m.especialidade})`}
+                        </p>
+                      )}
+                      {m.tratamento && (
+                        <p className="col-span-2">
+                          <strong className="text-foreground">Tratamento:</strong> {m.tratamento}
+                        </p>
+                      )}
+                      {m.detalhes && (
+                        <p className="col-span-2">
+                          <strong className="text-foreground">Observações:</strong> {m.detalhes}
+                        </p>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -106,15 +163,19 @@ function Relatorios() {
         {(mostraTudo || tipo === "sinais") && (
           <section className="mb-8">
             {renderHeader("Pressão e Glicose", Activity)}
-            {sinaisVitais.length === 0 ? <p className="text-sm italic text-muted-foreground">Nenhuma medição encontrada.</p> : (
+            {sinaisVitais.length === 0 ? (
+              <p className="text-sm italic text-muted-foreground">Nenhuma medição encontrada.</p>
+            ) : (
               <ul className="space-y-2">
-                {sinaisVitais.map(s => (
+                {sinaisVitais.map((s) => (
                   <li key={s.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm flex justify-between items-start">
                     <div>
                       <p className="font-bold text-foreground">{s.titulo}</p>
                       {s.detalhes && <p className="text-muted-foreground text-xs">{s.detalhes}</p>}
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">{formatData(s.data)} {s.hora}</span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatData(s.data)} {s.hora}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -125,17 +186,22 @@ function Relatorios() {
         {(mostraTudo || tipo === "compromissos") && (
           <section className="mb-8">
             {renderHeader("Consultas e Exames", FileText)}
-            {compromissos.length === 0 ? <p className="text-sm italic text-muted-foreground">Nenhum compromisso encontrado.</p> : (
+            {compromissos.length === 0 ? (
+              <p className="text-sm italic text-muted-foreground">Nenhum compromisso encontrado.</p>
+            ) : (
               <ul className="space-y-2">
-                {compromissos.map(c => (
+                {compromissos.map((c) => (
                   <li key={c.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm flex justify-between items-start">
                     <div>
                       <p className="font-bold text-foreground">{c.titulo}</p>
-                      <p className="text-muted-foreground">{c.local || "Local não informado"} | {c.profissional || "Profissional não informado"}</p>
-                      {/* ✅ Mostra o status do compromisso no relatório */}
+                      <p className="text-muted-foreground">
+                        {c.local || "Local não informado"} | {c.profissional || "Profissional não informado"}
+                      </p>
                       <p className="text-xs font-bold mt-1 text-[#5B92C7]">{labelStatus(c.situacao)}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">{formatData(c.data)} {c.hora}</span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatData(c.data)} {c.hora}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -146,21 +212,48 @@ function Relatorios() {
         {(mostraTudo || tipo === "tratamentos") && (
           <section className="mb-8">
             {renderHeader("Histórico de Tratamentos", HeartPulse)}
-            {tratamentosUnicos.length === 0 ? <p className="text-sm italic text-muted-foreground">Nenhum tratamento registrado.</p> : (
+            {tratamentosUnicos.length === 0 ? (
+              <p className="text-sm italic text-muted-foreground">Nenhum tratamento registrado.</p>
+            ) : (
               <div className="space-y-3">
-                {tratamentosUnicos.map(tratamento => (
+                {tratamentosUnicos.map((tratamento) => (
                   <div key={tratamento} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
                     <h3 className="font-bold text-[#2C4A6B] mb-1">{tratamento}</h3>
                     <ul className="space-y-1">
-                      {itens.filter(i => i.cuidado === "Medicação" && i.tratamento === tratamento).map(m => (
-                        <li key={m.id} className="text-muted-foreground">
-                          • {m.medicamento} ({m.dosagem}) - {formatData(m.inicio)} {m.fim ? `a ${formatData(m.fim)}` : "(contínuo)"}
-                        </li>
-                      ))}
+                      {itens
+                        .filter((i) => i.cuidado === "Medicação" && i.tratamento === tratamento)
+                        .map((m) => (
+                          <li key={m.id} className="text-muted-foreground">
+                            • {m.medicamento} ({m.dosagem}) - {formatData(m.inicio)}{" "}
+                            {m.fim ? `a ${formatData(m.fim)}` : "(contínuo)"}
+                          </li>
+                        ))}
                     </ul>
                   </div>
                 ))}
               </div>
+            )}
+          </section>
+        )}
+
+        {(mostraTudo || tipo === "historico_doses") && (
+          <section className="mb-8">
+            {renderHeader("Histórico de Doses", History)}
+            {historicoDoses.length === 0 ? (
+              <p className="text-sm italic text-muted-foreground">Nenhuma dose registrada.</p>
+            ) : (
+              <ul className="space-y-2">
+                {historicoDoses.map((d: any) => (
+                  <li key={d.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-foreground">{d.titulo}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatData(d.data)} {d.criadoEm?.slice(11, 16)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
           </section>
         )}
@@ -173,16 +266,14 @@ function Relatorios() {
           main { padding: 0 !important; }
           section { page-break-inside: avoid; }
 
-          /* ✅ Esconde apenas elementos de navegação do Layout (fora do conteúdo do PDF) */
+          /* ✅ Esconde apenas elementos de navegação do Layout */
           nav, [role="navigation"] { display: none !important; }
           .fixed { display: none !important; }
 
           /* ✅ Garante que o conteúdo ocupe toda a página */
           body > div, #root { padding: 0 !important; margin: 0 !important; }
 
-          /* ⚠️ NÃO escondemos "header" nem ".absolute":
-                - <header> é usado pelo próprio cabeçalho do relatório
-                - .absolute pode conter elementos decorativos do PDF */
+          /* ⚠️ NÃO escondemos header nem .absolute */
         }
       `}</style>
     </div>
