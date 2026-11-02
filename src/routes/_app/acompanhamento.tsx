@@ -208,295 +208,295 @@ function Acompanhamento() {
 
   if (carregando) return <div className="space-y-3 p-4"><Skeleton className="h-40 rounded-3xl bg-muted" /><Skeleton className="h-40 rounded-3xl bg-muted" /></div>;
 
-// ✅ TELA: SINAIS VITAIS
-if (view === "sinais_vitais") {
-  return (
-    <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
-      <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-      <div className="flex justify-between items-center">
-        <h1 className="font-display text-3xl font-semibold italic text-foreground">Pressão & Glicose</h1>
-        <Link to="/relatorios" search={{ tipo: "sinais" }} className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden">
-          <FileText className="h-3.5 w-3.5" /> Relatório
-        </Link>
-      </div>
-      <SeletorTesouro />
+  // ✅ TELA: SINAIS VITAIS
+  if (view === "sinais_vitais") {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        <div className="flex justify-between items-center">
+          <h1 className="font-display text-3xl font-semibold italic text-foreground">Pressão & Glicose</h1>
+          <Link to="/relatorios" search={{ tipo: "sinais" }} className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden">
+            <FileText className="h-3.5 w-3.5" /> Relatório
+          </Link>
+        </div>
+        <SeletorTesouro />
 
-      <div className="space-y-3 mt-4">
-        {sinaisVitais.length === 0 ? (
-           <div className="notebook p-6 text-center text-muted-foreground">
-             <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-             <p>Nenhuma medição registrada ainda.</p>
-           </div>
-        ) : (
-          sinaisVitais.map((s) => {
-            const isPressao = s.cuidado === "Pressão";
-            return (
-              <div key={s.id} className="notebook p-4 flex items-center gap-4 bg-white shadow-sm border border-border/50">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema)" }}>
-                  {isPressao ? <Activity className="h-5 w-5" /> : <Droplet className="h-5 w-5" />}
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-lg text-foreground">{s.titulo}</span>
-                    <span className="text-xs text-muted-foreground">{formatData(s.data)} {s.hora && `às ${s.hora}`}</span>
+        <div className="space-y-3 mt-4">
+          {sinaisVitais.length === 0 ? (
+             <div className="notebook p-6 text-center text-muted-foreground">
+               <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+               <p>Nenhuma medição registrada ainda.</p>
+             </div>
+          ) : (
+            sinaisVitais.map((s) => {
+              const isPressao = s.cuidado === "Pressão";
+              return (
+                <div key={s.id} className="notebook p-4 flex items-center gap-4 bg-white shadow-sm border border-border/50">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema)" }}>
+                    {isPressao ? <Activity className="h-5 w-5" /> : <Droplet className="h-5 w-5" />}
                   </div>
-                  {s.detalhes && <p className="text-sm text-muted-foreground">{s.detalhes}</p>}
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold text-lg text-foreground">{s.titulo}</span>
+                      <span className="text-xs text-muted-foreground">{formatData(s.data)} {s.hora && `às ${s.hora}`}</span>
+                    </div>
+                    {s.detalhes && <p className="text-sm text-muted-foreground">{s.detalhes}</p>}
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-// ✅ TELA: TRATAMENTOS
-if (view === "tratamentos") {
-  return (
-    <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
-      <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-      <div className="flex justify-between items-center">
-        <h1 className="font-display text-3xl font-semibold italic text-foreground">Tratamentos</h1>
-        <Link to="/relatorios" search={{ tipo: "tratamentos" }} className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden">
-          <FileText className="h-3.5 w-3.5" /> Relatório
-        </Link>
+  // ✅ TELA: TRATAMENTOS
+  if (view === "tratamentos") {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        <div className="flex justify-between items-center">
+          <h1 className="font-display text-3xl font-semibold italic text-foreground">Tratamentos</h1>
+          <Link to="/relatorios" search={{ tipo: "tratamentos" }} className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden">
+            <FileText className="h-3.5 w-3.5" /> Relatório
+          </Link>
+        </div>
+        <SeletorTesouro />
+
+        <div className="space-y-3 mt-4">
+          {tratamentos.length === 0 ? (
+            <p className="notebook p-4 text-sm text-muted-foreground italic">Nenhum tratamento registrado. Ao criar uma medicação, preencha o campo "Tratamento".</p>
+          ) : (
+            tratamentos.map(tratamento => {
+              const medsDoTratamento = itens.filter(i => i.cuidado === "Medicação" && i.tratamento === tratamento);
+              return (
+                <div key={tratamento} className="notebook p-4 space-y-2 border-l-4" style={{ borderLeftColor: "var(--tema)" }}>
+                  <h3 className="font-bold text-lg text-foreground">{tratamento}</h3>
+                  <ul className="space-y-1">
+                    {medsDoTratamento.map(m => (
+                      <li key={m.id} className="text-sm text-muted-foreground flex justify-between">
+                        <span>{m.medicamento} ({m.dosagem})</span>
+                        <span className="text-xs">{formatData(m.inicio)} {m.fim ? `- ${formatData(m.fim)}` : "(contínuo)"}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
-      <SeletorTesouro />
+    );
+  }
 
-      <div className="space-y-3 mt-4">
-        {tratamentos.length === 0 ? (
-          <p className="notebook p-4 text-sm text-muted-foreground italic">Nenhum tratamento registrado. Ao criar uma medicação, preencha o campo "Tratamento".</p>
-        ) : (
-          tratamentos.map(tratamento => {
-            const medsDoTratamento = itens.filter(i => i.cuidado === "Medicação" && i.tratamento === tratamento);
-            return (
-              <div key={tratamento} className="notebook p-4 space-y-2 border-l-4" style={{ borderLeftColor: "var(--tema)" }}>
-                <h3 className="font-bold text-lg text-foreground">{tratamento}</h3>
-                <ul className="space-y-1">
-                  {medsDoTratamento.map(m => (
-                    <li key={m.id} className="text-sm text-muted-foreground flex justify-between">
-                      <span>{m.medicamento} ({m.dosagem})</span>
-                      <span className="text-xs">{formatData(m.inicio)} {m.fim ? `- ${formatData(m.fim)}` : "(contínuo)"}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
-}
+  // ✅ MENU INICIAL
+  if (view === "menu") {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
+        <header className="text-center px-4 mb-2 flex flex-col items-center">
+          <h1 className="font-display text-4xl font-bold italic text-[var(--tema-escuro)] flex items-center justify-center gap-2">
+            horaMed <span className="text-3xl not-italic">🩺</span>
+          </h1>
+          <p className="text-xs font-sans italic text-muted-foreground mt-2">
+            Sua saúde organizada de forma simples.
+          </p>
+        </header>
 
-// ✅ MENU INICIAL
-if (view === "menu") {
-  return (
-    <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
-      <header className="text-center px-4 mb-2 flex flex-col items-center">
-        <h1 className="font-display text-4xl font-bold italic text-[var(--tema-escuro)] flex items-center justify-center gap-2">
-          horaMed <span className="text-3xl not-italic">🩺</span>
-        </h1>
-        <p className="text-xs font-sans italic text-muted-foreground mt-2">
-          Sua saúde organizada de forma simples.
+        <div className="px-4"><SeletorTesouro /></div>
+        <p className="font-display text-xl up font-bold text-[var(--tema)] text-center mb-2">
+          Acompanhamento
         </p>
-      </header>
+        <div className="grid grid-cols-2 gap-4 px-4 mt-6">
+          
+          <button onClick={() => setView("medicacoes_menu")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><PillIcon className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Medicamentos</span>
+          </button>
+          
+          <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Consultas e Exames</span>
+          </button>
 
-      <div className="px-4"><SeletorTesouro /></div>
-      <p className="font-display text-xl up font-bold text-[var(--tema)] text-center mb-2">
-        Acompanhamento
-      </p>
-      <div className="grid grid-cols-2 gap-4 px-4 mt-6">
-        
-        <button onClick={() => setView("medicacoes_menu")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
-          <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><PillIcon className="h-5 w-5" /></div>
-          <span className="font-display text-sm font-semibold italic text-center">Medicamentos</span>
-        </button>
-        
-        <button onClick={() => setView("compromissos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
-          <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
-          <span className="font-display text-sm font-semibold italic text-center">Consultas e Exames</span>
-        </button>
+          <button onClick={() => setView("sinais_vitais")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Activity className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Pressão & Glicose</span>
+          </button>
 
-        <button onClick={() => setView("sinais_vitais")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
-          <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Activity className="h-5 w-5" /></div>
-          <span className="font-display text-sm font-semibold italic text-center">Pressão & Glicose</span>
-        </button>
+          <button onClick={() => setView("tratamentos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><HeartPulse className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Tratamentos</span>
+          </button>
 
-        <button onClick={() => setView("tratamentos")} className="notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
-          <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><HeartPulse className="h-5 w-5" /></div>
-          <span className="font-display text-sm font-semibold italic text-center">Tratamentos</span>
-        </button>
+          <Link to="/relatorios" search={{ tipo: "tudo" }} className="col-span-2 notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
+            <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><ClipboardList className="h-5 w-5" /></div>
+            <span className="font-display text-sm font-semibold italic text-center">Relatório Geral (PDF)</span>
+          </Link>
 
-        <Link to="/relatorios" search={{ tipo: "tudo" }} className="col-span-2 notebook flex flex-col items-center justify-center gap-2 border-[#B8933F]/60 p-4 transition hover:bg-muted/10">
-          <div className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><ClipboardList className="h-5 w-5" /></div>
-          <span className="font-display text-sm font-semibold italic text-center">Relatório Geral (PDF)</span>
-        </Link>
-
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-// ✅ MENU DE MEDICAÇÕES
-if (view === "medicacoes_menu") {
-  return (
-    <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
-      <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-      <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Medicamentos</h1></header>
-      <SeletorTesouro />
-      
-      <div className="grid gap-3 mt-4">
-        <button onClick={() => setView("medicacoes_proximos")} className="notebook flex items-center gap-4 p-5 border-[#B8933F]/60 hover:bg-muted/10 transition">
-          <div className="grid h-12 w-12 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><CalendarCheck className="h-6 w-6" /></div>
-          <div className="text-left">
-            <h3 className="font-display text-lg font-bold italic">Próximas Doses</h3>
-            <p className="text-xs text-muted-foreground">Veja as doses pendentes de hoje e renove tratamentos.</p>
-          </div>
-        </button>
+  // ✅ MENU DE MEDICAÇÕES
+  if (view === "medicacoes_menu") {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+        <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Medicamentos</h1></header>
+        <SeletorTesouro />
+        
+        <div className="grid gap-3 mt-4">
+          <button onClick={() => setView("medicacoes_proximos")} className="notebook flex items-center gap-4 p-5 border-[#B8933F]/60 hover:bg-muted/10 transition">
+            <div className="grid h-12 w-12 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><CalendarCheck className="h-6 w-6" /></div>
+            <div className="text-left">
+              <h3 className="font-display text-lg font-bold italic">Próximas Doses</h3>
+              <p className="text-xs text-muted-foreground">Veja as doses pendentes de hoje e renove tratamentos.</p>
+            </div>
+          </button>
 
-        <button onClick={() => setView("medicacoes_historico")} className="notebook flex items-center gap-4 p-5 border-[#B8933F]/60 hover:bg-muted/10 transition">
-          <div className="grid h-12 w-12 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><History className="h-6 w-6" /></div>
-          <div className="text-left">
-            <h3 className="font-display text-lg font-bold italic">Histórico de Doses</h3>
-            <p className="text-xs text-muted-foreground">Acompanhe o que já foi tomado em cada dia.</p>
-          </div>
-        </button>
+          <button onClick={() => setView("medicacoes_historico")} className="notebook flex items-center gap-4 p-5 border-[#B8933F]/60 hover:bg-muted/10 transition">
+            <div className="grid h-12 w-12 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><History className="h-6 w-6" /></div>
+            <div className="text-left">
+              <h3 className="font-display text-lg font-bold italic">Histórico de Doses</h3>
+              <p className="text-xs text-muted-foreground">Acompanhe o que já foi tomado em cada dia.</p>
+            </div>
+          </button>
 
-        <button onClick={() => setView("medicacoes_estoque")} className="notebook flex items-center gap-4 p-5 border-[#B8933F]/60 hover:bg-muted/10 transition">
-          <div className="grid h-12 w-12 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><PillBottle className="h-6 w-6" /></div>
-          <div className="text-left">
-            <h3 className="font-display text-lg font-bold italic">Meus Remédios</h3>
-            <p className="text-xs text-muted-foreground">Veja o estoque atual e quantas doses já tomou.</p>
-          </div>
-        </button>
+          <button onClick={() => setView("medicacoes_estoque")} className="notebook flex items-center gap-4 p-5 border-[#B8933F]/60 hover:bg-muted/10 transition">
+            <div className="grid h-12 w-12 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><PillBottle className="h-6 w-6" /></div>
+            <div className="text-left">
+              <h3 className="font-display text-lg font-bold italic">Meus Remédios</h3>
+              <p className="text-xs text-muted-foreground">Veja o estoque atual e quantas doses já tomou.</p>
+            </div>
+          </button>
 
-        <button onClick={() => setView("medicacoes_viagem")} className="notebook flex items-center gap-4 p-5 border-[#B8933F]/60 hover:bg-muted/10 transition">
-          <div className="grid h-12 w-12 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Plane className="h-6 w-6" /></div>
-          <div className="text-left">
-            <h3 className="font-display text-lg font-bold italic">Planejador de Viagens</h3>
-            <p className="text-xs text-muted-foreground">Calcule a quantidade exata para a sua viagem.</p>
-          </div>
-        </button>
+          <button onClick={() => setView("medicacoes_viagem")} className="notebook flex items-center gap-4 p-5 border-[#B8933F]/60 hover:bg-muted/10 transition">
+            <div className="grid h-12 w-12 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Plane className="h-6 w-6" /></div>
+            <div className="text-left">
+              <h3 className="font-display text-lg font-bold italic">Planejador de Viagens</h3>
+              <p className="text-xs text-muted-foreground">Calcule a quantidade exata para a sua viagem.</p>
+            </div>
+          </button>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-// ✅ TELA: PRÓXIMAS DOSES
-if (view === "medicacoes_proximos") {
-  return (
-    <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
-      <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-      <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Próximas Doses</h1></header>
-      <SeletorTesouro />
+  // ✅ TELA: PRÓXIMAS DOSES
+  if (view === "medicacoes_proximos") {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+        <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        <header><h1 className="font-display text-3xl font-semibold italic text-foreground">Próximas Doses</h1></header>
+        <SeletorTesouro />
 
-      {continuos.length > 0 && (
-        <div className="space-y-2 mb-4">
-          {continuos.map(m => {
-            const inicioDate = parseYMD(m.inicio || hoje);
-            const limiteDate = new Date(inicioDate.getTime());
-            limiteDate.setDate(limiteDate.getDate() + 15);
-            const dataFormatada = `${String(limiteDate.getDate()).padStart(2, '0')}/${String(limiteDate.getMonth() + 1).padStart(2, '0')}/${limiteDate.getFullYear()}`;
-            
-            const hojeDate = parseYMD(hoje);
-            const diasPassados = Math.floor((hojeDate.getTime() - inicioDate.getTime()) / (1000 * 3600 * 24));
-            const aviso = diasPassados >= 10;
+        {continuos.length > 0 && (
+          <div className="space-y-2 mb-4">
+            {continuos.map(m => {
+              const inicioDate = parseYMD(m.inicio || hoje);
+              const limiteDate = new Date(inicioDate.getTime());
+              limiteDate.setDate(limiteDate.getDate() + 15);
+              const dataFormatada = `${String(limiteDate.getDate()).padStart(2, '0')}/${String(limiteDate.getMonth() + 1).padStart(2, '0')}/${limiteDate.getFullYear()}`;
+              
+              const hojeDate = parseYMD(hoje);
+              const diasPassados = Math.floor((hojeDate.getTime() - inicioDate.getTime()) / (1000 * 3600 * 24));
+              const aviso = diasPassados >= 10;
 
-            return (
-              <div key={m.id} className={`flex justify-between items-center p-3 rounded-xl border shadow-sm ${aviso ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
-                <div className="flex flex-col">
-                  <span className={`font-semibold text-sm ${aviso ? 'text-red-900' : 'text-amber-900'}`}>
-                    {m.medicamento} <span className="text-[10px] font-normal opacity-70 ml-1">(Uso contínuo)</span>
-                  </span>
-                  <span className={`text-[11px] ${aviso ? 'text-red-700 font-bold' : 'text-amber-700'}`}>
-                    {aviso ? "⚠️ Renove agora! " : ""}Agendado até {dataFormatada}
-                  </span>
+              return (
+                <div key={m.id} className={`flex justify-between items-center p-3 rounded-xl border shadow-sm ${aviso ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+                  <div className="flex flex-col">
+                    <span className={`font-semibold text-sm ${aviso ? 'text-red-900' : 'text-amber-900'}`}>
+                      {m.medicamento} <span className="text-[10px] font-normal opacity-70 ml-1">(Uso contínuo)</span>
+                    </span>
+                    <span className={`text-[11px] ${aviso ? 'text-red-700 font-bold' : 'text-amber-700'}`}>
+                      {aviso ? "⚠️ Renove agora! " : ""}Agendado até {dataFormatada}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => (navigate as any)({ to: "/criar", search: { duplicar: m.id } })}
+                    className={`flex items-center gap-1 font-bold text-xs px-3 py-1.5 rounded-lg transition ${aviso ? 'text-red-700 bg-red-100 hover:bg-red-200' : 'text-amber-700 bg-amber-100 hover:bg-amber-200'}`}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" /> Renovar
+                  </button>
                 </div>
-                <button
-                  onClick={() => (navigate as any)({ to: "/criar", search: { duplicar: m.id } })}
-                  className={`flex items-center gap-1 font-bold text-xs px-3 py-1.5 rounded-lg transition ${aviso ? 'text-red-700 bg-red-100 hover:bg-red-200' : 'text-amber-700 bg-amber-100 hover:bg-amber-200'}`}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" /> Renovar
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="max-h-[600px] overflow-y-auto pr-1 space-y-3">
-        {proximosAgendamentos.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic text-center p-4">Nenhuma dose pendente.</p>
-        ) : (
-          proximosAgendamentos.map((a, idx) => {
-            const itemFormatado = { ...a.med, data: a.data, hora: a.horario, situacao: "proximo", cuidado: "Medicação" as Cuidado } as unknown as Item;
-            const isHoje = a.data === hoje;
-            const [ano, mes, dia] = a.data.split("-");
-            const dataFormatada = `${dia}/${mes}/${ano}`;
-            
-            return (
-              <div key={`${a.med.id}-${a.data}-${a.horario}-${idx}`} className="space-y-1 pb-1">
-                <CompromissoCard item={itemFormatado} compacto />
-                <p className="text-[11px] font-semibold text-muted-foreground pl-2 uppercase tracking-wide flex items-center gap-1">
-                  {isHoje ? "Hoje" : dataFormatada}, às {a.horario}
-                  {!a.med.fim && <span title="Uso contínuo" className="text-muted-foreground/70 ml-1 text-xs">♾️</span>}
-                </p>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
-      </div>
-    </div>
-  );
-}
 
-// ✅ TELA: HISTÓRICO DE DOSES
-if (view === "medicacoes_historico") {
-  return (
-    <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
-      <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-      
-      <div className="flex justify-between items-center">
-        <h1 className="font-display text-3xl font-semibold italic text-foreground">Histórico</h1>
-        <Link 
-          to="/relatorios" 
-          search={{ tipo: "medicamentos", q: filtroMed }} 
-          className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden"
-        >
-          <FileText className="h-3.5 w-3.5" /> Relatório
-        </Link>
-      </div>
-      
-      <SeletorTesouro />
-
-      <div className="notebook p-5 space-y-4">
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <input type="date" className="field text-sm p-2" value={dataHistorico} onChange={(e) => setDataHistorico(e.target.value)} />
-          <select className="field text-sm p-2" value={filtroMed} onChange={(e) => setFiltroMed(e.target.value)}>
-            <option value="">Todos os remédios</option>
-            {emUso.map(m => <option key={m.id} value={m.medicamento}>{m.medicamento}</option>)}
-          </select>
+        <div className="max-h-[600px] overflow-y-auto pr-1 space-y-3">
+          {proximosAgendamentos.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic text-center p-4">Nenhuma dose pendente.</p>
+          ) : (
+            proximosAgendamentos.map((a, idx) => {
+              const itemFormatado = { ...a.med, data: a.data, hora: a.horario, situacao: "proximo", cuidado: "Medicação" as Cuidado } as unknown as Item;
+              const isHoje = a.data === hoje;
+              const [ano, mes, dia] = a.data.split("-");
+              const dataFormatada = `${dia}/${mes}/${ano}`;
+              
+              return (
+                <div key={`${a.med.id}-${a.data}-${a.horario}-${idx}`} className="space-y-1 pb-1">
+                  <CompromissoCard item={itemFormatado} compacto />
+                  <p className="text-[11px] font-semibold text-muted-foreground pl-2 uppercase tracking-wide flex items-center gap-1">
+                    {isHoje ? "Hoje" : dataFormatada}, às {a.horario}
+                    {!a.med.fim && <span title="Uso contínuo" className="text-muted-foreground/70 ml-1 text-xs">♾️</span>}
+                  </p>
+                </div>
+              );
+            })
+          )}
         </div>
-        {logsFiltrados.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum registro encontrado.</p>
-        ) : (
-          <ul className="space-y-2">
-            {logsFiltrados.map((l: any) => (
-              <li key={l.id} className="flex items-center gap-2 rounded-lg bg-muted/20 p-2 font-sans text-sm">
-                <span className="text-green-600">✓</span>
-                <span className="flex-1 text-foreground">{l.titulo}</span>
-                <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
-                <button onClick={() => excluirLog(l)} className="p-1 text-muted-foreground hover:text-red-500 transition" title="Excluir registro"><Trash2 className="h-4 w-4" /></button>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
-    </div>
-  );
-}
+    );
+  }
+
+  // ✅ TELA: HISTÓRICO DE DOSES
+  if (view === "medicacoes_historico") {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+        <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        
+        <div className="flex justify-between items-center">
+          <h1 className="font-display text-3xl font-semibold italic text-foreground">Histórico</h1>
+          <Link 
+            to="/relatorios" 
+            search={{ tipo: "historico_doses", q: filtroMed }} 
+            className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden"
+          >
+            <FileText className="h-3.5 w-3.5" /> Relatório
+          </Link>
+        </div>
+        
+        <SeletorTesouro />
+
+        <div className="notebook p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <input type="date" className="field text-sm p-2" value={dataHistorico} onChange={(e) => setDataHistorico(e.target.value)} />
+            <select className="field text-sm p-2" value={filtroMed} onChange={(e) => setFiltroMed(e.target.value)}>
+              <option value="">Todos os remédios</option>
+              {emUso.map(m => <option key={m.id} value={m.medicamento}>{m.medicamento}</option>)}
+            </select>
+          </div>
+          {logsFiltrados.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum registro encontrado.</p>
+          ) : (
+            <ul className="space-y-2">
+              {logsFiltrados.map((l: any) => (
+                <li key={l.id} className="flex items-center gap-2 rounded-lg bg-muted/20 p-2 font-sans text-sm">
+                  <span className="text-green-600">✓</span>
+                  <span className="flex-1 text-foreground">{l.titulo}</span>
+                  <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
+                  <button onClick={() => excluirLog(l)} className="p-1 text-muted-foreground hover:text-red-500 transition" title="Excluir registro"><Trash2 className="h-4 w-4" /></button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // ✅ TELA: MEUS REMÉDIOS (Estoque com Alerta)
   if (view === "medicacoes_estoque") {
@@ -546,7 +546,7 @@ if (view === "medicacoes_historico") {
     );
   }
 
-  // ✅ TELA: PLANEJADOR DE VIAGENS
+  //  TELA: PLANEJADOR DE VIAGENS
   if (view === "medicacoes_viagem") {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -607,19 +607,6 @@ if (view === "medicacoes_historico") {
         <Botao variant="ghost" onClick={() => setView("menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
         <div className="flex justify-between items-center">
           <h1 className="font-display text-3xl font-semibold italic text-foreground">Consultas e Exames</h1>
-          <Link
-            to="/relatorios"
-            search={{
-              tipo: "compromissos",
-              q: buscaProximos,
-              dataInicio: filtroDataInicio,
-              dataFim: filtroDataFim,
-              status: filtroStatus,
-            }}
-            className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden"
-          >
-            <FileText className="h-3.5 w-3.5" /> Relatório
-          </Link>
         </div>
         <SeletorTesouro />
         
@@ -669,13 +656,54 @@ if (view === "medicacoes_historico") {
           <section className="notebook space-y-3 p-4 mt-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">{drill.cuidado} · {LINHAS.find((l) => l.s === drill.situacao)?.label}</h3>
-              <Botao variant="ghost" onClick={() => setDrill(null)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-semibold"><X className="h-4 w-4" /> Fechar</Botao>
+              
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/relatorios"
+                  search={{
+                    tipo: "compromissos",
+                    situacao: drill.situacao,
+                    dataInicio: filtroDataInicio,
+                    dataFim: filtroDataFim,
+                  }}
+                  className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden"
+                >
+                  <FileText className="h-3.5 w-3.5" /> Relatório
+                </Link>
+
+                <Botao variant="ghost" onClick={() => setDrill(null)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-semibold">
+                  <X className="h-4 w-4" /> Fechar
+                </Botao>
+              </div>
             </div>
-            {filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao).length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nada por aqui.</p>
-            ) : (
-              ordenarPorDataHora(filtrados.filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)).map((i) => <CompromissoCard key={i.id} item={i} compacto />)
-            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="date"
+                className="field text-sm p-2"
+                value={filtroDataInicio}
+                onChange={(e) => setFiltroDataInicio(e.target.value)}
+                placeholder="Data início"
+              />
+              <input
+                type="date"
+                className="field text-sm p-2"
+                value={filtroDataFim}
+                onChange={(e) => setFiltroDataFim(e.target.value)}
+                placeholder="Data fim"
+              />
+            </div>
+            
+            {(() => {
+              const doDrill = filtrados
+                .filter((i) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)
+                .filter((i) => !filtroDataInicio || (i.data && i.data >= filtroDataInicio))
+                .filter((i) => !filtroDataFim || (i.data && i.data <= filtroDataFim));
+              if (doDrill.length === 0) {
+                return <p className="text-sm text-muted-foreground">Nada por aqui.</p>;
+              }
+              return ordenarPorDataHora(doDrill).map((i) => <CompromissoCard key={i.id} item={i} compacto />);
+            })()}
           </section>
         )}
 
@@ -699,7 +727,6 @@ if (view === "medicacoes_historico") {
             </Link>
           </div>
 
-          {/* ✅ Filtros de data e status */}
           <div className="grid grid-cols-2 gap-2">
             <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
             <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
