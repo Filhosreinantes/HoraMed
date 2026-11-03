@@ -20,7 +20,6 @@ function Hoje() {
   const [modalCompromissosAberto, setModalCompromissosAberto] = useState(false);
   const [detalheAberto, setDetalheAberto] = useState<any>(null);
 
-  // --- Medicações ---
   const emUso = itens.filter((i) => i.cuidado === "Medicação" && medicacaoEmUso(i));
   
   const agendaHoje = useMemo(() => {
@@ -58,7 +57,6 @@ function Hoje() {
     return arr.sort((a, b) => a.horario.localeCompare(b.horario));
   }, [emUso, logs, hoje]);
 
-  // --- Compromissos ---
   const compromissosHoje = useMemo(() => {
     return itens
       .filter(i => 
@@ -93,6 +91,53 @@ function Hoje() {
   return (
     <div className="mx-auto max-w-lg space-y-4 py-6 pb-24">
       
+      {/* MODAL: DETALHES COMPLETOS */}
+      {detalheAberto && (
+        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-start border-b pb-3">
+              <h2 className="font-display text-xl font-bold italic" style={{ color: "var(--tema-escuro)" }}>{detalheAberto.titulo || detalheAberto.medicamento}</h2>
+              <button onClick={() => setDetalheAberto(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              {detalheAberto.cuidado === "Medicação" ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><span className="text-xs text-muted-foreground block">Dosagem</span><p className="font-bold">{detalheAberto.dosagem || "-"}</p></div>
+                    <div><span className="text-xs text-muted-foreground block">Estoque Restante</span><p className={`font-bold ${(detalheAberto.estoqueAtual || 0) <= 5 ? "text-red-600" : ""}`}>{detalheAberto.estoqueAtual || 0} {detalheAberto.dosagemUnidade || "un"}</p></div>
+                    <div className="col-span-2"><span className="text-xs text-muted-foreground block">Tratamento</span><p className="font-bold">{detalheAberto.tratamento || "-"}</p></div>
+                    <div><span className="text-xs text-muted-foreground block">Médico Prescritor</span><p>{detalheAberto.profissional || "-"}</p></div>
+                    <div><span className="text-xs text-muted-foreground block">Especialidade</span><p>{detalheAberto.especialidade || "-"}</p></div>
+                    <div><span className="text-xs text-muted-foreground block">Início</span><p>{formatData(detalheAberto.inicio)}</p></div>
+                    <div><span className="text-xs text-muted-foreground block">Fim</span><p>{detalheAberto.fim ? formatData(detalheAberto.fim) : "Uso contínuo"}</p></div>
+                    <div className="col-span-2"><span className="text-xs text-muted-foreground block">Horários</span><p>{detalheAberto.horarios?.join(", ") || "-"}</p></div>
+                    {detalheAberto.detalhes && (
+                      <div className="col-span-2 bg-gray-50 p-2 rounded-lg"><span className="text-xs text-muted-foreground block">Observações</span><p className="italic">{detalheAberto.detalhes}</p></div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2"><span className="text-xs text-muted-foreground block">Tipo</span><p className="font-bold">{detalheAberto.cuidado}</p></div>
+                    <div><span className="text-xs text-muted-foreground block">Data</span><p className="font-bold">{formatData(detalheAberto.data)}</p></div>
+                    <div><span className="text-xs text-muted-foreground block">Horário</span><p className="font-bold">{detalheAberto.hora || "A definir"}</p></div>
+                    <div className="col-span-2"><span className="text-xs text-muted-foreground block">Local</span><p>{detalheAberto.local || "Não informado"}</p></div>
+                    <div><span className="text-xs text-muted-foreground block">Profissional</span><p>{detalheAberto.profissional || "-"}</p></div>
+                    <div><span className="text-xs text-muted-foreground block">Especialidade / Tipo</span><p>{detalheAberto.especialidade || detalheAberto.tipoExame || "-"}</p></div>
+                    {detalheAberto.recomendacoes && (
+                      <div className="col-span-2 bg-blue-50 p-2 rounded-lg"><span className="text-xs text-blue-800 block">Recomendações</span><p className="text-blue-900 italic">{detalheAberto.recomendacoes}</p></div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            <button onClick={() => setDetalheAberto(null)} className="w-full bg-[var(--tema)] text-white font-bold py-2 rounded-xl mt-2">Fechar</button>
+          </div>
+        </div>
+      )}
+
       {/* MODAL: TODAS AS DOSES */}
       {modalDosesAberto && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-br from-[var(--tema-claro)] to-white">
@@ -103,7 +148,7 @@ function Hoje() {
           <div className="p-4 space-y-2 max-w-lg mx-auto pb-24">
             {agendaHoje.map((a, idx) => (
               <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-white/50 gap-3">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onClick={() => { setModalDosesAberto(false); setDetalheAberto(a.med); }}>
                   <div className="grid h-8 w-8 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Pill className="h-4 w-4" /></div>
                   <div className="flex flex-col min-w-0">
                     <span className="font-bold text-sm text-foreground truncate">{a.med.medicamento}</span>
@@ -130,7 +175,7 @@ function Hoje() {
           <div className="p-4 space-y-3 max-w-lg mx-auto pb-24">
             {compromissosHoje.map((i) => (
               <div key={i.id} className="bg-white rounded-2xl shadow-sm border border-white p-3 flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-3 cursor-pointer" onClick={() => { setModalCompromissosAberto(false); setDetalheAberto(i); }}>
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="grid h-10 w-10 place-items-center rounded-full shrink-0" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema-escuro)" }}><Stethoscope className="h-5 w-5" /></div>
                     <div className="flex-1 min-w-0">
@@ -186,6 +231,7 @@ function Hoje() {
                         <button onClick={() => registrarMedicacao(a.med, hoje, a.horario)} className="text-[12px] font-bold text-white px-2.5 py-1 rounded-md" style={{ backgroundColor: "var(--tema)" }}>Tomei</button>
                       </div>
                     </div>
+                    <button onClick={() => setDetalheAberto(a.med)} className="text-[10px] font-bold text-[var(--tema)] underline self-start ml-11">Detalhes</button>
                   </div>
                 ))}
                 {agendaHoje.length > 3 && (
@@ -231,6 +277,7 @@ function Hoje() {
                           <span className="text-xs text-muted-foreground truncate">{comp.hora || "Horário a definir"}{comp.local ? ` · ${comp.local}` : ""}</span>
                         </div>
                       </div>
+                      <button onClick={() => setDetalheAberto(comp)} className="text-[10px] font-bold text-[var(--tema)] underline shrink-0">Detalhes</button>
                     </div>
                     <div className="flex border-t border-gray-100 p-1.5 gap-1.5">
                       <button onClick={() => atualizarSituacao(comp.id, comp.pessoaId, comp.cuidado as string, "feito")} className="flex-1 bg-green-600 text-white font-bold text-[12px] py-1 rounded-md hover:bg-green-700">Compareceu</button>
