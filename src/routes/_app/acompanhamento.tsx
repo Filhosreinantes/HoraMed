@@ -266,17 +266,25 @@ if (view === "sinais_vitais") {
           sinaisFiltrados.map((s: any) => {
             const isPressao = s.cuidado === "Pressão";
             return (
-              <div key={s.id} className="notebook p-4 flex items-center gap-4 bg-white shadow-sm border border-border/50">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema)" }}>
-                  {isPressao ? <Activity className="h-5 w-5" /> : <Droplet className="h-5 w-5" />}
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-lg text-foreground">{s.titulo}</span>
-                    <span className="text-xs text-muted-foreground">{formatData(s.data)} {s.hora && `às ${s.hora}`}</span>
+              <div key={s.id} className="notebook p-4 flex flex-col gap-1 bg-white shadow-sm border border-border/50">
+                <div className="flex items-center gap-4">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ backgroundColor: "var(--tema-claro)", color: "var(--tema)" }}>
+                    {isPressao ? <Activity className="h-5 w-5" /> : <Droplet className="h-5 w-5" />}
                   </div>
-                  {s.detalhes && <p className="text-sm text-muted-foreground">{s.detalhes}</p>}
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold text-lg text-foreground">{s.titulo}</span>
+                      <span className="text-xs text-muted-foreground">{formatData(s.data)} {s.hora && `às ${s.hora}`}</span>
+                    </div>
+                  </div>
                 </div>
+                
+                {/* ✅ Contexto e Observação */}
+                {s.detalhes && (
+                  <div className="mt-1 ml-14 bg-slate-50 p-2 rounded-lg text-xs text-muted-foreground italic border-l-2 border-[var(--tema)]">
+                    {s.detalhes}
+                  </div>
+                )}
               </div>
             );
           })
