@@ -43,35 +43,64 @@ const LINHAS: { s: Situacao; label: string }[] = [
 ];
 
 function Acompanhamento() {
-  // ✅ Adicionado `ativa` (necessário para Nota_Tratamento)
   const { itens, logs, ativa, carregando, salvarRegistros } = useApp() as any;
   const navigate = useNavigate();
   const [view, setView] = useState<View>("menu");
-  const [periodo, setPeriodo] = useState<Periodo>("mes");
+  const [periodoTela, setPeriodoTela] = useState<Periodo>("mes");
   const [drill, setDrill] = useState<Drill>(null);
   const [buscaProximos, setBuscaProximos] = useState("");
 
-  const [filtroDataInicio, setFiltroDataInicio] = useState("");
-  const [filtroDataFim, setFiltroDataFim] = useState("");
+  // ✅ Filtros Unificados
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  
+  // ✅ Filtros Específicos
   const [filtroStatus, setFiltroStatus] = useState<Situacao | "">("");
   const [filtroSinal, setFiltroSinal] = useState("");
   const [filtroTratamento, setFiltroTratamento] = useState("");
-
   const [filtroRemedios, setFiltroRemedios] = useState<"uso" | "encerrados">("uso");
   const [filtroMed, setFiltroMed] = useState("");
+  
+  // ✅ Específico do Histórico
   const [dataHistorico, setDataHistorico] = useState(hojeYMD());
+  
+  // ✅ Específico da Viagem
   const [viagemInicio, setViagemInicio] = useState(hojeYMD());
   const [viagemFim, setViagemFim] = useState(hojeYMD());
 
   const hoje = hojeYMD();
 
+  // ✅ Datas Efetivas para enviar ao Relatório
+  const dataInicioEfetiva = dataInicio || (periodoTela === "mes" ? `${hoje.slice(0, 7)}-01` : periodoTela === "ano" ? `${hoje.slice(0, 4)}-01-01` : "");
+  const dataFimEfetiva = dataFim || (periodoTela === "mes" ? hoje : periodoTela === "ano" ? hoje : "");
+
+  // ✅ Função de filtragem padronizada
+  const filtrarPorPeriodo = (lista: any[], campoData: "data" | "inicio" = "data") => {
+    let resultado = lista.filter(item => {
+      const data = item[campoData] || item.criadoEm;
+      if (!data) return true;
+      if (dataInicio && data < dataInicio) return false;
+      if (dataFim && data > dataFim) return false;
+      return true;
+    });
+    
+    if (periodoTela === "mes") {
+      const mesAtual = hoje.slice(0, 7);
+      resultado = resultado.filter(item => (item[campoData] || item.criadoEm || "").startsWith(mesAtual));
+    } else if (periodoTela === "ano") {
+      const anoAtual = hoje.slice(0, 4);
+      resultado = resultado.filter(item => (item[campoData] || item.criadoEm || "").startsWith(anoAtual));
+    }
+    return resultado;
+  };
+
   const filtrados = useMemo(() => {
     return itens.filter((i: any) => {
-      if (periodo === "tudo") return true;
+      if (periodoTela === "tudo") return true;
       const d = i.data || i.inicio || "";
-      return periodo === "mes" ? d.slice(0, 7) === hoje.slice(0, 7) : d.slice(0, 4) === hoje.slice(0, 4);
+      return periodoTela === "mes" ? d.slice(0, 7) === hoje.slice(0, 7) : d.slice(0, 4) === hoje.slice(0, 4);
     });
-  }, [itens, periodo, hoje]);
+  }, [itens, periodoTela, hoje]);
 
   const meds = itens.filter((i: any) => i.cuidado === "Medicação");
   const emUso = ordenarPorDataHora(meds.filter((m: any) => medicacaoEmUso(m)));
@@ -91,15 +120,10 @@ function Acompanhamento() {
 
   const remediosAgrupados = useMemo(() => {
     const mapa: Record<string, { med: any, dosesTomadas: number, caixasTomadas: number }> = {};
-    
     meds.forEach((m: any) => {
       const nome = m.medicamento || "Desconhecido";
       if (!mapa[nome]) {
-        mapa[nome] = { 
-          med: m, 
-          dosesTomadas: logs.filter((l: any) => l.parentId === m.id).length,
-          caixasTomadas: 0 
-        };
+        mapa[nome] = { med: m, dosesTomadas: logs.filter((l: any) => l.parentId === m.id).length, caixasTomadas: 0 };
       } else {
         if (m.inicio && (m.inicio > (mapa[nome].med.inicio || ""))) {
           mapa[nome].med = m;
@@ -108,33 +132,25 @@ function Acompanhamento() {
         mapa[nome].caixasTomadas += 1;
       }
     });
-
     return Object.values(mapa);
   }, [meds, logs]);
 
   const sinaisVitais = useMemo(() => {
-    return itens
-      .filter((i: any) => i.cuidado === "Pressão" || i.cuidado === "Glicose")
-      .sort((a: any, b: any) => (b.data || "").localeCompare(a.data || "") || (b.hora || "").localeCompare(a.hora || ""));
+    return itens.filter((i: any) => i.cuidado === "Pressão" || i.cuidado === "Glicose");
   }, [itens]);
 
   const tratamentos = useMemo(() => {
-    return Array.from(new Set(
-      itens.filter((i: any) => i.cuidado === "Medicação" && i.tratamento).map((i: any) => i.tratamento)
-    )) as string[];
+    return Array.from(new Set(itens.filter((i: any) => i.cuidado === "Medicação" && i.tratamento).map((i: any) => i.tratamento))) as string[];
   }, [itens]);
 
   const proximos = useMemo(() => {
-    let lista = ordenarPorDataHora(itens.filter((i: any) => 
-      compromissoPendente(i) && 
-      (i.cuidado === "Consulta" || i.cuidado === "Exame")
-    ));
+    let lista = ordenarPorDataHora(itens.filter((i: any) => compromissoPendente(i) && (i.cuidado === "Consulta" || i.cuidado === "Exame")));
     if (buscaProximos) lista = lista.filter((i: any) => i.cuidado === buscaProximos);
-    if (filtroDataInicio) lista = lista.filter((i: any) => i.data && i.data >= filtroDataInicio);
-    if (filtroDataFim) lista = lista.filter((i: any) => i.data && i.data <= filtroDataFim);
+    if (dataInicio) lista = lista.filter((i: any) => i.data && i.data >= dataInicio);
+    if (dataFim) lista = lista.filter((i: any) => i.data && i.data <= dataFim);
     if (filtroStatus) lista = lista.filter((i: any) => (i.situacao ?? "proximo") === filtroStatus);
     return lista;
-  }, [itens, buscaProximos, filtroDataInicio, filtroDataFim, filtroStatus]);
+  }, [itens, buscaProximos, dataInicio, dataFim, filtroStatus]);
 
   const proximosAgendamentos = useMemo(() => {
     const arr: any[] = [];
@@ -143,32 +159,24 @@ function Acompanhamento() {
     const limiteYMD = `${dataLimite.getFullYear()}-${String(dataLimite.getMonth() + 1).padStart(2, "0")}-${String(dataLimite.getDate()).padStart(2, "0")}`;
 
     emUso.forEach((m: any) => {
-      const dataInicio = m.inicio || hoje;
-      const dataFim = m.fim || limiteYMD;
-      if (dataFim < hoje) return;
-
+      const dInicio = m.inicio || hoje;
+      const dFim = m.fim || limiteYMD;
+      if (dFim < hoje) return;
       const diasDaSemana = m.diasSemana || [0, 1, 2, 3, 4, 5, 6];
       const horarios = m.horarios || [];
       if (horarios.length === 0) return;
 
-      let dataIteracao = hoje > dataInicio ? hoje : dataInicio;
-      
-      while (dataIteracao <= dataFim) {
+      let dataIteracao = hoje > dInicio ? hoje : dInicio;
+      while (dataIteracao <= dFim) {
         const d = parseYMD(dataIteracao);
-        const diaSemana = d.getDay();
-        
-        if (diasDaSemana.includes(diaSemana)) {
+        if (diasDaSemana.includes(d.getDay())) {
           let horariosValidos = horarios;
-          if (dataIteracao === dataInicio) {
+          if (dataIteracao === dInicio) {
             const horaInicio = horarios[0] ?? "";
             horariosValidos = horarios.filter((h: string) => h >= horaInicio);
           }
-          const dosesPendentes = horariosValidos.filter((h: string) => {
-            return !doseRegistrada(logs, m.id, dataIteracao, h.trim());
-          });
-          dosesPendentes.forEach((hora: string) => {
-            arr.push({ med: m, data: dataIteracao, horario: hora });
-          });
+          const dosesPendentes = horariosValidos.filter((h: string) => !doseRegistrada(logs, m.id, dataIteracao, h.trim()));
+          dosesPendentes.forEach((hora: string) => arr.push({ med: m, data: dataIteracao, horario: hora }));
         }
         d.setDate(d.getDate() + 1);
         dataIteracao = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -178,10 +186,7 @@ function Acompanhamento() {
   }, [emUso, logs, hoje]);
 
   const logsFiltrados = useMemo(() => {
-    return logs
-      .filter((i: any) => !filtroMed || i.titulo.toLowerCase().includes(filtroMed.toLowerCase()))
-      .filter((i: any) => i.data === dataHistorico)
-      .sort((a: any, b: any) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
+    return logs.filter((i: any) => !filtroMed || i.titulo.toLowerCase().includes(filtroMed.toLowerCase())).filter((i: any) => i.data === dataHistorico).sort((a: any, b: any) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
   }, [logs, filtroMed, dataHistorico]);
 
   const excluirLog = async (log: any) => {
@@ -212,10 +217,8 @@ function Acompanhamento() {
 
 // ✅ TELA: SINAIS VITAIS
 if (view === "sinais_vitais") {
-  const sinaisFiltrados = sinaisVitais
-    .filter((s: any) => !filtroSinal || s.cuidado === filtroSinal)
-    .filter((s: any) => !filtroDataInicio || (s.data && s.data >= filtroDataInicio))
-    .filter((s: any) => !filtroDataFim || (s.data && s.data <= filtroDataFim));
+  const sinaisFiltrados = filtrarPorPeriodo(sinaisVitais, "data")
+    .filter((s: any) => !filtroSinal || s.cuidado === filtroSinal);
 
   return (
     <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -225,7 +228,26 @@ if (view === "sinais_vitais") {
       </div>
       <SeletorTesouro />
 
-      <div className="space-y-3 mt-4">
+      {/* Filtros padronizados */}
+      <div className="notebook p-4 space-y-3 mb-4">
+        <p className="text-xs font-bold uppercase text-muted-foreground">Período</p>
+        <div className="flex gap-2 flex-wrap">
+          <Pill ativo={periodoTela === "mes"} onClick={() => setPeriodoTela("mes")}>Este mês</Pill>
+          <Pill ativo={periodoTela === "ano"} onClick={() => setPeriodoTela("ano")}>Este ano</Pill>
+          <Pill ativo={periodoTela === "tudo"} onClick={() => setPeriodoTela("tudo")}>Tudo</Pill>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input type="date" className="field text-sm p-2" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
+          <input type="date" className="field text-sm p-2" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+        </div>
+        <select className="field text-sm p-2 w-full" value={filtroSinal} onChange={(e) => setFiltroSinal(e.target.value)}>
+          <option value="">Todos (Pressão e Glicose)</option>
+          <option value="Pressão">Apenas Pressão</option>
+          <option value="Glicose">Apenas Glicose</option>
+        </select>
+      </div>
+
+      <div className="space-y-3">
         {sinaisFiltrados.length === 0 ? (
            <div className="notebook p-6 text-center text-muted-foreground">
              <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -252,37 +274,28 @@ if (view === "sinais_vitais") {
         )}
       </div>
 
-      <div className="notebook p-4 space-y-3 mt-4">
-        <p className="text-xs font-bold uppercase text-muted-foreground">Filtrar e Baixar Relatório</p>
-        <div className="grid grid-cols-2 gap-2">
-          <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
-          <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
-        </div>
-        <select className="field text-sm p-2 w-full" value={filtroSinal} onChange={(e) => setFiltroSinal(e.target.value)}>
-          <option value="">Todos (Pressão e Glicose)</option>
-          <option value="Pressão">Apenas Pressão</option>
-          <option value="Glicose">Apenas Glicose</option>
-        </select>
-        <Link
-          to="/relatorios"
-          search={{
-            tipo: "sinais",
-            filtros: JSON.stringify({
-              sinais: { dataInicio: filtroDataInicio, dataFim: filtroDataFim, q: filtroSinal },
-            }),
-          }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
-        >
-          <FileText className="h-4 w-4" /> Baixar Relatório
-        </Link>
-      </div>
+      <Link
+        to="/relatorios"
+        search={{
+          tipo: "sinais",
+          filtros: JSON.stringify({
+            sinais: { dataInicio: dataInicioEfetiva, dataFim: dataFimEfetiva, q: filtroSinal },
+          }),
+        }}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md mt-4"
+      >
+        <FileText className="h-4 w-4" /> Baixar Relatório
+      </Link>
     </div>
   );
 }
 
-// ✅ TELA: TRATAMENTOS (com observação por tratamento)
+// ✅ TELA: TRATAMENTOS
 if (view === "tratamentos") {
-  const tratamentosFiltrados = tratamentos.filter((t) => !filtroTratamento || t === filtroTratamento);
+  const tratamentosFiltrados = filtrarPorPeriodo(itens.filter((i: any) => i.cuidado === "Medicação" && i.tratamento), "inicio")
+    .map((m: any) => m.tratamento)
+    .filter((v: any, i: number, a: any[]) => a.indexOf(v) === i)
+    .filter((t: string) => !filtroTratamento || t === filtroTratamento);
 
   return (
     <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
@@ -292,24 +305,31 @@ if (view === "tratamentos") {
       </div>
       <SeletorTesouro />
 
-      <div className="notebook p-4 space-y-3">
+      {/* Filtros padronizados */}
+      <div className="notebook p-4 space-y-3 mb-4">
+        <p className="text-xs font-bold uppercase text-muted-foreground">Período</p>
+        <div className="flex gap-2 flex-wrap">
+          <Pill ativo={periodoTela === "mes"} onClick={() => setPeriodoTela("mes")}>Este mês</Pill>
+          <Pill ativo={periodoTela === "ano"} onClick={() => setPeriodoTela("ano")}>Este ano</Pill>
+          <Pill ativo={periodoTela === "tudo"} onClick={() => setPeriodoTela("tudo")}>Tudo</Pill>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input type="date" className="field text-sm p-2" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
+          <input type="date" className="field text-sm p-2" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+        </div>
         <select className="field text-sm p-2 w-full" value={filtroTratamento} onChange={(e) => setFiltroTratamento(e.target.value)}>
           <option value="">Todos os tratamentos</option>
           {tratamentos.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
       </div>
 
-      <div className="space-y-3 mt-4">
+      <div className="space-y-3">
         {tratamentosFiltrados.length === 0 ? (
           <p className="notebook p-4 text-sm text-muted-foreground italic">Nenhum tratamento registrado. Ao criar uma medicação, preencha o campo "Tratamento".</p>
         ) : (
           tratamentosFiltrados.map((tratamento) => {
             const medsDoTratamento = itens.filter((i: any) => i.cuidado === "Medicação" && i.tratamento === tratamento);
-
-            // ✅ Busca a observação salva para este tratamento
-            const notaSalva = itens.find((i: any) =>
-              i.cuidado === "Nota_Tratamento" && i.titulo === tratamento
-            )?.detalhes || "";
+            const notaSalva = itens.find((i: any) => i.cuidado === "Nota_Tratamento" && i.titulo === tratamento)?.detalhes || "";
 
             return (
               <div key={tratamento} className="notebook p-4 space-y-2 border-l-4" style={{ borderLeftColor: "var(--tema)" }}>
@@ -367,25 +387,18 @@ if (view === "tratamentos") {
         )}
       </div>
 
-      <div className="notebook p-4 space-y-3 mt-4">
-        <p className="text-xs font-bold uppercase text-muted-foreground">Filtrar e Baixar Relatório</p>
-        <div className="grid grid-cols-2 gap-2">
-          <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
-          <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
-        </div>
-        <Link
-          to="/relatorios"
-          search={{
-            tipo: "tratamentos",
-            filtros: JSON.stringify({
-              tratamentos: { q: filtroTratamento },
-            }),
-          }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
-        >
-          <FileText className="h-4 w-4" /> Baixar Relatório
-        </Link>
-      </div>
+      <Link
+        to="/relatorios"
+        search={{
+          tipo: "tratamentos",
+          filtros: JSON.stringify({
+            tratamentos: { q: filtroTratamento, dataInicio: dataInicioEfetiva, dataFim: dataFimEfetiva },
+          }),
+        }}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md mt-4"
+      >
+        <FileText className="h-4 w-4" /> Baixar Relatório
+      </Link>
     </div>
   );
 }
@@ -556,48 +569,56 @@ if (view === "medicacoes_proximos") {
   );
 }
 
-// ✅ TELA: HISTÓRICO DE DOSES
-if (view === "medicacoes_historico") {
-  return (
-    <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
-      <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
-      
-      <div className="flex justify-between items-center">
-        <h1 className="font-display text-3xl font-semibold italic text-foreground">Histórico</h1>
-      </div>
-      
-      <SeletorTesouro />
+  // ✅ TELA: HISTÓRICO DE DOSES
+  if (view === "medicacoes_historico") {
+    const historicoFiltrado = filtrarPorPeriodo(logs.filter((l: any) => l.cuidado === "Medicação_Log" || (l.cuidado === "Medicação" && l.evento === true)), "data")
+      .filter((l: any) => !filtroMed || l.titulo.toLowerCase().includes(filtroMed.toLowerCase()));
 
-      <div className="notebook p-5 space-y-4">
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <input type="date" className="field text-sm p-2" value={dataHistorico} onChange={(e) => setDataHistorico(e.target.value)} />
-          <select className="field text-sm p-2" value={filtroMed} onChange={(e) => setFiltroMed(e.target.value)}>
+    return (
+      <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
+        <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        
+        <div className="flex justify-between items-center">
+          <h1 className="font-display text-3xl font-semibold italic text-foreground">Histórico</h1>
+        </div>
+        
+        <SeletorTesouro />
+
+        {/* Filtros padronizados */}
+        <div className="notebook p-4 space-y-3 mb-4">
+          <p className="text-xs font-bold uppercase text-muted-foreground">Período</p>
+          <div className="flex gap-2 flex-wrap">
+            <Pill ativo={periodoTela === "mes"} onClick={() => setPeriodoTela("mes")}>Este mês</Pill>
+            <Pill ativo={periodoTela === "ano"} onClick={() => setPeriodoTela("ano")}>Este ano</Pill>
+            <Pill ativo={periodoTela === "tudo"} onClick={() => setPeriodoTela("tudo")}>Tudo</Pill>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input type="date" className="field text-sm p-2" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
+            <input type="date" className="field text-sm p-2" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+          </div>
+          <select className="field text-sm p-2 w-full" value={filtroMed} onChange={(e) => setFiltroMed(e.target.value)}>
             <option value="">Todos os remédios</option>
             {emUso.map((m: any) => <option key={m.id} value={m.medicamento}>{m.medicamento}</option>)}
           </select>
         </div>
-        {logsFiltrados.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum registro encontrado.</p>
-        ) : (
-          <ul className="space-y-2">
-            {logsFiltrados.map((l: any) => (
-              <li key={l.id} className="flex items-center gap-2 rounded-lg bg-muted/20 p-2 font-sans text-sm">
-                <span className="text-green-600">✓</span>
-                <span className="flex-1 text-foreground">{l.titulo}</span>
-                <span className="text-xs text-muted-foreground">{l.criadoEm?.slice(11, 16)}</span>
-                <button onClick={() => excluirLog(l)} className="p-1 text-muted-foreground hover:text-red-500 transition" title="Excluir registro"><Trash2 className="h-4 w-4" /></button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
 
-      <div className="notebook p-4 space-y-3 mt-4">
-        <p className="text-xs font-bold uppercase text-muted-foreground">Filtrar e Baixar Relatório</p>
-        <div className="grid grid-cols-2 gap-2">
-          <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
-          <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
+        <div className="notebook p-5 space-y-4">
+          {historicoFiltrado.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum registro encontrado no período.</p>
+          ) : (
+            <ul className="space-y-2">
+              {historicoFiltrado.map((l: any) => (
+                <li key={l.id} className="flex items-center gap-2 rounded-lg bg-muted/20 p-2 font-sans text-sm">
+                  <span className="text-green-600">✓</span>
+                  <span className="flex-1 text-foreground">{l.titulo}</span>
+                  <span className="text-xs text-muted-foreground">{formatData(l.data)}</span>
+                  <button onClick={() => excluirLog(l)} className="p-1 text-muted-foreground hover:text-red-500 transition" title="Excluir registro"><Trash2 className="h-4 w-4" /></button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
+
         <Link
           to="/relatorios"
           search={{
@@ -605,114 +626,139 @@ if (view === "medicacoes_historico") {
             filtros: JSON.stringify({
               historico_doses: {
                 q: filtroMed,
-                dataInicio: filtroDataInicio,
-                dataFim: filtroDataFim,
+                dataInicio: dataInicioEfetiva,
+                dataFim: dataFimEfetiva,
               },
             }),
           }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md mt-4"
         >
           <FileText className="h-4 w-4" /> Baixar Relatório
         </Link>
       </div>
-    </div>
-  );
-}
-   
-  // ✅ TELA: MEUS REMÉDIOS (Estoque com Editar/Excluir)
+    );
+  }
+
+  // ✅ TELA: MEUS REMÉDIOS (Estoque)
   if (view === "medicacoes_estoque") {
+    const remediosFiltrados = remediosAgrupados.filter((r) => {
+      const med = r.med;
+      if (filtroRemedios === "uso" ? !medicacaoEmUso(med) : medicacaoEmUso(med)) return false;
+      
+      const data = med.inicio || med.criadoEm;
+      if (dataInicio && data && data < dataInicio) return false;
+      if (dataFim && data && data > dataFim) return false;
+      
+      if (periodoTela === "mes" && data && !data.startsWith(hoje.slice(0, 7))) return false;
+      if (periodoTela === "ano" && data && !data.startsWith(hoje.slice(0, 4))) return false;
+
+      return true;
+    });
+
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
         <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
+        
         <div className="flex justify-between items-center">
           <h1 className="font-display text-3xl font-semibold italic text-foreground">Meus Remédios</h1>
         </div>
         <SeletorTesouro />
 
-        <div className="notebook p-5 space-y-4">
-          <div className="flex gap-2">
+        {/* Filtros padronizados */}
+        <div className="notebook p-4 space-y-3 mb-4">
+          <p className="text-xs font-bold uppercase text-muted-foreground">Período</p>
+          <div className="flex gap-2 flex-wrap">
+            <Pill ativo={periodoTela === "mes"} onClick={() => setPeriodoTela("mes")}>Este mês</Pill>
+            <Pill ativo={periodoTela === "ano"} onClick={() => setPeriodoTela("ano")}>Este ano</Pill>
+            <Pill ativo={periodoTela === "tudo"} onClick={() => setPeriodoTela("tudo")}>Tudo</Pill>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input type="date" className="field text-sm p-2" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
+            <input type="date" className="field text-sm p-2" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+          </div>
+          <div className="flex gap-2 mt-2">
             <Pill ativo={filtroRemedios === "uso"} onClick={() => setFiltroRemedios("uso")}>Em uso ({emUso.length})</Pill>
             <Pill ativo={filtroRemedios === "encerrados"} onClick={() => setFiltroRemedios("encerrados")}>Encerrados ({encerradas.length})</Pill>
           </div>
-          <div className="space-y-3 mt-2">
-            {remediosAgrupados.filter((r) => filtroRemedios === "uso" ? medicacaoEmUso(r.med) : !medicacaoEmUso(r.med)).map((r) => {
-              const estoqueBaixo = (r.med.estoqueAtual || 0) <= 5;
-              return (
-                <div key={r.med.id} className="notebook p-4 space-y-2 bg-white text-sm">
-                  <div className="flex justify-between items-start border-b border-border/50 pb-2">
-                    <div>
-                      <p className="font-bold text-base text-foreground">{r.med.medicamento}</p>
-                      <p className="text-xs text-muted-foreground">{r.med.dosagem}</p>
+        </div>
+
+        <div className="notebook p-5 space-y-4">
+          <div className="space-y-3">
+            {remediosFiltrados.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">Nenhum medicamento encontrado no período.</p>
+            ) : (
+              remediosFiltrados.map((r) => {
+                const estoqueBaixo = (r.med.estoqueAtual || 0) <= 5;
+                return (
+                  <div key={r.med.id} className="notebook p-4 space-y-2 bg-white text-sm">
+                    <div className="flex justify-between items-start border-b border-border/50 pb-2">
+                      <div>
+                        <p className="font-bold text-base text-foreground">{r.med.medicamento}</p>
+                        <p className="text-xs text-muted-foreground">{r.med.dosagem}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Link to="/criar" search={{ duplicar: r.med.id }} className="p-1 text-muted-foreground hover:text-[var(--tema)]" title="Editar">
+                          <FileText className="h-4 w-4" />
+                        </Link>
+                        <button
+                          onClick={async () => {
+                            if (!confirm("Excluir este medicamento?")) return;
+                            await salvarRegistros([{
+                              id: uid(),
+                              pessoaId: r.med.pessoaId,
+                              criadoEm: nowLocalISO(),
+                              titulo: "Excluído",
+                              cuidado: r.med.cuidado,
+                              evento: true,
+                              parentId: r.med.id,
+                              acao: "excluir"
+                            }], "acontecimentos");
+                          }}
+                          className="p-1 text-muted-foreground hover:text-red-500"
+                          title="Excluir"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      <Link to="/criar" search={{ duplicar: r.med.id }} className="p-1 text-muted-foreground hover:text-[var(--tema)]" title="Editar">
-                        <FileText className="h-4 w-4" />
-                      </Link>
-                      <button
-                        onClick={async () => {
-                          if (!confirm("Excluir este medicamento?")) return;
-                          await salvarRegistros([{
-                            id: uid(),
-                            pessoaId: r.med.pessoaId,
-                            criadoEm: nowLocalISO(),
-                            titulo: "Excluído",
-                            cuidado: r.med.cuidado,
-                            evento: true,
-                            parentId: r.med.id,
-                            acao: "excluir"
-                          }], "acontecimentos");
-                        }}
-                        className="p-1 text-muted-foreground hover:text-red-500"
-                        title="Excluir"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      {r.med.profissional && <p><strong className="text-foreground">Médico:</strong> {r.med.profissional}</p>}
+                      {r.med.especialidade && <p><strong className="text-foreground">Especialidade:</strong> {r.med.especialidade}</p>}
+                      {r.med.tratamento && <p className="col-span-2"><strong className="text-foreground">Tratamento:</strong> {r.med.tratamento}</p>}
+                      <p><strong className="text-foreground">Início:</strong> {formatData(r.med.inicio)}</p>
+                      <p><strong className="text-foreground">Fim:</strong> {r.med.fim ? formatData(r.med.fim) : "Uso contínuo"}</p>
+                      <p className="col-span-2"><strong className="text-foreground">Horários:</strong> {r.med.horarios?.join(", ")}</p>
+                      <p className="col-span-2"><strong className="text-foreground">Estoque:</strong> {r.med.estoqueAtual || 0} {r.med.dosagemUnidade || "un"} {estoqueBaixo && "⚠️"}</p>
+                      {r.med.detalhes && <p className="col-span-2"><strong className="text-foreground">Observações:</strong> {r.med.detalhes}</p>}
+                    </div>
+
+                    <div className="flex gap-4 mt-2 pt-2 border-t border-border/50 text-xs font-semibold text-[var(--tema-escuro)]">
+                      <p>{r.dosesTomadas} doses tomadas</p>
+                      <p>{r.caixasTomadas} {r.caixasTomadas === 1 ? 'ciclo' : 'ciclos'} registrados</p>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    {r.med.profissional && <p><strong className="text-foreground">Médico:</strong> {r.med.profissional}</p>}
-                    {r.med.especialidade && <p><strong className="text-foreground">Especialidade:</strong> {r.med.especialidade}</p>}
-                    {r.med.tratamento && <p className="col-span-2"><strong className="text-foreground">Tratamento:</strong> {r.med.tratamento}</p>}
-                    <p><strong className="text-foreground">Início:</strong> {formatData(r.med.inicio)}</p>
-                    <p><strong className="text-foreground">Fim:</strong> {r.med.fim ? formatData(r.med.fim) : "Uso contínuo"}</p>
-                    <p className="col-span-2"><strong className="text-foreground">Horários:</strong> {r.med.horarios?.join(", ")}</p>
-                    <p className="col-span-2"><strong className="text-foreground">Estoque:</strong> {r.med.estoqueAtual || 0} {r.med.dosagemUnidade || "un"} {estoqueBaixo && "⚠️"}</p>
-                    {r.med.detalhes && <p className="col-span-2"><strong className="text-foreground">Observações:</strong> {r.med.detalhes}</p>}
-                  </div>
-
-                  <div className="flex gap-4 mt-2 pt-2 border-t border-border/50 text-xs font-semibold text-[var(--tema-escuro)]">
-                    <p>{r.dosesTomadas} doses tomadas</p>
-                    <p>{r.caixasTomadas} {r.caixasTomadas === 1 ? 'ciclo' : 'ciclos'} registrados</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="space-y-3 pt-3 border-t border-border/50">
-            <p className="text-xs font-bold uppercase text-muted-foreground">Filtrar e Baixar Relatório</p>
-            <div className="grid grid-cols-2 gap-2">
-              <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
-              <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
-            </div>
-            <Link
-              to="/relatorios"
-              search={{
-                tipo: filtroRemedios === "encerrados" ? "medicamentos_encerrados" : "medicamentos",
-                filtros: JSON.stringify({
-                  medicamentos: {
-                    dataInicio: filtroDataInicio,
-                    dataFim: filtroDataFim,
-                  },
-                }),
-              }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
-            >
-              <FileText className="h-4 w-4" /> Baixar Relatório
-            </Link>
+                );
+              })
+            )}
           </div>
         </div>
+
+        <Link
+          to="/relatorios"
+          search={{
+            tipo: filtroRemedios === "encerrados" ? "medicamentos_encerrados" : "medicamentos",
+            filtros: JSON.stringify({
+              medicamentos: {
+                dataInicio: dataInicioEfetiva,
+                dataFim: dataFimEfetiva,
+              },
+            }),
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md mt-4"
+        >
+          <FileText className="h-4 w-4" /> Baixar Relatório
+        </Link>
       </div>
     );
   }
@@ -781,17 +827,37 @@ if (view === "medicacoes_historico") {
         </div>
         <SeletorTesouro />
         
+        {/* Filtros padronizados */}
+        <div className="notebook p-4 space-y-3 mb-4">
+          <p className="text-xs font-bold uppercase text-muted-foreground">Período</p>
+          <div className="flex gap-2 flex-wrap">
+            <Pill ativo={periodoTela === "mes"} onClick={() => setPeriodoTela("mes")}>Este mês</Pill>
+            <Pill ativo={periodoTela === "ano"} onClick={() => setPeriodoTela("ano")}>Este ano</Pill>
+            <Pill ativo={periodoTela === "tudo"} onClick={() => setPeriodoTela("tudo")}>Tudo</Pill>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input type="date" className="field text-sm p-2" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
+            <input type="date" className="field text-sm p-2" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+          </div>
+          <select className="field text-sm p-2 w-full" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as Situacao | "")}>
+            <option value="">Todos os status</option>
+            <option value="proximo">Próximos</option>
+            <option value="feito">Compareceu</option>
+            <option value="faltou">Faltou</option>
+            <option value="cancelado">Cancelou</option>
+          </select>
+          <select className="field text-sm p-2 w-full" value={buscaProximos} onChange={(e) => setBuscaProximos(e.target.value)}>
+            <option value="">Todos os tipos</option>
+            <option value="Consulta">Consulta</option>
+            <option value="Exame">Exame</option>
+          </select>
+        </div>
+
         <div className="notebook p-5 mt-4" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
           <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2 mb-1">
             <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} /> Panorama dos cuidados
           </h2>
           <p className="text-sm text-muted-foreground mb-4">Toque em um dos blocos para ver os detalhes.</p>
-          
-          <div className="flex gap-2 mb-4">
-            <Pill ativo={periodo === "mes"} onClick={() => setPeriodo("mes")}>Este mês</Pill>
-            <Pill ativo={periodo === "ano"} onClick={() => setPeriodo("ano")}>Este ano</Pill>
-            <Pill ativo={periodo === "tudo"} onClick={() => setPeriodo("tudo")}>Tudo</Pill>
-          </div>
 
           <div className="grid gap-3">
             {(["Consulta", "Exame"] as Cuidado[]).map((c) => {
@@ -832,23 +898,6 @@ if (view === "medicacoes_historico") {
               </Botao>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="date"
-                className="field text-sm p-2"
-                value={filtroDataInicio}
-                onChange={(e) => setFiltroDataInicio(e.target.value)}
-                placeholder="Data início"
-              />
-              <input
-                type="date"
-                className="field text-sm p-2"
-                value={filtroDataFim}
-                onChange={(e) => setFiltroDataFim(e.target.value)}
-                placeholder="Data fim"
-              />
-            </div>
-
             <Link
               to="/relatorios"
               search={{
@@ -856,8 +905,8 @@ if (view === "medicacoes_historico") {
                 filtros: JSON.stringify({
                   compromissos: {
                     situacao: drill.situacao,
-                    dataInicio: filtroDataInicio,
-                    dataFim: filtroDataFim,
+                    dataInicio: dataInicioEfetiva,
+                    dataFim: dataFimEfetiva,
                   },
                 }),
               }}
@@ -869,8 +918,8 @@ if (view === "medicacoes_historico") {
             {(() => {
               const doDrill = filtrados
                 .filter((i: any) => i.cuidado === drill.cuidado && (i.situacao ?? "proximo") === drill.situacao)
-                .filter((i: any) => !filtroDataInicio || (i.data && i.data >= filtroDataInicio))
-                .filter((i: any) => !filtroDataFim || (i.data && i.data <= filtroDataFim));
+                .filter((i: any) => !dataInicio || (i.data && i.data >= dataInicio))
+                .filter((i: any) => !dataFim || (i.data && i.data <= dataFim));
               if (doDrill.length === 0) {
                 return <p className="text-sm text-muted-foreground">Nada por aqui.</p>;
               }
@@ -884,22 +933,13 @@ if (view === "medicacoes_historico") {
         <section className="space-y-3">
           <h2 className="text-xl font-semibold">Todos os próximos</h2>
           
-          <div className="grid grid-cols-2 gap-2">
-            <input type="date" className="field text-sm p-2" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
-            <input type="date" className="field text-sm p-2" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
-          </div>
-          <select className="field text-sm p-2 w-full" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as Situacao | "")}>
-            <option value="">Todos os status</option>
-            <option value="proximo">Próximos</option>
-            <option value="feito">Compareceu</option>
-            <option value="faltou">Faltou</option>
-            <option value="cancelado">Cancelou</option>
-          </select>
-          <select className="field text-sm p-2 w-full" value={buscaProximos} onChange={(e) => setBuscaProximos(e.target.value)}>
-            <option value="">Todos os tipos</option>
-            <option value="Consulta">Consulta</option>
-            <option value="Exame">Exame</option>
-          </select>
+          {proximos.length === 0 ? (
+            <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso encontrado.</p>
+          ) : (
+            <div className="max-h-[400px] space-y-2 overflow-y-auto pr-1">
+              {proximos.map((i: any) => <CompromissoCard key={i.id} item={i} compacto />)}
+            </div>
+          )}
 
           <Link
             to="/relatorios"
@@ -908,24 +948,16 @@ if (view === "medicacoes_historico") {
               filtros: JSON.stringify({
                 compromissos: {
                   q: buscaProximos,
-                  dataInicio: filtroDataInicio,
-                  dataFim: filtroDataFim,
+                  dataInicio: dataInicioEfetiva,
+                  dataFim: dataFimEfetiva,
                   situacao: filtroStatus,
                 },
               }),
             }}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:opacity-90"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md mt-4"
           >
             <FileText className="h-4 w-4" /> Baixar Relatório
           </Link>
-
-          {proximos.length === 0 ? (
-            <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso encontrado.</p>
-          ) : (
-            <div className="max-h-[400px] space-y-2 overflow-y-auto pr-1">
-              {proximos.map((i: any) => <CompromissoCard key={i.id} item={i} compacto />)}
-            </div>
-          )}
         </section>
       </div>
     );
