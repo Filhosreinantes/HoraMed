@@ -1,4 +1,4 @@
-// Checkout PIX do Rotina Azul.
+// Checkout PIX do HoraMed.
 //   { acao: "criar", nome, email, cpf, plano?, ref? } → cria a intenção + pedido PIX no PagBank
 //   { acao: "status", id }                    → status do pagamento (para a tela atualizar sozinha)
 import {
@@ -70,14 +70,14 @@ async function criar(body: Record<string, unknown>) {
 
   const expira = new Date(agora.getTime() + MINUTOS_PARA_PAGAR * 60_000);
   const { data: intencao, error } = await db
-    .from("rotina_checkouts")
+    .from("horamed_checkouts")
     .insert({ nome, email, cpf, codigo_ref: ref, valor_centavos: centavos, plano, expira_em: expira.toISOString() })
     .select("id")
     .single();
   if (error || !intencao) throw new Error(`criar intenção: ${error?.message}`);
 
   const webhook =
-    Deno.env.get("ROTINA_WEBHOOK_URL") ?? `${Deno.env.get("SUPABASE_URL")}/functions/v1/rotina-azul-webhook`;
+    Deno.env.get("HORAMED_WEBHOOK_URL") ?? `${Deno.env.get("SUPABASE_URL")}/functions/v1/horamed-webhook`;
 
   let pedido;
   try {
@@ -87,13 +87,13 @@ async function criar(body: Record<string, unknown>) {
       body: JSON.stringify({
         reference_id: intencao.id,
         customer: { name: nome, email, tax_id: cpf },
-        items: [{ reference_id: `rotina-azul-${plano}`, name: `Rotina Azul - ${nomePlano}`, quantity: 1, unit_amount: centavos }],
+        items: [{ reference_id: `horamed-${plano}`, name: `HoraMed - ${nomePlano}`, quantity: 1, unit_amount: centavos }],
         qr_codes: [{ amount: { value: centavos }, expiration_date: dataBrasilia(expira) }],
         notification_urls: [webhook],
       }),
     });
   } catch (e) {
-    await db.from("rotina_checkouts").update({ status: "falhou" }).eq("id", intencao.id);
+    await db.from("horamed_checkouts").update({ status: "falhou" }).eq("id", intencao.id);
     throw e;
   }
 
@@ -101,7 +101,7 @@ async function criar(body: Record<string, unknown>) {
   // deno-lint-ignore no-explicit-any
   const png = qr?.links?.find((l: any) => l.rel === "QRCODE.PNG")?.href ?? null;
   const { data: c, error: errUpd } = await db
-    .from("rotina_checkouts")
+    .from("horamed_checkouts")
     .update({ pagbank_order_id: pedido.id, qr_text: qr?.text ?? null, qr_png: png })
     .eq("id", intencao.id)
     .select("id, status, qr_text, qr_png, expira_em")
@@ -116,7 +116,7 @@ async function status(body: Record<string, unknown>) {
   if (!UUID.test(id)) return json({ error: "id inválido" }, 400);
 
   const { data: c } = await db
-    .from("rotina_checkouts")
+    .from("horamed_checkouts")
     .select("status, verificado_em")
     .eq("id", id)
     .maybeSingle();
@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
     if (body.acao === "status") return await status(body);
     return json({ error: "ação inválida" }, 400);
   } catch (e) {
-    console.error("[rotina-azul-checkout]", e);
+    console.error("[horamed-checkout]", e);
     return json({ error: "Não foi possível gerar o PIX. Tente novamente." }, 500);
   }
 });
