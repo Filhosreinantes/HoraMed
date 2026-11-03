@@ -46,7 +46,10 @@ function Acompanhamento() {
   const { itens, logs, ativa, carregando, salvarRegistros } = useApp() as any;
   const navigate = useNavigate();
   const [view, setView] = useState<View>("menu");
+  
+  // ✅ Período Padronizado (Mês/Ano/Tudo)
   const [periodoTela, setPeriodoTela] = useState<Periodo>("mes");
+  
   const [drill, setDrill] = useState<Drill>(null);
   const [buscaProximos, setBuscaProximos] = useState("");
 
@@ -61,16 +64,13 @@ function Acompanhamento() {
   const [filtroRemedios, setFiltroRemedios] = useState<"uso" | "encerrados">("uso");
   const [filtroMed, setFiltroMed] = useState("");
   
-  // ✅ Específico do Histórico
-  const [dataHistorico, setDataHistorico] = useState(hojeYMD());
-  
   // ✅ Específico da Viagem
   const [viagemInicio, setViagemInicio] = useState(hojeYMD());
   const [viagemFim, setViagemFim] = useState(hojeYMD());
 
   const hoje = hojeYMD();
 
-  // ✅ Datas Efetivas para enviar ao Relatório
+  // ✅ Datas Efetivas para enviar ao Relatório (caso o usuário não digite nada, usa o período selecionado)
   const dataInicioEfetiva = dataInicio || (periodoTela === "mes" ? `${hoje.slice(0, 7)}-01` : periodoTela === "ano" ? `${hoje.slice(0, 4)}-01-01` : "");
   const dataFimEfetiva = dataFim || (periodoTela === "mes" ? hoje : periodoTela === "ano" ? hoje : "");
 
@@ -144,13 +144,19 @@ function Acompanhamento() {
   }, [itens]);
 
   const proximos = useMemo(() => {
-    let lista = ordenarPorDataHora(itens.filter((i: any) => compromissoPendente(i) && (i.cuidado === "Consulta" || i.cuidado === "Exame")));
+    let lista = ordenarPorDataHora(itens.filter((i: any) => 
+      compromissoPendente(i) && 
+      (i.cuidado === "Consulta" || i.cuidado === "Exame")
+    ));
+    
     if (buscaProximos) lista = lista.filter((i: any) => i.cuidado === buscaProximos);
-    if (dataInicio) lista = lista.filter((i: any) => i.data && i.data >= dataInicio);
-    if (dataFim) lista = lista.filter((i: any) => i.data && i.data <= dataFim);
-    if (filtroStatus) lista = lista.filter((i: any) => (i.situacao ?? "proximo") === filtroStatus);
+    
+    // ✅ Filtro pelo período selecionado no panorama (mes/ano/tudo)
+    if (periodoTela === "mes") lista = lista.filter((i: any) => (i.data || "").startsWith(hoje.slice(0, 7)));
+    else if (periodoTela === "ano") lista = lista.filter((i: any) => (i.data || "").startsWith(hoje.slice(0, 4)));
+    
     return lista;
-  }, [itens, buscaProximos, dataInicio, dataFim, filtroStatus]);
+  }, [itens, buscaProximos, periodoTela, hoje]);
 
   const proximosAgendamentos = useMemo(() => {
     const arr: any[] = [];
@@ -186,8 +192,11 @@ function Acompanhamento() {
   }, [emUso, logs, hoje]);
 
   const logsFiltrados = useMemo(() => {
-    return logs.filter((i: any) => !filtroMed || i.titulo.toLowerCase().includes(filtroMed.toLowerCase())).filter((i: any) => i.data === dataHistorico).sort((a: any, b: any) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
-  }, [logs, filtroMed, dataHistorico]);
+    return filtrarPorPeriodo(logs, "data")
+      .filter((l: any) => l.cuidado === "Medicação_Log" || (l.cuidado === "Medicação" && l.evento === true))
+      .filter((l: any) => !filtroMed || (l.titulo || "").toLowerCase().includes(filtroMed.toLowerCase()))
+      .sort((a: any, b: any) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
+  }, [logs, filtroMed, periodoTela, dataInicio, dataFim]);
 
   const excluirLog = async (log: any) => {
     if (!confirm("Excluir este registro de dose?")) return;
@@ -251,7 +260,7 @@ if (view === "sinais_vitais") {
         {sinaisFiltrados.length === 0 ? (
            <div className="notebook p-6 text-center text-muted-foreground">
              <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-             <p>Nenhuma medição registrada ainda.</p>
+             <p>Nenhuma medição registrada no período.</p>
            </div>
         ) : (
           sinaisFiltrados.map((s: any) => {
@@ -325,7 +334,7 @@ if (view === "tratamentos") {
 
       <div className="space-y-3">
         {tratamentosFiltrados.length === 0 ? (
-          <p className="notebook p-4 text-sm text-muted-foreground italic">Nenhum tratamento registrado. Ao criar uma medicação, preencha o campo "Tratamento".</p>
+          <p className="notebook p-4 text-sm text-muted-foreground italic">Nenhum tratamento registrado no período.</p>
         ) : (
           tratamentosFiltrados.map((tratamento) => {
             const medsDoTratamento = itens.filter((i: any) => i.cuidado === "Medicação" && i.tratamento === tratamento);
@@ -571,9 +580,6 @@ if (view === "medicacoes_proximos") {
 
   // ✅ TELA: HISTÓRICO DE DOSES
   if (view === "medicacoes_historico") {
-    const historicoFiltrado = filtrarPorPeriodo(logs.filter((l: any) => l.cuidado === "Medicação_Log" || (l.cuidado === "Medicação" && l.evento === true)), "data")
-      .filter((l: any) => !filtroMed || l.titulo.toLowerCase().includes(filtroMed.toLowerCase()));
-
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
         <Botao variant="ghost" onClick={() => setView("medicacoes_menu")} className="mb-1 flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Voltar</Botao>
@@ -603,11 +609,11 @@ if (view === "medicacoes_proximos") {
         </div>
 
         <div className="notebook p-5 space-y-4">
-          {historicoFiltrado.length === 0 ? (
+          {logsFiltrados.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum registro encontrado no período.</p>
           ) : (
             <ul className="space-y-2">
-              {historicoFiltrado.map((l: any) => (
+              {logsFiltrados.map((l: any) => (
                 <li key={l.id} className="flex items-center gap-2 rounded-lg bg-muted/20 p-2 font-sans text-sm">
                   <span className="text-green-600">✓</span>
                   <span className="flex-1 text-foreground">{l.titulo}</span>
@@ -827,37 +833,17 @@ if (view === "medicacoes_proximos") {
         </div>
         <SeletorTesouro />
         
-        {/* Filtros padronizados */}
-        <div className="notebook p-4 space-y-3 mb-4">
-          <p className="text-xs font-bold uppercase text-muted-foreground">Período</p>
-          <div className="flex gap-2 flex-wrap">
-            <Pill ativo={periodoTela === "mes"} onClick={() => setPeriodoTela("mes")}>Este mês</Pill>
-            <Pill ativo={periodoTela === "ano"} onClick={() => setPeriodoTela("ano")}>Este ano</Pill>
-            <Pill ativo={periodoTela === "tudo"} onClick={() => setPeriodoTela("tudo")}>Tudo</Pill>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <input type="date" className="field text-sm p-2" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
-            <input type="date" className="field text-sm p-2" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
-          </div>
-          <select className="field text-sm p-2 w-full" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as Situacao | "")}>
-            <option value="">Todos os status</option>
-            <option value="proximo">Próximos</option>
-            <option value="feito">Compareceu</option>
-            <option value="faltou">Faltou</option>
-            <option value="cancelado">Cancelou</option>
-          </select>
-          <select className="field text-sm p-2 w-full" value={buscaProximos} onChange={(e) => setBuscaProximos(e.target.value)}>
-            <option value="">Todos os tipos</option>
-            <option value="Consulta">Consulta</option>
-            <option value="Exame">Exame</option>
-          </select>
-        </div>
-
         <div className="notebook p-5 mt-4" style={{ boxShadow: "0 0 20px 2px var(--tema-claro)", border: "1px solid var(--tema)" }}>
           <h2 className="font-display text-xl font-semibold italic text-foreground flex items-center gap-2 mb-1">
             <Stethoscope className="h-5 w-5" style={{ color: "var(--tema)" }} /> Panorama dos cuidados
           </h2>
           <p className="text-sm text-muted-foreground mb-4">Toque em um dos blocos para ver os detalhes.</p>
+          
+          <div className="flex gap-2 mb-4">
+            <Pill ativo={periodoTela === "mes"} onClick={() => setPeriodoTela("mes")}>Este mês</Pill>
+            <Pill ativo={periodoTela === "ano"} onClick={() => setPeriodoTela("ano")}>Este ano</Pill>
+            <Pill ativo={periodoTela === "tudo"} onClick={() => setPeriodoTela("tudo")}>Tudo</Pill>
+          </div>
 
           <div className="grid gap-3">
             {(["Consulta", "Exame"] as Cuidado[]).map((c) => {
@@ -931,33 +917,39 @@ if (view === "medicacoes_proximos") {
         <Divisor />
         
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold">Todos os próximos</h2>
-          
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Todos os próximos</h2>
+            <Link 
+              to="/relatorios" 
+              search={{ 
+                tipo: "compromissos", 
+                filtros: JSON.stringify({ 
+                  compromissos: { 
+                    situacao: "", 
+                    dataInicio: dataInicioEfetiva,
+                    dataFim: dataFimEfetiva
+                  } 
+                }) 
+              }} 
+              className="flex items-center gap-1 rounded-full bg-[var(--tema-claro)] px-3 py-1.5 text-xs font-bold text-[var(--tema-escuro)] print:hidden"
+            >
+              <FileText className="h-3.5 w-3.5" /> Relatório
+            </Link>
+          </div>
+
+          <select className="field text-sm p-2 w-full" value={buscaProximos} onChange={(e) => setBuscaProximos(e.target.value)}>
+            <option value="">Todos os tipos</option>
+            <option value="Consulta">Consulta</option>
+            <option value="Exame">Exame</option>
+          </select>
+
           {proximos.length === 0 ? (
-            <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso encontrado.</p>
+            <p className="notebook p-4 text-sm text-muted-foreground">Nenhum compromisso agendado no período.</p>
           ) : (
             <div className="max-h-[400px] space-y-2 overflow-y-auto pr-1">
               {proximos.map((i: any) => <CompromissoCard key={i.id} item={i} compacto />)}
             </div>
           )}
-
-          <Link
-            to="/relatorios"
-            search={{
-              tipo: "compromissos",
-              filtros: JSON.stringify({
-                compromissos: {
-                  q: buscaProximos,
-                  dataInicio: dataInicioEfetiva,
-                  dataFim: dataFimEfetiva,
-                  situacao: filtroStatus,
-                },
-              }),
-            }}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--tema)] px-4 py-3 text-sm font-bold text-white shadow-md mt-4"
-          >
-            <FileText className="h-4 w-4" /> Baixar Relatório
-          </Link>
         </section>
       </div>
     );
