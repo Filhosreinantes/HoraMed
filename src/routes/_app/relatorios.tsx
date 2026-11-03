@@ -102,7 +102,18 @@ function Relatorios() {
     if (secoes.has("medicamentos")) {
       const f = filtros.medicamentos;
       let m = itens.filter(i => i.cuidado === "Medicação");
-      if (f.dataInicio || f.dataFim) m = m.filter(i => dentro(i.inicio, f.dataInicio, f.dataFim));
+      
+      // ✅ Correção 2: Filtro inteligente de interseção (overlap) para medicamentos
+      if (f.dataInicio || f.dataFim) {
+        m = m.filter(i => {
+          const iniMed = i.inicio || "";
+          const fimMed = i.fim || "9999-12-31"; // Se não tem fim, é uso contínuo
+          if (f.dataInicio && fimMed < f.dataInicio) return false;
+          if (f.dataFim && iniMed && iniMed > f.dataFim) return false;
+          return true;
+        });
+      }
+      
       if (f.emUso) r.medsEmUso = m.filter(i => !i.fim || i.fim >= hoje).sort((a, b) => (b.inicio || "").localeCompare(a.inicio || ""));
       if (f.encerrados) r.medsEncerrados = m.filter(i => i.fim && i.fim < hoje).sort((a, b) => (b.inicio || "").localeCompare(a.inicio || ""));
     }
@@ -166,9 +177,9 @@ function Relatorios() {
   );
 
   // ==================
-  // MODO PREVIEW (só aparece quando tipo !== "tudo")
+  // MODO PREVIEW (só aparece quando tipo !== "tudo" ou após clicar em Gerar Relatório)
   // ==================
-  if (tipo !== "tudo" && mostrarPreview) {
+  if (mostrarPreview) {
     return (
       <div className="mx-auto w-full max-w-lg pb-20 pt-2 print:p-0">
         <div className="flex items-center justify-between mb-4 print:hidden px-4">
@@ -246,28 +257,36 @@ function Relatorios() {
             </section>
           )}
 
+          {/* ✅ Pressão com Observação */}
           {secoes.has("sinais") && dados.pressao.length > 0 && (
             <section className="mb-8">
               {renderHeader("Pressão Arterial", Activity)}
-              <ul className="space-y-1">
+              <ul className="space-y-2">
                 {dados.pressao.map((s: any) => (
-                  <li key={s.id} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0 text-sm">
-                    <span className="font-bold text-foreground">{s.titulo}</span>
-                    <span className="text-xs text-muted-foreground">{formatData(s.data)} {s.hora}</span>
+                  <li key={s.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold text-foreground">{s.titulo}</span>
+                      <span className="text-xs text-muted-foreground">{formatData(s.data)} {s.hora}</span>
+                    </div>
+                    {s.detalhes && <p className="text-xs italic text-muted-foreground bg-gray-50 p-1.5 rounded">{s.detalhes}</p>}
                   </li>
                 ))}
               </ul>
             </section>
           )}
 
+          {/* ✅ Glicose com Observação */}
           {secoes.has("sinais") && dados.glicose.length > 0 && (
             <section className="mb-8">
               {renderHeader("Glicose", Activity)}
-              <ul className="space-y-1">
+              <ul className="space-y-2">
                 {dados.glicose.map((s: any) => (
-                  <li key={s.id} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0 text-sm">
-                    <span className="font-bold text-foreground">{s.titulo}</span>
-                    <span className="text-xs text-muted-foreground">{formatData(s.data)} {s.hora}</span>
+                  <li key={s.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold text-foreground">{s.titulo}</span>
+                      <span className="text-xs text-muted-foreground">{formatData(s.data)} {s.hora}</span>
+                    </div>
+                    {s.detalhes && <p className="text-xs italic text-muted-foreground bg-gray-50 p-1.5 rounded">{s.detalhes}</p>}
                   </li>
                 ))}
               </ul>
