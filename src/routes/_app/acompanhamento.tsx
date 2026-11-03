@@ -656,18 +656,26 @@ if (view === "medicacoes_proximos") {
   // ✅ TELA: MEUS REMÉDIOS (Estoque)
   if (view === "medicacoes_estoque") {
     const remediosFiltrados = remediosAgrupados.filter((r) => {
-      const med = r.med;
-      if (filtroRemedios === "uso" ? !medicacaoEmUso(med) : medicacaoEmUso(med)) return false;
-      
-      const data = med.inicio || med.criadoEm;
-      if (dataInicio && data && data < dataInicio) return false;
-      if (dataFim && data && data > dataFim) return false;
-      
-      if (periodoTela === "mes" && data && !data.startsWith(hoje.slice(0, 7))) return false;
-      if (periodoTela === "ano" && data && !data.startsWith(hoje.slice(0, 4))) return false;
+  const med = r.med;
+  
+  // 1. Filtro Em Uso / Encerrados
+  if (filtroRemedios === "uso" ? !medicacaoEmUso(med) : medicacaoEmUso(med)) return false;
+  
+  // 2. Filtro de Período (Interseção de datas)
+  const iniFiltro = dataInicioEfetiva;
+  const fimFiltro = dataFimEfetiva;
+  
+  if (iniFiltro || fimFiltro) {
+    const iniMed = med.inicio || "";
+    const fimMed = med.fim || "9999-12-31"; // Se não tem fim, é uso contínuo
+    
+    // Se o remédio terminou antes do período começar, ou começou depois do período terminar, remove
+    if (iniFiltro && fimMed < iniFiltro) return false;
+    if (fimFiltro && iniMed && iniMed > fimFiltro) return false;
+  }
 
-      return true;
-    });
+  return true;
+});
 
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-20 pt-2">
