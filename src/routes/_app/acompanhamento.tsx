@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/acompanhamento")({
-  head: () => ({ meta: [{ title: "Acompanhamento · horaMed" }] }),
+  head: () => ({ meta: [{ title: "Acompanhamento · HoraMed" }] }),
   component: Acompanhamento,
 });
 
