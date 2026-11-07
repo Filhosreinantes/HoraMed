@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_app/criar")({
   },
   head: () => ({
     meta: [
-      { title: "Novo registro · horaMed" },
+      { title: "Novo registro · HoraMed" },
       { name: "description", content: "Agende medicamentos, consultas, exames e registre sinais vitais." },
     ],
   }),
